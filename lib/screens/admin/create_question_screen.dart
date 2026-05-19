@@ -7,6 +7,7 @@ import '../../providers/question_provider.dart';
 import '../../models/question_model.dart';
 import '../../services/image_service.dart';
 import '../../utils/constants.dart';
+import '../../utils/latex_converter.dart';
 import '../shared/katex_widget.dart';
 import '../../widgets/animations.dart';
 
@@ -30,6 +31,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
   String _selectedLanguage = 'English';
   String? _selectedChapter;
   File? _diagramFile;
+  bool _useKaTeXPreview = true;
 
   final _imageService = ImageService();
 
@@ -90,18 +92,46 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
       }
       if (!status.isGranted) return;
     } else {
-      // Gallery permission depends on Android version, usually handled by picker but good to be safe
+      PermissionStatus status;
       if (Platform.isAndroid) {
-         // Storage permissions vary by API level, image_picker handles most but check is better
+        // Safe permissions checking across all Android versions (Android 13+ vs older)
+        int sdkInt = 0;
+        try {
+          final apiMatch = RegExp(r'API\s+(\d+)').firstMatch(Platform.operatingSystemVersion);
+          if (apiMatch != null) {
+            sdkInt = int.parse(apiMatch.group(1)!);
+          } else {
+            final androidMatch = RegExp(r'Android\s+(\d+)').firstMatch(Platform.operatingSystemVersion);
+            if (androidMatch != null) {
+              final ver = int.parse(androidMatch.group(1)!);
+              if (ver >= 13) sdkInt = 33;
+            }
+          }
+        } catch (_) {}
+
+        if (sdkInt >= 33) {
+          status = await Permission.photos.request();
+        } else {
+          status = await Permission.storage.request();
+        }
+      } else {
+        status = await Permission.photos.request();
       }
+      if (status.isPermanentlyDenied) {
+        _showPermissionDialog('Gallery');
+        return;
+      }
+      if (!status.isGranted) return;
     }
 
     try {
       final file = await _imageService.pickAndCropImage(context, source: source);
-      if (file == null) return;
+      if (!mounted || file == null) return;
       _processScannedFile(file);
     } catch (e) {
-      _showSnack('Image selection failed: $e');
+      if (mounted) {
+        _showSnack('Image selection failed: $e');
+      }
     }
   }
 
@@ -257,7 +287,68 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                     ),
                     if (_questionCtrl.text.isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      _buildPreviewBox(KaTeXWidget(text: _questionCtrl.text)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _label('Live Preview'),
+                          Row(
+                            children: [
+                              ChoiceChip(
+                                label: const Text(
+                                  'KaTeX Render',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                                selected: _useKaTeXPreview,
+                                selectedColor: const Color(0x200051D5),
+                                labelStyle: TextStyle(
+                                  color: _useKaTeXPreview ? const Color(0xAA0051D5) : Colors.black54,
+                                ),
+                                onSelected: (selected) {
+                                  if (selected) setState(() => _useKaTeXPreview = true);
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              ChoiceChip(
+                                label: const Text(
+                                  'Readable Text',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                                selected: !_useKaTeXPreview,
+                                selectedColor: const Color(0x200051D5),
+                                labelStyle: TextStyle(
+                                  color: !_useKaTeXPreview ? const Color(0xAA0051D5) : Colors.black54,
+                                ),
+                                onSelected: (selected) {
+                                  if (selected) setState(() => _useKaTeXPreview = false);
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _buildPreviewBox(
+                        _useKaTeXPreview
+                            ? KaTeXWidget(text: _questionCtrl.text)
+                            : Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8F9FA),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Text(
+                                  LatexToReadableConverter.convert(_questionCtrl.text),
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.5,
+                                    color: Color(0xFF1E293B),
+                                  ),
+                                ),
+                              ),
+                      ),
                     ],
                   ]),
                 ),

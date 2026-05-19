@@ -66,5 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>This app requires camera access to scan physical exam questions and convert them to digital LaTeX questions.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app requires photo library access to allow you to upload images of math problems from your gallery.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app requires microphone access if capturing video content.</string>
 </dict>
 </plist>

@@ -52,13 +52,49 @@ class QuestionProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Memory efficient streaming OCR
-      final rawMarkdown = await _apiService.processOcrImage(imageFile);
+      // Stream OCR with rich preprocessed results from server pipeline
+      final ocrResult = await _apiService.processOcrImage(imageFile);
+      final rawText = ocrResult['rawText'] as String? ?? '';
       
-      if (rawMarkdown.trim().isEmpty) {
+      if (rawText.trim().isEmpty) {
         _creationError = 'Could not extract text from the image.';
       } else {
-        _questionQueue = LatexExtractorService.extractQuestions(rawMarkdown);
+        // Step 1: Check if the backend returned structured MCQ options
+        if (ocrResult.containsKey('parsedMcq') && ocrResult['parsedMcq'] != null) {
+          final parsed = Map<String, dynamic>.from(ocrResult['parsedMcq']);
+          final String questionText = parsed['question'] ?? '';
+          final List<dynamic> rawOptions = parsed['options'] ?? [];
+          
+          List<String> options = [];
+          for (var opt in rawOptions) {
+            if (opt is Map) {
+              options.add(opt['text']?.toString() ?? '');
+            } else {
+              options.add(opt.toString());
+            }
+          }
+          
+          // Ensure exactly 4 options are populated
+          while (options.length < 4) {
+            options.add('');
+          }
+          if (options.length > 4) {
+            options = options.sublist(0, 4);
+          }
+          
+          _questionQueue = [
+            ScanData(
+              questionText: questionText,
+              options: options,
+              correctAnswer: '',
+              latex: ocrResult['latex'] as String?,
+              rawText: rawText,
+            )
+          ];
+        } else {
+          // Step 2: Fallback to client-side extraction if backend parsing wasn't complete
+          _questionQueue = LatexExtractorService.extractQuestions(rawText);
+        }
       }
     } on ApiException catch (e) {
       _creationError = e.message;

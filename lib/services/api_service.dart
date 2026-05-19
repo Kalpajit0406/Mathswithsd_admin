@@ -110,14 +110,16 @@ class ApiService {
     return data['data']['url'];
   }
 
-  Future<String> processOcrImage(File file) async {
+  Future<Map<String, dynamic>> processOcrImage(File file) async {
     try {
       final request = http.MultipartRequest(
         'POST',
         Uri.parse('$_baseUrl${AppConstants.processOcrEndpoint}'),
       );
 
-      request.headers.addAll(await _headers());
+      final headers = await _headers();
+      headers.remove('Content-Type');
+      request.headers.addAll(headers);
       request.files.add(await http.MultipartFile.fromPath(
         'image', 
         file.path,
@@ -128,7 +130,7 @@ class ApiService {
       final response = await http.Response.fromStream(streamedResponse);
 
       final data = _processResponse(response);
-      return data['data']?['rawText'] ?? '';
+      return Map<String, dynamic>.from(data['data'] ?? {});
     } on SocketException {
       throw ApiException('Network unreachable. Ensure your server is running.', 503);
     } on TimeoutException {
