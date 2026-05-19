@@ -117,7 +117,7 @@ class ConfidenceBadge extends StatelessWidget {
             width: double.infinity,
             height: 6,
             decoration: BoxDecoration(
-              backgroundColor: Colors.grey[300],
+              color: Colors.grey[300],
               borderRadius: BorderRadius.circular(3),
             ),
             child: FractionallySizedBox(

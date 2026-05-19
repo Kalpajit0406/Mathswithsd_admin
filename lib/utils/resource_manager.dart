@@ -171,7 +171,7 @@ mixin ResourceDisposal<T extends StatefulWidget> on State<T> {
       duration: duration,
       lowerBound: lowerBound,
       upperBound: upperBound,
-      vsync: vsync ?? this,
+      vsync: vsync ?? (this as TickerProvider),
     );
     _resourceManager.trackAnimationController(controller);
     return controller;

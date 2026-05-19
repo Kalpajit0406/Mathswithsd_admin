@@ -1,5 +1,5 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:logger/logger.dart';
 
 /// Global error handler for uncaught exceptions
 class ErrorBoundary extends StatefulWidget {
@@ -16,14 +16,12 @@ class ErrorBoundary extends StatefulWidget {
 }
 
 class _ErrorBoundaryState extends State<ErrorBoundary> {
-  late final Logger _logger;
   bool _hasError = false;
   FlutterErrorDetails? _errorDetails;
 
   @override
   void initState() {
     super.initState();
-    _logger = Logger();
     
     // Catch all Flutter errors
     FlutterError.onError = (FlutterErrorDetails details) {
@@ -31,20 +29,15 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
         _hasError = true;
         _errorDetails = details;
       });
-      _logger.e(
-        'Flutter Error: ${details.exceptionAsString()}',
-        error: details.exception,
-        stackTrace: details.stack,
-      );
+      debugPrint('Flutter Error: ${details.exceptionAsString()}\n'
+          'Error: ${details.exception}\n'
+          'StackTrace: ${details.stack}');
       widget.onError?.call();
     };
 
     // Catch platform channel errors
     PlatformDispatcher.instance.onError = (error, stack) {
-      _logger.e(
-        'Platform Error: $error',
-        stackTrace: stack,
-      );
+      debugPrint('Platform Error: $error\nStackTrace: $stack');
       return true;
     };
   }
