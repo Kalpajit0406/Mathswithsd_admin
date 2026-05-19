@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-/// KaTeX math rendering widget using WebView
+/// KaTeX math rendering widget using WebView with dynamic height calculation
 class KaTeXWidget extends StatefulWidget {
   final String text;
   final double? height;
@@ -21,6 +21,7 @@ class KaTeXWidget extends StatefulWidget {
 class _KaTeXWidgetState extends State<KaTeXWidget> {
   late WebViewController _controller;
   bool _isLoaded = false;
+  double _contentHeight = 45.0; // Start with compact default height
 
   static const String _baseHtml = '''
 <!DOCTYPE html>
@@ -41,10 +42,16 @@ class _KaTeXWidgetState extends State<KaTeXWidget> {
       overflow-wrap: break-word;
     }
     #content { visibility: hidden; line-height: 1.6; }
-    .katex { font-size: 1em; }
-    .katex-display { overflow-x: auto; overflow-y: hidden; }
+    .katex { font-size: 1.05em; }
+    .katex-display { overflow-x: auto; overflow-y: hidden; margin: 0.5em 0; }
   </style>
   <script>
+    function sendHeight() {
+      if (window.HeightChannel) {
+        var height = document.body.scrollHeight || document.documentElement.scrollHeight;
+        window.HeightChannel.postMessage(height.toString());
+      }
+    }
     function renderContent(text) {
       var el = document.getElementById('content');
       el.innerHTML = text;
@@ -59,7 +66,7 @@ class _KaTeXWidgetState extends State<KaTeXWidget> {
           throwOnError: false
         });
         el.style.visibility = 'visible';
-        window.flutter_inappwebview && window.flutter_inappwebview.callHandler('heightChanged', document.body.scrollHeight);
+        setTimeout(sendHeight, 100);
       } else {
         setTimeout(function(){ renderContent(text); }, 80);
       }
@@ -78,6 +85,17 @@ class _KaTeXWidgetState extends State<KaTeXWidget> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.transparent)
+      ..addJavaScriptChannel(
+        'HeightChannel',
+        onMessageReceived: (JavaScriptMessage message) {
+          final height = double.tryParse(message.message);
+          if (height != null && mounted) {
+            setState(() {
+              _contentHeight = height + 12; // Add a small buffer
+            });
+          }
+        },
+      )
       ..loadHtmlString(_baseHtml)
       ..setNavigationDelegate(NavigationDelegate(
         onPageFinished: (_) {
@@ -108,7 +126,7 @@ class _KaTeXWidgetState extends State<KaTeXWidget> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: widget.height ?? 80,
+      height: widget.height ?? _contentHeight,
       child: WebViewWidget(controller: _controller),
     );
   }
@@ -132,7 +150,7 @@ class InlineMathText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (_hasMath) {
-      return KaTeXWidget(text: text, height: 50);
+      return KaTeXWidget(text: text);
     }
     return Text(
       text,
