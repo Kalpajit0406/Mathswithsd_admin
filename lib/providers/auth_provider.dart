@@ -52,7 +52,7 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _apiService.login(phone, password);
+      final response = await _apiService.loginWithRetry(phone, password);
       final data = response['data'];
       if (data == null) {
         throw Exception('Invalid response from server');

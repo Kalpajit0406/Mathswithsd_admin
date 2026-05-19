@@ -53,7 +53,7 @@ class QuestionProvider with ChangeNotifier {
 
     try {
       // Stream OCR with rich preprocessed results from server pipeline
-      final ocrResult = await _apiService.processOcrImage(imageFile);
+      final ocrResult = await _apiService.processOcrImageWithRetry(imageFile);
       final rawText = ocrResult['rawText'] as String? ?? '';
       
       if (rawText.trim().isEmpty) {

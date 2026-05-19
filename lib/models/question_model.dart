@@ -53,6 +53,8 @@ class ScanData {
   final String? correctAnswer;
   final String? latex;
   final String? rawText;
+  final double? confidence;  // OCR confidence score (0-100)
+  final double? difficulty;  // Question difficulty estimate (1-5)
 
   ScanData({
     required this.questionText,
@@ -60,6 +62,8 @@ class ScanData {
     this.correctAnswer,
     this.latex,
     this.rawText,
+    this.confidence,
+    this.difficulty,
   });
 
   factory ScanData.fromJson(Map<String, dynamic> json) {
@@ -69,6 +73,8 @@ class ScanData {
       correctAnswer: json['correctAnswer'],
       latex: json['latex'],
       rawText: json['rawText'],
+      confidence: json['confidence'] != null ? (json['confidence'] as num).toDouble() : null,
+      difficulty: json['difficulty'] != null ? (json['difficulty'] as num).toDouble() : null,
     );
   }
 }

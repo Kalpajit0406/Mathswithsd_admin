@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import '../models/exam_model.dart';
 import '../models/test_model.dart';
 import '../services/api_service.dart';
+import '../utils/resource_manager.dart';
 
 enum LoadState { idle, loading, error, loaded }
 
-class ExamProvider with ChangeNotifier {
+class ExamProvider with ChangeNotifier, NotifierResourceDisposal {
   final ApiService _apiService = ApiService();
   
   List<Exam> _exams = [];
@@ -98,7 +99,7 @@ class ExamProvider with ChangeNotifier {
 
   void _startTimer() {
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _timer = createSafeTimer(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds > 0) {
         _remainingSeconds--;
         notifyListeners();

@@ -350,4 +350,121 @@ class ApiService {
     ).timeout(const Duration(seconds: 15));
     _processResponse(response);
   }
+
+  // ─── Retry Methods ───────────────────────────────────────────────────────────
+
+  /// Process OCR image with exponential backoff retry
+  /// Includes longer timeout (60s) and 3 retry attempts
+  Future<Map<String, dynamic>> processOcrImageWithRetry(File file) async {
+    int attempt = 0;
+    const maxAttempts = 3;
+    Duration delay = const Duration(seconds: 1);
+
+    while (attempt < maxAttempts) {
+      try {
+        return await processOcrImage(file);
+      } on ApiException catch (e) {
+        attempt++;
+        if (attempt >= maxAttempts) rethrow;
+        await Future.delayed(delay);
+        delay = Duration(seconds: delay.inSeconds * 2);
+      }
+    }
+    throw ApiException('OCR processing failed after $maxAttempts attempts', 500);
+  }
+
+  /// Create question with retry logic
+  Future<Question> createQuestionWithRetry(Question question) async {
+    int attempt = 0;
+    const maxAttempts = 3;
+    Duration delay = const Duration(seconds: 1);
+
+    while (attempt < maxAttempts) {
+      try {
+        return await createQuestion(question);
+      } on ApiException catch (e) {
+        attempt++;
+        if (attempt >= maxAttempts) rethrow;
+        await Future.delayed(delay);
+        delay = Duration(seconds: delay.inSeconds * 2);
+      }
+    }
+    throw ApiException('Create question failed after $maxAttempts attempts', 500);
+  }
+
+  /// Login with retry
+  Future<Map<String, dynamic>> loginWithRetry(String phone, String password) async {
+    int attempt = 0;
+    const maxAttempts = 3;
+    Duration delay = const Duration(seconds: 1);
+
+    while (attempt < maxAttempts) {
+      try {
+        return await login(phone, password);
+      } on ApiException catch (e) {
+        attempt++;
+        if (attempt >= maxAttempts) rethrow;
+        await Future.delayed(delay);
+        delay = Duration(seconds: delay.inSeconds * 2);
+      }
+    }
+    throw ApiException('Login failed after $maxAttempts attempts', 500);
+  }
+
+  /// Get questions with retry
+  Future<List<Question>> getQuestionsWithRetry({int? classNo, String? language}) async {
+    int attempt = 0;
+    const maxAttempts = 3;
+    Duration delay = const Duration(seconds: 1);
+
+    while (attempt < maxAttempts) {
+      try {
+        return await getQuestions(classNo: classNo, language: language);
+      } on ApiException catch (e) {
+        attempt++;
+        if (attempt >= maxAttempts) rethrow;
+        await Future.delayed(delay);
+        delay = Duration(seconds: delay.inSeconds * 2);
+      }
+    }
+    throw ApiException('Get questions failed after $maxAttempts attempts', 500);
+  }
+
+  /// Get all tests/exams with retry
+  Future<List<TestConfig>> getAllTestsWithRetry() async {
+    int attempt = 0;
+    const maxAttempts = 3;
+    Duration delay = const Duration(seconds: 1);
+
+    while (attempt < maxAttempts) {
+      try {
+        return await getAllTests();
+      } on ApiException catch (e) {
+        attempt++;
+        if (attempt >= maxAttempts) rethrow;
+        await Future.delayed(delay);
+        delay = Duration(seconds: delay.inSeconds * 2);
+      }
+    }
+    throw ApiException('Get tests failed after $maxAttempts attempts', 500);
+  }
+
+  /// Get students with retry
+  Future<Map<String, List<StudentUser>>> getAllStudentsWithRetry() async {
+    int attempt = 0;
+    const maxAttempts = 3;
+    Duration delay = const Duration(seconds: 1);
+
+    while (attempt < maxAttempts) {
+      try {
+        return await getAllStudents();
+      } on ApiException catch (e) {
+        attempt++;
+        if (attempt >= maxAttempts) rethrow;
+        await Future.delayed(delay);
+        delay = Duration(seconds: delay.inSeconds * 2);
+      }
+    }
+    throw ApiException('Get students failed after $maxAttempts attempts', 500);
+  }
 }

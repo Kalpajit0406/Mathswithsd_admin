@@ -10,6 +10,7 @@ import '../../utils/constants.dart';
 import '../../utils/latex_converter.dart';
 import '../shared/katex_widget.dart';
 import '../../widgets/animations.dart';
+import '../../widgets/confidence_badge.dart';
 
 class CreateQuestionTab extends StatefulWidget {
   const CreateQuestionTab({super.key});
@@ -169,7 +170,158 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
       );
     } else if (provider.questionQueue.isNotEmpty) {
       _syncFromQueue();
+      
+      // Show OCR confidence feedback
+      final ocr = provider.questionQueue.first;
+      if (ocr.confidence != null) {
+        _showOCRConfidenceFeedback(ocr.confidence!);
+      }
     }
+  }
+
+  void _showOCRConfidenceFeedback(double confidence) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'OCR Quality Assessment',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Center(
+              child: ConfidenceBadge(confidence: confidence),
+            ),
+            const SizedBox(height: 24),
+            // Show recommendation based on confidence
+            _buildConfidenceRecommendation(confidence),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF4A148C), width: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Re-crop Image',
+                      style: TextStyle(
+                        color: Color(0xFF4A148C),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('OCR results accepted ✓'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4A148C),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Accept',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConfidenceRecommendation(double confidence) {
+    String recommendation;
+    Color bgColor;
+    Color textColor;
+    IconData icon;
+
+    if (confidence >= 90) {
+      recommendation = '✓ Ready to use\nOCR results are excellent quality';
+      bgColor = const Color(0xFF4CAF50).withOpacity(0.1);
+      textColor = const Color(0xFF4CAF50);
+      icon = Icons.check_circle;
+    } else if (confidence >= 80) {
+      recommendation = '→ Review recommended\nDouble-check complex sections';
+      bgColor = const Color(0xFF2196F3).withOpacity(0.1);
+      textColor = const Color(0xFF2196F3);
+      icon = Icons.info;
+    } else if (confidence >= 70) {
+      recommendation = '⚠ Please review carefully\nCheck mathematical notation';
+      bgColor = const Color(0xFFFFC107).withOpacity(0.1);
+      textColor = const Color(0xFFFFC107);
+      icon = Icons.warning;
+    } else if (confidence >= 60) {
+      recommendation = '⚠ Manual correction needed\nSome errors may be present';
+      bgColor = const Color(0xFFFF9800).withOpacity(0.1);
+      textColor = const Color(0xFFFF9800);
+      icon = Icons.warning_amber;
+    } else {
+      recommendation = '✕ Re-crop or re-upload recommended\nQuality too low for reliable OCR';
+      bgColor = const Color(0xFFBA1A1A).withOpacity(0.1);
+      textColor = const Color(0xFFBA1A1A);
+      icon = Icons.error;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: textColor.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: textColor, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              recommendation,
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _pickDiagram() async {
