@@ -488,4 +488,175 @@ class ApiService {
     }
     throw ApiException('Get students failed after $maxAttempts attempts', 500);
   }
+
+  // ─── PDF PROCESSING ──────────────────────────────────────────────────────────
+
+  /// Upload PDF file and extract questions
+  /// Sends multipart request with file and options
+  Future<Map<String, dynamic>?> uploadPdfAndExtractQuestions(
+    File pdfFile, {
+    Function(double)? onProgress,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/api/v1/pdf/extract-questions');
+      final request = http.MultipartRequest('POST', uri);
+
+      // Add headers
+      final headers = await _headers();
+      request.headers.addAll(headers);
+
+      // Add file
+      request.files.add(
+        http.MultipartFile(
+          'file',
+          pdfFile.readAsBytes().asStream(),
+          await pdfFile.length(),
+          filename: pdfFile.path.split('/').last,
+        ),
+      );
+
+      // Track progress
+      var uploadProgress = 0;
+      request.onProgress = (bytes) {
+        uploadProgress = bytes;
+        final totalBytes = request.contentLength;
+        if (totalBytes != null && totalBytes > 0) {
+          onProgress?.call(uploadProgress / totalBytes);
+        }
+      };
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 120));
+      final response = await http.Response.fromStream(streamedResponse);
+
+      final data = _processResponse(response);
+      return data;
+    } catch (e) {
+      throw ApiException('PDF upload failed: $e', 500);
+    }
+  }
+
+  /// Submit PDF by URL for processing
+  /// Initiates async processing on backend
+  Future<Map<String, dynamic>?> submitPdfByUrl(String url) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/v1/pdf/scan-url'),
+        headers: await _headers(),
+        body: jsonEncode({
+          'url': url,
+          'options': {
+            'conversionFormats': {
+              'docx': true,
+              'latex': true,
+            }
+          }
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw ApiException('Failed to submit PDF URL: $e', 500);
+    }
+  }
+
+  /// Check PDF processing status
+  /// Returns status, progress, and estimated time
+  Future<Map<String, dynamic>> getPdfStatus(String pdfId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/v1/pdf/status/$pdfId'),
+        headers: await _headers(),
+      ).timeout(const Duration(seconds: 15));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw ApiException('Failed to get PDF status: $e', 500);
+    }
+  }
+
+  /// Download PDF result in specific format
+  /// Formats: mmd, docx, html, latex, lines_json
+  Future<List<int>?> downloadPdfResult(String pdfId, String format) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/v1/pdf/download/$pdfId/$format'),
+        headers: await _headers(),
+      ).timeout(const Duration(seconds: 60));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response.bodyBytes;
+      }
+
+      throw ApiException('Failed to download PDF result', response.statusCode);
+    } catch (e) {
+      throw ApiException('PDF download error: $e', 500);
+    }
+  }
+
+  /// Extract questions from already-processed PDF
+  /// Pass the PDF ID that was returned from submitPdfByUrl
+  Future<Map<String, dynamic>?> extractQuestionsFromPdfId(String pdfId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/v1/pdf/extract-questions'),
+        headers: await _headers(),
+        body: jsonEncode({
+          'pdfId': pdfId,
+        }),
+      ).timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw ApiException('Failed to extract questions from PDF: $e', 500);
+    }
+  }
+
+  /// Delete PDF results from Mathpix
+  /// WARNING: This is permanent
+  Future<Map<String, dynamic>?> deletePdf(String pdfId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/api/v1/pdf/$pdfId'),
+        headers: await _headers(),
+      ).timeout(const Duration(seconds: 15));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw ApiException('Failed to delete PDF: $e', 500);
+    }
+  }
+
+  /// Stream PDF pages in real-time (Server-Sent Events)
+  /// Returns event stream of page results as they complete
+  Stream<Map<String, dynamic>> streamPdfPages(String pdfId) async* {
+    try {
+      final uri = Uri.parse('$_baseUrl/api/v1/pdf/stream/$pdfId');
+      final headers = await _headers();
+
+      final request = http.StreamedRequest('GET', uri);
+      request.headers.addAll(headers);
+
+      final response = await request.send();
+
+      if (response.statusCode != 200) {
+        throw ApiException('Stream failed with status ${response.statusCode}', response.statusCode);
+      }
+
+      await for (final line in response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())) {
+        if (line.startsWith('data: ')) {
+          try {
+            final jsonStr = line.substring(6);
+            final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+            yield data;
+          } catch (e) {
+            // Skip malformed lines
+          }
+        }
+      }
+    } catch (e) {
+      throw ApiException('PDF streaming error: $e', 500);
+    }
+  }
 }

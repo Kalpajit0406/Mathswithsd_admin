@@ -11,6 +11,8 @@ import '../../utils/latex_converter.dart';
 import '../shared/latex_widget.dart';
 import '../../widgets/animations.dart';
 import '../../widgets/confidence_badge.dart';
+import '../../widgets/question_queue_status_widget.dart';
+import '../../widgets/pdf_picker_widget.dart';
 
 class CreateQuestionTab extends StatefulWidget {
   /// Optional image file to process immediately after mounting (used by lost-data recovery)
@@ -37,6 +39,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
   File? _diagramFile;
   bool _useLaTeXPreview = true;
   bool _isManualInput = false;
+  bool _showPdfPicker = false;
 
   final _imageService = ImageService();
   QuestionProvider? _subscribedProvider;
@@ -64,24 +67,28 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
     });
   }
 
-  int _lastQueueLength = 0;
+  int _lastQueueIndex = -1;
   bool _lastIsScanning = false;
 
   void _onProviderChange() {
     if (!mounted) return;
     final provider = Provider.of<QuestionProvider>(context, listen: false);
-    // Detect when scanning just finished and a new queue item appeared
+    
+    // Detect when scanning just finished and queue has items
     final scanningJustFinished = _lastIsScanning && !provider.isScanning;
-    final queueGrew = provider.questionQueue.length > _lastQueueLength;
+    final indexChanged = provider.currentQueueIndex != _lastQueueIndex;
+    
     _lastIsScanning = provider.isScanning;
-    _lastQueueLength = provider.questionQueue.length;
+    _lastQueueIndex = provider.currentQueueIndex;
 
-    if (scanningJustFinished && queueGrew) {
+    if (scanningJustFinished && provider.isQueueActive) {
       _syncFromQueue();
-      final ocr = provider.questionQueue.first;
-      if (ocr.confidence != null) {
-        _showOCRConfidenceFeedback(ocr.confidence!);
+      final current = provider.currentQueueItem;
+      if (current?.confidence != null) {
+        _showOCRConfidenceFeedback(current!.confidence!);
       }
+    } else if (indexChanged && provider.isQueueActive) {
+      _syncFromQueue();
     } else if (scanningJustFinished && provider.creationError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -96,18 +103,25 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
 
   void _syncFromQueue() {
     final provider = Provider.of<QuestionProvider>(context, listen: false);
-    if (provider.questionQueue.isNotEmpty) {
-      final scan = provider.questionQueue.first;
-      _questionCtrl.text = scan.questionText;
+    final current = provider.currentQueueItem;
+    
+    if (current != null) {
+      _questionCtrl.text = current.questionText;
       for (int i = 0; i < 4; i++) {
-        if (scan.options.length > i) {
-          _optCtrls[i].text = scan.options[i];
+        if (current.options.length > i) {
+          _optCtrls[i].text = current.options[i];
         } else {
           _optCtrls[i].clear();
         }
       }
-      if (scan.correctAnswer != null) _correctCtrl.text = scan.correctAnswer!;
-      setState(() {});
+      if (current.correctAnswer != null && current.correctAnswer!.isNotEmpty) {
+        _correctCtrl.text = current.correctAnswer!;
+      } else {
+        _correctCtrl.clear();
+      }
+      setState(() {
+        _isManualInput = false;
+      });
     }
   }
 
@@ -434,20 +448,23 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
 
     if (success) {
       _clearForm();
-      if (provider.questionQueue.isNotEmpty) {
-        provider.popQuestionFromQueue();
-      }
       
-      if (provider.questionQueue.isNotEmpty) {
+      // Move to next question if queue has more items
+      if (provider.hasNextQuestion) {
+        provider.nextQuestion();
         _syncFromQueue();
       } else {
+        // Queue is done
         setState(() {
           _isManualInput = false;
         });
       }
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Question saved successfully!'),
+          content: provider.hasNextQuestion
+              ? const Text('✓ Question saved! Loading next...')
+              : const Text('✓ All questions saved successfully!'),
           backgroundColor: const Color(0xFF4CAF50),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -482,6 +499,50 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
       builder: (context, provider, _) {
         final chapters = AppConstants.classChapters[_selectedClass] ?? [];
         final bool hasQueue = provider.questionQueue.isNotEmpty;
+
+        // Show PDF picker if requested
+        if (_showPdfPicker) {
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () {
+                        setState(() {
+                          _showPdfPicker = false;
+                        });
+                      },
+                    ),
+                    const Text(
+                      'PDF/Document Upload',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                PdfPickerWidget(
+                  enableDirectExtraction: true,
+                  onQuestionsExtracted: (questions, sessionId) {
+                    setState(() {
+                      _showPdfPicker = false;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Extracted ${questions.length} questions!')),
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        }
 
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -804,6 +865,45 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          BounceOnTap(
+            onTap: () {
+              setState(() {
+                _showPdfPicker = true;
+              });
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.description_outlined, color: Color(0xFF2563EB), size: 28),
+                  SizedBox(width: 12),
+                  Text(
+                    'Upload PDF/Document',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -850,31 +950,77 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
 
   Widget _buildQuestionQueueStatus(QuestionProvider provider) {
     if (provider.questionQueue.isEmpty) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0051D5).withOpacity(0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF0051D5).withOpacity(0.12), width: 1),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.auto_awesome_motion_rounded, color: Color(0xFF0051D5)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              provider.questionQueue.length > 1 
-                ? 'Batch Scan: ${provider.questionQueue.length} questions remaining in queue'
-                : 'Editing Parsed Question',
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF0051D5),
-                fontSize: 14,
+    
+    return Column(
+      children: [
+        // Use the new comprehensive queue status widget
+        QuestionQueueStatusWidget(
+          onPrevious: () {
+            if (provider.previousQuestion()) {
+              _syncFromQueue();
+            }
+          },
+          onNext: () {
+            if (provider.nextQuestion()) {
+              _syncFromQueue();
+            }
+          },
+          onSkip: () {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Skip Question'),
+                content: const Text('Skip this question without saving?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      if (provider.nextQuestion()) {
+                        _syncFromQueue();
+                      }
+                    },
+                    child: const Text('Skip'),
+                  ),
+                ],
               ),
-            ),
-          ),
-        ],
-      ),
+            );
+          },
+          onDelete: () {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Delete Question'),
+                content: const Text('Remove this question from the queue?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      provider.removeCurrentQuestion();
+                      if (provider.isQueueActive) {
+                        _syncFromQueue();
+                      } else {
+                        setState(() {
+                          _isManualInput = false;
+                        });
+                      }
+                    },
+                    child: const Text('Delete', style: TextStyle(color: Color(0xFFBA1A1A))),
+                  ),
+                ],
+              ),
+            );
+          },
+          showNavigationButtons: true,
+        ),
+      ],
     );
   }
 
