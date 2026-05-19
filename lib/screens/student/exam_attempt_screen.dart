@@ -4,7 +4,7 @@ import 'dart:async';
 import '../../providers/auth_provider.dart';
 import '../../providers/exam_provider.dart';
 import '../../models/exam_model.dart';
-import '../shared/katex_widget.dart';
+import '../shared/latex_widget.dart';
 import 'result_screen.dart';
 
 class ExamAttemptScreen extends StatefulWidget {
@@ -266,7 +266,7 @@ class _ExamAttemptScreenState extends State<ExamAttemptScreen> with WidgetsBindi
                           BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
                         ],
                       ),
-                      child: KaTeXWidget(text: currentQ.questionText),
+                      child: LaTeXWidget(text: currentQ.questionText),
                     ),
                     const SizedBox(height: 24),
 

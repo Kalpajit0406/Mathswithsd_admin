@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/user_model.dart';
 import '../models/question_model.dart';
@@ -102,7 +103,12 @@ class ApiService {
     );
     request.headers['Authorization'] = 'Bearer ${token ?? ''}';
     request.headers['ngrok-skip-browser-warning'] = 'true';
-    request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+    final bytes = await imageFile.readAsBytes();
+    request.files.add(http.MultipartFile.fromBytes(
+      'file', 
+      bytes,
+      filename: imageFile.path.split('/').last,
+    ));
 
     final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
     final response = await http.Response.fromStream(streamedResponse);
@@ -112,14 +118,29 @@ class ApiService {
 
   Future<Map<String, dynamic>> processOcrImage(File file) async {
     try {
+      debugPrint("[ApiService] processOcrImage file path: ${file.path}");
+      final bool exists = await file.exists();
+      if (!exists) {
+        throw ApiException('Image file does not exist at path: ${file.path}', 400);
+      }
+      
+      final int length = await file.length();
+      debugPrint("[ApiService] File length: $length bytes");
+      if (length == 0) {
+        throw ApiException('Captured image is empty (0 bytes). Please try taking the photo again.', 400);
+      }
+      
       final request = http.MultipartRequest(
         'POST',
         Uri.parse('$_baseUrl${AppConstants.processOcrEndpoint}'),
       );
 
       final headers = await _headers();
+      // Boundary is set automatically by http package, so we remove manual Content-Type
       headers.remove('Content-Type');
       request.headers.addAll(headers);
+      
+      // Use fromPath for better memory efficiency and reliability
       request.files.add(await http.MultipartFile.fromPath(
         'image', 
         file.path,
@@ -137,7 +158,7 @@ class ApiService {
       throw ApiException('OCR request timed out. Try a smaller crop.', 408);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Upload failed: ${e.toString()}', 500);
+      throw ApiException('OCR upload failed: ${e.toString()}', 500);
     }
   }
 

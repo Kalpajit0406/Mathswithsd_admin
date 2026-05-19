@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-/// KaTeX math rendering widget using WebView with dynamic height calculation
-class KaTeXWidget extends StatefulWidget {
+/// LaTeX math rendering widget using WebView with MathJax and dynamic height calculation
+class LaTeXWidget extends StatefulWidget {
   final String text;
   final double? height;
   final TextAlign? textAlign;
 
-  const KaTeXWidget({
+  const LaTeXWidget({
     super.key,
     required this.text,
     this.height,
@@ -15,10 +15,10 @@ class KaTeXWidget extends StatefulWidget {
   });
 
   @override
-  State<KaTeXWidget> createState() => _KaTeXWidgetState();
+  State<LaTeXWidget> createState() => _LaTeXWidgetState();
 }
 
-class _KaTeXWidgetState extends State<KaTeXWidget> {
+class _LaTeXWidgetState extends State<LaTeXWidget> {
   late WebViewController _controller;
   bool _isLoaded = false;
   double _contentHeight = 45.0; // Start with compact default height
@@ -28,9 +28,27 @@ class _KaTeXWidgetState extends State<KaTeXWidget> {
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\$', '\$'], ['\\\\(', '\\\\)']],
+        displayMath: [['\$\$', '\$\$'], ['\\\\[', '\\\\]']],
+        processEscapes: true
+      },
+      options: {
+        ignoreHtmlClass: 'tex2jax_ignore',
+        processHtmlClass: 'tex2jax_process'
+      },
+      startup: {
+        pageReady: () => {
+          return MathJax.startup.defaultPageReady().then(() => {
+            sendHeight();
+          });
+        }
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -42,8 +60,7 @@ class _KaTeXWidgetState extends State<KaTeXWidget> {
       overflow-wrap: break-word;
     }
     #content { visibility: hidden; line-height: 1.6; }
-    .katex { font-size: 1.05em; }
-    .katex-display { overflow-x: auto; overflow-y: hidden; margin: 0.5em 0; }
+    .MathJax { font-size: 1.05em !important; }
   </style>
   <script>
     function sendHeight() {
@@ -55,18 +72,11 @@ class _KaTeXWidgetState extends State<KaTeXWidget> {
     function renderContent(text) {
       var el = document.getElementById('content');
       el.innerHTML = text;
-      if (window.renderMathInElement) {
-        renderMathInElement(el, {
-          delimiters: [
-            {left: '\$\$', right: '\$\$', display: true},
-            {left: '\$', right: '\$', display: false},
-            {left: '\\\\(', right: '\\\\)', display: false},
-            {left: '\\\\[', right: '\\\\]', display: true}
-          ],
-          throwOnError: false
+      el.style.visibility = 'visible';
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        MathJax.typesetPromise([el]).then(() => {
+          sendHeight();
         });
-        el.style.visibility = 'visible';
-        setTimeout(sendHeight, 100);
       } else {
         setTimeout(function(){ renderContent(text); }, 80);
       }
@@ -74,7 +84,7 @@ class _KaTeXWidgetState extends State<KaTeXWidget> {
   </script>
 </head>
 <body>
-  <div id="content"></div>
+  <div id="content" class="tex2jax_process"></div>
 </body>
 </html>
 ''';
@@ -106,7 +116,7 @@ class _KaTeXWidgetState extends State<KaTeXWidget> {
   }
 
   @override
-  void didUpdateWidget(covariant KaTeXWidget oldWidget) {
+  void didUpdateWidget(covariant LaTeXWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.text != widget.text && _isLoaded) {
       _updateContent();
@@ -145,12 +155,12 @@ class InlineMathText extends StatelessWidget {
     this.color,
   });
 
-  bool get _hasMath => text.contains(r'$') || text.contains(r'\(') || text.contains(r'\[');
+  bool get _hasMath => text.contains(r'$') || text.contains(r'\(') || text.contains(r'\[') || text.contains(r'\');
 
   @override
   Widget build(BuildContext context) {
     if (_hasMath) {
-      return KaTeXWidget(text: text);
+      return LaTeXWidget(text: text);
     }
     return Text(
       text,

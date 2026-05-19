@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/question_model.dart';
 import '../services/api_service.dart';
-import '../services/latex_extractor_service.dart';
 import 'dart:io';
 
 enum QuestionLoadState { idle, loading, loaded, error }
@@ -55,51 +54,81 @@ class QuestionProvider with ChangeNotifier {
       // Stream OCR with rich preprocessed results from server pipeline
       final ocrResult = await _apiService.processOcrImageWithRetry(imageFile);
       final rawText = ocrResult['rawText'] as String? ?? '';
-      
-      if (rawText.trim().isEmpty) {
-        _creationError = 'Could not extract text from the image.';
+      final latex = ocrResult['latex'] as String? ?? '';
+      final confidence = ocrResult['confidence'] != null
+          ? (ocrResult['confidence'] as num).toDouble() * 100
+          : null;
+      final hasContent = rawText.trim().isNotEmpty || latex.trim().isNotEmpty;
+
+      if (!hasContent) {
+        _creationError = 'Could not extract text from the image. Please ensure the photo is clear and well-lit.';
       } else {
-        // Step 1: Check if the backend returned structured MCQ options
-        if (ocrResult.containsKey('parsedMcq') && ocrResult['parsedMcq'] != null) {
-          final parsed = Map<String, dynamic>.from(ocrResult['parsedMcq']);
-          final String questionText = parsed['question'] ?? '';
-          final List<dynamic> rawOptions = parsed['options'] ?? [];
+        _questionQueue.clear();
+
+        if (ocrResult.containsKey('parsedQuestions') && ocrResult['parsedQuestions'] != null) {
+          final List<dynamic> parsedList = ocrResult['parsedQuestions'];
           
-          List<String> options = [];
-          for (var opt in rawOptions) {
-            if (opt is Map) {
-              options.add(opt['text']?.toString() ?? '');
-            } else {
-              options.add(opt.toString());
+          for (var parsedItem in parsedList) {
+            final parsed = Map<String, dynamic>.from(parsedItem);
+            
+            // Because we pass latex to the detector, 'question' is already latex-formatted
+            final String parsedQuestion = parsed['question'] ?? '';
+            final List<dynamic> rawOptions = parsed['options'] ?? [];
+            
+            List<String> options = [];
+            for (var opt in rawOptions) {
+              if (opt is Map) {
+                options.add(opt['text']?.toString() ?? '');
+              } else {
+                options.add(opt.toString());
+              }
             }
+            
+            // Ensure exactly 4 options are populated
+            while (options.length < 4) {
+              options.add('');
+            }
+            if (options.length > 4) {
+              options = options.sublist(0, 4);
+            }
+            
+            // We use parsedQuestion if available, otherwise fall back to the full image text
+            final String finalQuestionText = parsedQuestion.trim().isNotEmpty 
+                ? parsedQuestion 
+                : (latex.trim().isNotEmpty ? latex : rawText);
+                
+            _questionQueue.add(
+              ScanData(
+                questionText: finalQuestionText,
+                options: options,
+                correctAnswer: '',
+                latex: latex, // Keep full original image latex for reference/debugging
+                rawText: rawText, // Keep full original image text for reference/debugging
+                confidence: confidence,
+              )
+            );
           }
-          
-          // Ensure exactly 4 options are populated
-          while (options.length < 4) {
-            options.add('');
-          }
-          if (options.length > 4) {
-            options = options.sublist(0, 4);
-          }
-          
-          _questionQueue = [
+        }
+        
+        // Fallback: If no structured questions were found, create a single entry
+        if (_questionQueue.isEmpty) {
+          final questionText = latex.trim().isNotEmpty ? latex : rawText;
+          _questionQueue.add(
             ScanData(
               questionText: questionText,
-              options: options,
+              options: ['', '', '', ''],
               correctAnswer: '',
-              latex: ocrResult['latex'] as String?,
+              latex: latex,
               rawText: rawText,
+              confidence: confidence,
             )
-          ];
-        } else {
-          // Step 2: Fallback to client-side extraction if backend parsing wasn't complete
-          _questionQueue = LatexExtractorService.extractQuestions(rawText);
+          );
         }
       }
     } on ApiException catch (e) {
       _creationError = e.message;
     } catch (e) {
-      _creationError = 'Scanning failed. Please try again.';
+      _creationError = 'Scanning failed: ${e.toString()}';
     } finally {
       _isScanning = false;
       notifyListeners();

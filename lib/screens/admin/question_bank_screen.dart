@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/question_provider.dart';
 import '../../models/question_model.dart';
 import '../../utils/constants.dart';
-import '../shared/katex_widget.dart';
+import '../shared/latex_widget.dart';
 import '../../services/image_service.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -225,7 +225,7 @@ class _QuestionCard extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
                 ),
                 const SizedBox(height: 12),
-                KaTeXWidget(text: question.questionText),
+                LaTeXWidget(text: question.questionText),
                 if (question.diagram != null) ...[
                   const SizedBox(height: 12),
                   ClipRRect(

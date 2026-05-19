@@ -8,12 +8,15 @@ import '../../models/question_model.dart';
 import '../../services/image_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/latex_converter.dart';
-import '../shared/katex_widget.dart';
+import '../shared/latex_widget.dart';
 import '../../widgets/animations.dart';
 import '../../widgets/confidence_badge.dart';
 
 class CreateQuestionTab extends StatefulWidget {
-  const CreateQuestionTab({super.key});
+  /// Optional image file to process immediately after mounting (used by lost-data recovery)
+  final File? initialScanFile;
+
+  const CreateQuestionTab({super.key, this.initialScanFile});
 
   @override
   State<CreateQuestionTab> createState() => _CreateQuestionTabState();
@@ -32,26 +35,62 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
   String _selectedLanguage = 'English';
   String? _selectedChapter;
   File? _diagramFile;
-  bool _useKaTeXPreview = true;
+  bool _useLaTeXPreview = true;
+  bool _isManualInput = false;
 
   final _imageService = ImageService();
+  QuestionProvider? _subscribedProvider;
 
   @override
   void initState() {
     super.initState();
     _selectedChapter = AppConstants.classChapters[_selectedClass]?.first;
-    _handleLostData();
-    
-    // Auto-sync when queue changes
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _syncFromQueue();
+      // If AdminDashboard passed a file (lost-data recovery path), scan it now
+      if (widget.initialScanFile != null) {
+        _processScannedFile(widget.initialScanFile!);
+      } else {
+        // Normal launch: sync if there's already something in the queue
+        _syncFromQueue();
+      }
+
+      // Listen for future queue changes (e.g., triggered externally by AdminDashboard)
+      final provider = Provider.of<QuestionProvider>(context, listen: false);
+      _subscribedProvider = provider;
+      _lastQueueLength = provider.questionQueue.length;
+      _lastIsScanning = provider.isScanning;
+      provider.addListener(_onProviderChange);
     });
   }
 
-  Future<void> _handleLostData() async {
-    final lostFile = await _imageService.getLostData();
-    if (lostFile != null && mounted) {
-      _processScannedFile(File(lostFile.path));
+  int _lastQueueLength = 0;
+  bool _lastIsScanning = false;
+
+  void _onProviderChange() {
+    if (!mounted) return;
+    final provider = Provider.of<QuestionProvider>(context, listen: false);
+    // Detect when scanning just finished and a new queue item appeared
+    final scanningJustFinished = _lastIsScanning && !provider.isScanning;
+    final queueGrew = provider.questionQueue.length > _lastQueueLength;
+    _lastIsScanning = provider.isScanning;
+    _lastQueueLength = provider.questionQueue.length;
+
+    if (scanningJustFinished && queueGrew) {
+      _syncFromQueue();
+      final ocr = provider.questionQueue.first;
+      if (ocr.confidence != null) {
+        _showOCRConfidenceFeedback(ocr.confidence!);
+      }
+    } else if (scanningJustFinished && provider.creationError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.creationError!),
+          backgroundColor: const Color(0xFFBA1A1A),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
     }
   }
 
@@ -332,7 +371,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
   }
 
   Future<void> _saveQuestion() async {
-    if (_questionCtrl.text.isEmpty) {
+    if (_questionCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Question text is required'),
@@ -343,11 +382,48 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
       return;
     }
 
+    for (int i = 0; i < 4; i++) {
+      if (_optCtrls[i].text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Option ${String.fromCharCode(65 + i)} is required'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+        return;
+      }
+    }
+
+    final String correctAnswer = _correctCtrl.text.trim();
+    if (correctAnswer.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Correct answer is required'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
+    final List<String> options = _optCtrls.map((c) => c.text.trim()).toList();
+    if (!options.any((o) => o.toLowerCase() == correctAnswer.toLowerCase())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Correct answer must match one of the 4 options exactly'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
     final provider = Provider.of<QuestionProvider>(context, listen: false);
     final q = Question(
       questionText: _questionCtrl.text.trim(),
-      options: _optCtrls.map((c) => c.text.trim()).toList(),
-      correctAnswer: _correctCtrl.text.trim(),
+      options: options,
+      correctAnswer: correctAnswer,
       classNo: _selectedClass,
       language: _selectedLanguage,
       chapter: _selectedChapter ?? '',
@@ -360,7 +436,14 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
       _clearForm();
       if (provider.questionQueue.isNotEmpty) {
         provider.popQuestionFromQueue();
+      }
+      
+      if (provider.questionQueue.isNotEmpty) {
         _syncFromQueue();
+      } else {
+        setState(() {
+          _isManualInput = false;
+        });
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -384,6 +467,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
 
   @override
   void dispose() {
+    _subscribedProvider?.removeListener(_onProviderChange);
     _questionCtrl.dispose();
     for (var c in _optCtrls) {
       c.dispose();
@@ -411,7 +495,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
               ),
               const SizedBox(height: 24),
               
-              if (!hasQueue && !provider.isScanning) 
+              if (!hasQueue && !provider.isScanning && !_isManualInput) 
                 FadeInSlide(
                   duration: const Duration(milliseconds: 550),
                   delay: const Duration(milliseconds: 100),
@@ -428,7 +512,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                   duration: const Duration(milliseconds: 550),
                   delay: const Duration(milliseconds: 100),
                   child: _buildFormSection('Question Content', [
-                    _label('Question Text (KaTeX Preview)'),
+                    _label('Question Text (LaTeX Preview)'),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _questionCtrl,
@@ -447,16 +531,16 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                             children: [
                               ChoiceChip(
                                 label: const Text(
-                                  'KaTeX Render',
+                                  'LaTeX Render',
                                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                 ),
-                                selected: _useKaTeXPreview,
+                                selected: _useLaTeXPreview,
                                 selectedColor: const Color(0x200051D5),
                                 labelStyle: TextStyle(
-                                  color: _useKaTeXPreview ? const Color(0xAA0051D5) : Colors.black54,
+                                  color: _useLaTeXPreview ? const Color(0xAA0051D5) : Colors.black54,
                                 ),
                                 onSelected: (selected) {
-                                  if (selected) setState(() => _useKaTeXPreview = true);
+                                  if (selected) setState(() => _useLaTeXPreview = true);
                                 },
                               ),
                               const SizedBox(width: 8),
@@ -465,13 +549,13 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                                   'Readable Text',
                                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                 ),
-                                selected: !_useKaTeXPreview,
+                                selected: !_useLaTeXPreview,
                                 selectedColor: const Color(0x200051D5),
                                 labelStyle: TextStyle(
-                                  color: !_useKaTeXPreview ? const Color(0xAA0051D5) : Colors.black54,
+                                  color: !_useLaTeXPreview ? const Color(0xAA0051D5) : Colors.black54,
                                 ),
                                 onSelected: (selected) {
-                                  if (selected) setState(() => _useKaTeXPreview = false);
+                                  if (selected) setState(() => _useLaTeXPreview = false);
                                 },
                               ),
                             ],
@@ -480,8 +564,8 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                       ),
                       const SizedBox(height: 8),
                       _buildPreviewBox(
-                        _useKaTeXPreview
-                            ? KaTeXWidget(text: _questionCtrl.text)
+                        _useLaTeXPreview
+                            ? LaTeXWidget(text: _questionCtrl.text)
                             : Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -681,6 +765,45 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
               ),
             ],
           ),
+          const SizedBox(height: 20),
+          BounceOnTap(
+            onTap: () {
+              setState(() {
+                _isManualInput = true;
+              });
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFECEEF0), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.edit_note_rounded, color: Color(0xFF4A148C), size: 28),
+                  SizedBox(width: 12),
+                  Text(
+                    'Input Manually',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -726,7 +849,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
   }
 
   Widget _buildQuestionQueueStatus(QuestionProvider provider) {
-    if (provider.questionQueue.length <= 1) return const SizedBox.shrink();
+    if (provider.questionQueue.isEmpty) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
@@ -738,12 +861,16 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
         children: [
           const Icon(Icons.auto_awesome_motion_rounded, color: Color(0xFF0051D5)),
           const SizedBox(width: 14),
-          Text(
-            'Batch Scan: ${provider.questionQueue.length} questions remaining in queue',
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF0051D5),
-              fontSize: 14,
+          Expanded(
+            child: Text(
+              provider.questionQueue.length > 1 
+                ? 'Batch Scan: ${provider.questionQueue.length} questions remaining in queue'
+                : 'Editing Parsed Question',
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF0051D5),
+                fontSize: 14,
+              ),
             ),
           ),
         ],
@@ -812,19 +939,47 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
         if (provider.questionQueue.isNotEmpty)
           Expanded(
             child: OutlinedButton(
-              onPressed: () => provider.clearQueue(),
+              onPressed: () {
+                _clearForm();
+                provider.popQuestionFromQueue();
+                if (provider.questionQueue.isNotEmpty) {
+                  _syncFromQueue();
+                } else {
+                  setState(() => _isManualInput = false);
+                }
+              },
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 side: const BorderSide(color: Color(0xFFBA1A1A)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
               child: const Text(
-                'Discard Queue',
+                'Skip',
                 style: TextStyle(color: Color(0xFFBA1A1A), fontWeight: FontWeight.w800),
               ),
             ),
           ),
-        if (provider.questionQueue.isNotEmpty) const SizedBox(width: 12),
+        if (provider.questionQueue.isEmpty && _isManualInput)
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () {
+                _clearForm();
+                setState(() {
+                  _isManualInput = false;
+                });
+              },
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                side: const BorderSide(color: Color(0xFF75859D)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Color(0xFF75859D), fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+        if (provider.questionQueue.isNotEmpty || _isManualInput) const SizedBox(width: 12),
         Expanded(
           flex: 2,
           child: ElevatedButton(

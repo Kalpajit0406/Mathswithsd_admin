@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'dart:io';
 
 import '../../providers/auth_provider.dart';
-import '../../providers/question_provider.dart';
 import '../../services/image_service.dart';
 import 'manage_students_screen.dart';
 import 'create_test_screen.dart';
@@ -35,7 +34,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<void> _checkLostData() async {
     final lostFile = await _imageService.getLostData();
     if (lostFile != null && mounted) {
-      // Navigate to Create Question screen
+      // Pass the recovered file directly into CreateQuestionTab — no race conditions
       _navigateToCreateQuestion(fileToProcess: File(lostFile.path));
     }
   }
@@ -58,21 +57,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             elevation: 0,
           ),
-          body: const CreateQuestionTab(),
+          // Pass file directly: tab scans it in initState via postFrameCallback
+          body: CreateQuestionTab(initialScanFile: fileToProcess),
         ),
       ),
-    ).then((_) {
-      // Refresh or clear if needed
-    });
-
-    if (fileToProcess != null) {
-      // Small delay to ensure Tab is mounted
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          Provider.of<QuestionProvider>(context, listen: false).scanImage(fileToProcess);
-        }
-      });
-    }
+    );
   }
 
   @override

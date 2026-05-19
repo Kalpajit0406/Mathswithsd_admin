@@ -2,7 +2,7 @@ class AppConstants {
   // Use local LAN IP since you are testing on a physical device
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.37.148.209:5000',
+    defaultValue: 'http://10.37.148.133:5000',
   );
   // static const String baseUrl = 'http://10.0.2.2:5000'; // For emulator
   // API Endpoints
@@ -10,8 +10,8 @@ class AppConstants {
   static const String registerEndpoint = '/api/v1/student/register';
   static const String questionsEndpoint = '/api/v1/question/questions';
   static const String createQuestionEndpoint = '/api/v1/question/addQuestion'; // updated
-  static const String uploadImageEndpoint = '/api/v1/scan'; // updated
-  static const String processOcrEndpoint = '/api/v1/scan/process'; // Assuming this or similar, wait I will handle OCR in dart if it doesn't exist
+  static const String uploadImageEndpoint = '/api/v1/admin/ocr/scan';
+  static const String processOcrEndpoint = '/api/v1/admin/ocr/scan';
   static const String testsEndpoint = '/api/v1/tests';
   static const String createTestEndpoint = '/api/v1/tests/create';
   static const String announcementsEndpoint = '/api/v1/announcements'; // Will be mocked
