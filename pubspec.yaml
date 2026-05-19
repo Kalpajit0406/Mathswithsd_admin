@@ -1,0 +1,60 @@
+name: mathswithsd_admin
+description: "MathsWithSD - AI-powered math exam platform for students and teachers."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  
+  # HTTP & Networking
+  http: ^1.6.0
+  
+  # State Management
+  provider: ^6.1.5+1
+  
+  # Storage
+  shared_preferences: ^2.5.5
+  flutter_secure_storage: ^9.2.4
+  
+  # Image handling
+  image_picker: ^1.2.2
+  image_cropper: ^12.2.1
+  image: ^4.8.0
+  cached_network_image: ^3.4.1
+  
+  
+  # Camera
+  camera: ^0.12.0+1
+  permission_handler: ^12.0.1
+  
+  # Navigation
+  go_router: ^15.1.2
+  
+  # WebView for KaTeX
+  webview_flutter: ^4.13.0
+  
+  # Utils
+  intl: ^0.20.2
+  path_provider: ^2.1.5
+  path: ^1.9.1
+
+dependency_overrides:
+  path_provider_android: 2.2.12
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
