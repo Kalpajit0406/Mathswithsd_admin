@@ -13,9 +13,6 @@ class ImageService {
       // 1600px is still high quality for Mathpix but much safer for RAM
       final XFile? photo = await _picker.pickImage(
         source: source,
-        imageQuality: 60, // Slightly lower quality to significantly reduce byte size
-        maxWidth: 1600,
-        maxHeight: 1600,
       );
 
       if (photo == null) return null;

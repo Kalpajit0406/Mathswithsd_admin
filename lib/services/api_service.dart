@@ -499,7 +499,15 @@ class ApiService {
   }) async {
     try {
       final uri = Uri.parse('$_baseUrl/api/v1/pdf/extract-questions');
-      final request = http.MultipartRequest('POST', uri);
+      final request = MultipartRequestWithProgress(
+        'POST',
+        uri,
+        onProgress: (bytes, total) {
+          if (onProgress != null && total > 0) {
+            onProgress(bytes / total);
+          }
+        },
+      );
 
       // Add headers
       final headers = await _headers();
@@ -514,16 +522,6 @@ class ApiService {
           filename: pdfFile.path.split('/').last,
         ),
       );
-
-      // Track progress
-      var uploadProgress = 0;
-      request.onProgress = (bytes) {
-        uploadProgress = bytes;
-        final totalBytes = request.contentLength;
-        if (totalBytes != null && totalBytes > 0) {
-          onProgress?.call(uploadProgress / totalBytes);
-        }
-      };
 
       final streamedResponse = await request.send().timeout(const Duration(seconds: 120));
       final response = await http.Response.fromStream(streamedResponse);
@@ -660,3 +658,33 @@ class ApiService {
     }
   }
 }
+
+class MultipartRequestWithProgress extends http.MultipartRequest {
+  final void Function(int bytes, int totalBytes)? onProgress;
+
+  MultipartRequestWithProgress(
+    String method,
+    Uri url, {
+    this.onProgress,
+  }) : super(method, url);
+
+  @override
+  http.ByteStream finalize() {
+    final byteStream = super.finalize();
+    if (onProgress == null) return byteStream;
+
+    final total = contentLength;
+    int bytesUploaded = 0;
+
+    final transformer = StreamTransformer<List<int>, List<int>>.fromHandlers(
+      handleData: (data, sink) {
+        bytesUploaded += data.length;
+        onProgress!(bytesUploaded, total);
+        sink.add(data);
+      },
+    );
+
+    return http.ByteStream(byteStream.transform(transformer));
+  }
+}
+

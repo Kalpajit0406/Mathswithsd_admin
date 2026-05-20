@@ -28,6 +28,7 @@ dependencies:
   image_cropper: ^12.2.1
   image: ^4.8.0
   cached_network_image: ^3.4.1
+  file_picker: ^8.1.7
   
   
   # Camera

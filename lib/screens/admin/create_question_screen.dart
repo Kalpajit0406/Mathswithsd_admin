@@ -37,6 +37,8 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
   String _selectedLanguage = 'English';
   String? _selectedChapter;
   File? _diagramFile;
+  File? _selectedGalleryFile;
+  int? _selectedCorrectOptionIndex;
   bool _useLaTeXPreview = true;
   bool _isManualInput = false;
   bool _showPdfPicker = false;
@@ -68,7 +70,8 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
   }
 
   int _lastQueueIndex = -1;
-  bool _lastIsScanning = false;
+  int _lastQueueLength = 0;
+  bool _lastIsScanning = false; // Corrected type to bool
 
   void _onProviderChange() {
     if (!mounted) return;
@@ -119,7 +122,20 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
       } else {
         _correctCtrl.clear();
       }
+      
+      // Calculate matching checkbox correct option index
+      int? foundIndex;
+      if (current.correctAnswer != null && current.correctAnswer!.isNotEmpty) {
+        for (int i = 0; i < 4; i++) {
+          if (_optCtrls[i].text.trim().toLowerCase() == current.correctAnswer!.trim().toLowerCase()) {
+            foundIndex = i;
+            break;
+          }
+        }
+      }
+      
       setState(() {
+        _selectedCorrectOptionIndex = foundIndex;
         _isManualInput = false;
       });
     }
@@ -133,46 +149,17 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
     _correctCtrl.clear();
     setState(() {
       _diagramFile = null;
+      _selectedCorrectOptionIndex = null;
+      _selectedGalleryFile = null;
     });
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    // Check permissions
+    // Request permission only for camera, as gallery uses system Photo Picker on Android 13+ without permissions
     if (source == ImageSource.camera) {
       final status = await Permission.camera.request();
       if (status.isPermanentlyDenied) {
         _showPermissionDialog('Camera');
-        return;
-      }
-      if (!status.isGranted) return;
-    } else {
-      PermissionStatus status;
-      if (Platform.isAndroid) {
-        // Safe permissions checking across all Android versions (Android 13+ vs older)
-        int sdkInt = 0;
-        try {
-          final apiMatch = RegExp(r'API\s+(\d+)').firstMatch(Platform.operatingSystemVersion);
-          if (apiMatch != null) {
-            sdkInt = int.parse(apiMatch.group(1)!);
-          } else {
-            final androidMatch = RegExp(r'Android\s+(\d+)').firstMatch(Platform.operatingSystemVersion);
-            if (androidMatch != null) {
-              final ver = int.parse(androidMatch.group(1)!);
-              if (ver >= 13) sdkInt = 33;
-            }
-          }
-        } catch (_) {}
-
-        if (sdkInt >= 33) {
-          status = await Permission.photos.request();
-        } else {
-          status = await Permission.storage.request();
-        }
-      } else {
-        status = await Permission.photos.request();
-      }
-      if (status.isPermanentlyDenied) {
-        _showPermissionDialog('Gallery');
         return;
       }
       if (!status.isGranted) return;
@@ -181,7 +168,13 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
     try {
       final file = await _imageService.pickAndCropImage(context, source: source);
       if (!mounted || file == null) return;
-      _processScannedFile(file);
+      if (source == ImageSource.gallery) {
+        setState(() {
+          _selectedGalleryFile = file;
+        });
+      } else {
+        _processScannedFile(file);
+      }
     } catch (e) {
       if (mounted) {
         _showSnack('Image selection failed: $e');
@@ -222,6 +215,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
         ),
       );
     } else if (provider.questionQueue.isNotEmpty) {
+      setState(() {
+        _selectedGalleryFile = null;
+      });
       _syncFromQueue();
       
       // Show OCR confidence feedback
@@ -544,6 +540,137 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
           );
         }
 
+        // Show Gallery Image preview/upload if requested
+        if (_selectedGalleryFile != null) {
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () {
+                        setState(() {
+                          _selectedGalleryFile = null;
+                        });
+                      },
+                    ),
+                    const Text(
+                      'Gallery Image Preview',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 350),
+                        color: const Color(0xFFF1F5F9),
+                        child: Image.file(
+                          _selectedGalleryFile!,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Selected Image ready for OCR',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'File path: ${_selectedGalleryFile!.path.split('/').last}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            if (provider.isScanning) ...[
+                              const Center(
+                                child: Column(
+                                  children: [
+                                    CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0051D5)),
+                                    ),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      'Processing image with Mathpix OCR...',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF0051D5),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ] else ...[
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _selectedGalleryFile = null;
+                                        });
+                                      },
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                      child: const Text('Cancel'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () => _processScannedFile(_selectedGalleryFile!),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF0051D5),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        elevation: 0,
+                                      ),
+                                      child: const Text(
+                                        'Extract Questions',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -664,22 +791,76 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                   duration: const Duration(milliseconds: 550),
                   delay: const Duration(milliseconds: 200),
                   child: _buildFormSection('Options', [
-                    for (int i = 0; i < 4; i++) ...[
-                      _label('Option ${String.fromCharCode(65 + i)}'),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _optCtrls[i],
-                        decoration: _inputDec('Enter option ${i+1}...'),
-                        onChanged: (_) => setState(() {}),
+                    const Text(
+                      'Check the box next to the correct answer:',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF64748B),
                       ),
-                      const SizedBox(height: 12),
-                    ],
-                    _label('Correct Answer'),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _correctCtrl,
-                      decoration: _inputDec('Exact text of correct option'),
                     ),
+                    const SizedBox(height: 14),
+                    for (int i = 0; i < 4; i++) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 24.0, right: 8.0),
+                            child: Tooltip(
+                              message: 'Mark Option ${String.fromCharCode(65 + i)} as correct',
+                              child: Transform.scale(
+                                scale: 1.1,
+                                child: Checkbox(
+                                  value: _selectedCorrectOptionIndex == i,
+                                  activeColor: const Color(0xFF0051D5),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                  onChanged: (bool? val) {
+                                    setState(() {
+                                      if (val == true) {
+                                        _selectedCorrectOptionIndex = i;
+                                        _correctCtrl.text = _optCtrls[i].text.trim();
+                                      } else {
+                                        if (_selectedCorrectOptionIndex == i) {
+                                          _selectedCorrectOptionIndex = null;
+                                          _correctCtrl.clear();
+                                        }
+                                      }
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _label('Option ${String.fromCharCode(65 + i)}'),
+                                const SizedBox(height: 8),
+                                TextFormField(
+                                  controller: _optCtrls[i],
+                                  decoration: _inputDec('Enter option ${i + 1}...'),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (_selectedCorrectOptionIndex == i) {
+                                        _correctCtrl.text = val.trim();
+                                      }
+                                    });
+                                  },
+                                ),
+                                if (_optCtrls[i].text.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  _buildOptionPreviewBox(
+                                    LaTeXWidget(text: _optCtrls[i].text),
+                                  ),
+                                ],
+                                const SizedBox(height: 16),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ]),
                 ),
 
@@ -1168,6 +1349,19 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
           child,
         ],
       ),
+    );
+  }
+
+  Widget _buildOptionPreviewBox(Widget child) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F9FB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFECEEF0)),
+      ),
+      child: child,
     );
   }
 

@@ -129,9 +129,19 @@ class QuestionProvider with ChangeNotifier {
       final hasContent = rawText.trim().isNotEmpty || latex.trim().isNotEmpty;
 
       if (!hasContent) {
-        _creationError = 'Could not extract text from the image. Please ensure the photo is clear and well-lit.';
+        _creationError =
+            'Could not extract text from the image. Please ensure the photo is clear and well-lit.';
       } else {
-        _populateQueueFromOcr(ocrResult, rawText, latex, confidence);
+        // Prepare data for the generic _populateQueueFromOcr
+        final Map<String, dynamic> preparedOcrData = {
+          'questions': [
+            ocrResult.containsKey('parsedQuestions') && ocrResult['parsedQuestions'] != null ? ocrResult['parsedQuestions'] : null,
+          ].whereType<List<dynamic>>().expand((e) => e).toList(),
+          'rawText': rawText,
+          'latex': latex,
+          'confidence': confidence,
+        };
+        await _populateQueueFromOcr(preparedOcrData);
       }
     } on ApiException catch (e) {
       _creationError = e.message;
@@ -141,90 +151,6 @@ class QuestionProvider with ChangeNotifier {
       _isScanning = false;
       notifyListeners();
     }
-  }
-
-  /// Populate queue from OCR response with enhanced data preservation
-  void _populateQueueFromOcr(
-    Map<String, dynamic> ocrResult,
-    String rawText,
-    String latex,
-    double? confidence,
-  ) {
-    _questionQueue.clear();
-
-    if (ocrResult.containsKey('parsedQuestions') && ocrResult['parsedQuestions'] != null) {
-      final List<dynamic> parsedList = ocrResult['parsedQuestions'];
-
-      for (var parsedItem in parsedList) {
-        final parsed = Map<String, dynamic>.from(parsedItem);
-
-        // Extract question text
-        final String parsedQuestion = parsed['question'] ?? '';
-        final List<dynamic> rawOptions = parsed['options'] ?? [];
-
-        // Normalize options to List<String>
-        List<String> options = [];
-        for (var opt in rawOptions) {
-          if (opt is Map) {
-            options.add(opt['text']?.toString() ?? '');
-          } else {
-            options.add(opt.toString());
-          }
-        }
-
-        // Ensure exactly 4 options
-        while (options.length < 4) options.add('');
-        if (options.length > 4) options = options.sublist(0, 4);
-
-        // Use parsed question if available, otherwise full image text
-        final String finalQuestionText = parsedQuestion.trim().isNotEmpty
-            ? parsedQuestion
-            : (latex.trim().isNotEmpty ? latex : rawText);
-
-        // Create ScanData with enhanced data preservation
-        _questionQueue.add(
-          ScanData(
-            questionText: finalQuestionText,
-            options: options,
-            correctAnswer: '',
-            latex: latex,
-            rawText: rawText,
-            confidence: confidence,
-            
-            // NEW: Raw OCR preservation
-            rawOcrData: parsed['rawOcrData'] ?? {
-              'sourceUsed': ocrResult['detectionQuality']?['source'] ?? 'unknown',
-              'rawText': rawText,
-              'rawLatex': latex,
-              'confidence': confidence,
-            },
-            questionNumber: parsed['questionNumber'],
-            detectionOrder: parsed['detectionOrder'],
-            verified: false,
-          ),
-        );
-      }
-    }
-
-    // Fallback: If no structured questions were found, create single entry
-    if (_questionQueue.isEmpty) {
-      final questionText = latex.trim().isNotEmpty ? latex : rawText;
-      _questionQueue.add(
-        ScanData(
-          questionText: questionText,
-          options: ['', '', '', ''],
-          correctAnswer: '',
-          latex: latex,
-          rawText: rawText,
-          confidence: confidence,
-          detectionOrder: 1,
-          verified: false,
-        ),
-      );
-    }
-
-    print('[QuestionProvider] Queue populated: ${_questionQueue.length} questions');
-    _currentQueueIndex = 0;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -587,11 +513,27 @@ class QuestionProvider with ChangeNotifier {
       final scanDataList = <ScanData>[];
       for (int i = 0; i < questions.length; i++) {
         final q = questions[i];
+        
+        final List<String> extractedOptions = [];
+        final rawOptions = q['options'];
+        if (rawOptions is List) {
+          for (var opt in rawOptions) {
+            if (opt is Map) {
+              extractedOptions.add(opt['text']?.toString() ?? '');
+            } else {
+              extractedOptions.add(opt?.toString() ?? '');
+            }
+          }
+        }
+        
+        // Ensure exactly 4 options
+        while (extractedOptions.length < 4) {
+          extractedOptions.add('');
+        }
+        
         final scanData = ScanData(
           questionText: q['questionText'] ?? q['question'] ?? '',
-          options: q['options'] ?? [],
-          format: q['format'] ?? 'mcq',
-          language: q['language'] ?? 'English',
+          options: extractedOptions.sublist(0, 4),
           questionNumber: q['questionNumber']?.toString(),
           detectionOrder: q['detectionOrder'] ?? i,
           rawOcrData: q['rawOcrData'] ?? q,

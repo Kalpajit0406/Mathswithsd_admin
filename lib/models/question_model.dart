@@ -81,9 +81,24 @@ class ScanData {
   });
 
   factory ScanData.fromJson(Map<String, dynamic> json) {
+    // Safely extract options: handles both List<String> and List<Map> formats
+    final rawOptions = json['options'] as List? ?? [];
+    final List<String> parsedOptions = [];
+    for (var opt in rawOptions) {
+      if (opt is Map) {
+        parsedOptions.add(opt['text']?.toString() ?? '');
+      } else {
+        parsedOptions.add(opt?.toString() ?? '');
+      }
+    }
+    // Ensure exactly 4 options
+    while (parsedOptions.length < 4) {
+      parsedOptions.add('');
+    }
+
     return ScanData(
       questionText: json['questionText'] ?? json['question'] ?? '',
-      options: List<String>.from(json['options'] ?? []),
+      options: parsedOptions.sublist(0, 4),
       correctAnswer: json['correctAnswer'],
       latex: json['latex'],
       rawText: json['rawText'],

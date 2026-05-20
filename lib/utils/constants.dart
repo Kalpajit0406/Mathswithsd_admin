@@ -2,7 +2,7 @@ class AppConstants {
   // Use local LAN IP since you are testing on a physical device
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.37.148.133:5000',
+    defaultValue: 'http://10.37.148.11:5000',
   );
   // static const String baseUrl = 'http://10.0.2.2:5000'; // For emulator
   // API Endpoints
