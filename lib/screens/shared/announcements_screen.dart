@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/exam_provider.dart';
-import '../../models/test_model.dart';
-
+import '../../models/test_model.dart';import 'create_announcement_screen.dart';
 class AnnouncementsScreen extends StatefulWidget {
   final bool isAdmin;
   final String? studentClass; // for filtering
@@ -81,6 +80,23 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
           );
         },
       ),
+      floatingActionButton: widget.isAdmin
+          ? FloatingActionButton(
+              backgroundColor: const Color(0xFF1565C0),
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CreateAnnouncementScreen()),
+                );
+                if (result == true && mounted) {
+                  // Reload announcements after creating new one
+                  Provider.of<ExamProvider>(context, listen: false).loadAnnouncements();
+                }
+              },
+              tooltip: 'Create Announcement',
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
     );
   }
 }

@@ -45,7 +45,7 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: const Text('Announcement sent!'), backgroundColor: Colors.green.shade700),
       );
-      Navigator.pop(context);
+      Navigator.pop(context, true); // Return true to signal success
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
