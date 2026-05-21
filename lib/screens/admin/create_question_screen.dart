@@ -52,16 +52,21 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
     _selectedChapter = AppConstants.classChapters[_selectedClass]?.first;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<QuestionProvider>(context, listen: false);
+      provider.restoreQueueState().then((_) {
+        if (!mounted) return;
+        _syncFromQueue();
+      });
+
       // If AdminDashboard passed a file (lost-data recovery path), scan it now
       if (widget.initialScanFile != null) {
         _processScannedFile(widget.initialScanFile!);
-      } else {
+      } else if (provider.questionQueue.isNotEmpty) {
         // Normal launch: sync if there's already something in the queue
         _syncFromQueue();
       }
 
       // Listen for future queue changes (e.g., triggered externally by AdminDashboard)
-      final provider = Provider.of<QuestionProvider>(context, listen: false);
       _subscribedProvider = provider;
       _lastQueueLength = provider.questionQueue.length;
       _lastIsScanning = provider.isScanning;
@@ -467,14 +472,21 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
         ),
       );
     } else {
+      final errorText = provider.creationError ?? 'Failed to save';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(provider.creationError ?? 'Failed to save'),
+          content: Text(errorText),
           backgroundColor: const Color(0xFFBA1A1A),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
+
+      if (errorText.toLowerCase().contains('session expired')) {
+        await Future.delayed(const Duration(milliseconds: 250));
+        if (!mounted) return;
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      }
     }
   }
 

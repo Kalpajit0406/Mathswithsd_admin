@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/question_model.dart';
 import '../services/api_service.dart';
 import 'dart:io';
@@ -9,6 +11,7 @@ enum QueueNavigationMode { sequential, random, skip }
 /// Enhanced provider with multi-question queue management
 class QuestionProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
+  static const String _queuePrefsKey = 'ocr_question_queue_state_v1';
 
   // Questions database
   List<Question> _questions = [];
@@ -84,6 +87,65 @@ class QuestionProvider with ChangeNotifier {
   bool get isQueueActive => _questionQueue.isNotEmpty;
   int get verificationHistoryLength => _verificationHistory.length;
 
+  Future<void> _persistQueueState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final state = {
+        'queueSessionId': _queueSessionId,
+        'currentQueueIndex': _currentQueueIndex,
+        'items': _questionQueue.map((item) => item.toJson()).toList(),
+        'lastOcrResponse': _lastOcrResponse,
+      };
+      await prefs.setString(_queuePrefsKey, jsonEncode(state));
+    } catch (_) {
+      // Queue persistence is best-effort; scanning should continue even if disk write fails.
+    }
+  }
+
+  Future<void> restoreQueueState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_queuePrefsKey);
+      if (raw == null || raw.isEmpty) return;
+
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return;
+
+      final items = decoded['items'] as List?;
+      _queueSessionId = decoded['queueSessionId']?.toString();
+      _currentQueueIndex = (decoded['currentQueueIndex'] as num?)?.toInt() ?? 0;
+      
+      if (items != null) {
+        _questionQueue = items
+            .whereType<Map>()
+            .map((item) => ScanData.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+        if (_questionQueue.isNotEmpty && _currentQueueIndex >= _questionQueue.length) {
+          _currentQueueIndex = _questionQueue.length - 1;
+        }
+      }
+      _lastOcrResponse = decoded['lastOcrResponse'] is Map
+          ? Map<String, dynamic>.from(decoded['lastOcrResponse'] as Map)
+          : null;
+      notifyListeners();
+
+      // Sync and restore from backend if sessionId is present
+      if (_queueSessionId != null && _queueSessionId!.isNotEmpty) {
+        try {
+          final response = await _apiService.getOcrSession(_queueSessionId!);
+          if (response['success'] == true && response['data'] != null) {
+            final sessionData = response['data'] as Map<String, dynamic>;
+            await _populateQueueFromOcrSession(sessionData);
+          }
+        } catch (e) {
+          debugPrint('Failed to sync queue state with backend, using local cache: $e');
+        }
+      }
+    } catch (_) {
+      // Ignore corrupted local state
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // QUESTION LOADING
   // ═══════════════════════════════════════════════════════════════════════════
@@ -118,35 +180,23 @@ class QuestionProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final ocrResult = await _apiService.processOcrImageWithRetry(imageFile);
-      _lastOcrResponse = ocrResult;
-      
-      final rawText = ocrResult['rawText'] as String? ?? '';
-      final latex = ocrResult['latex'] as String? ?? '';
-      final confidence = ocrResult['confidence'] != null
-          ? (ocrResult['confidence'] as num).toDouble() * 100
-          : null;
-      final hasContent = rawText.trim().isNotEmpty || latex.trim().isNotEmpty;
-
-      if (!hasContent) {
-        _creationError =
-            'Could not extract text from the image. Please ensure the photo is clear and well-lit.';
+      final response = await _apiService.startOcrSessionWithRetry(imageFile);
+      if (response['success'] == true && response['data'] != null) {
+        final sessionData = response['data'] as Map<String, dynamic>;
+        await _populateQueueFromOcrSession(sessionData);
       } else {
-        // Prepare data for the generic _populateQueueFromOcr
-        final Map<String, dynamic> preparedOcrData = {
-          'questions': [
-            ocrResult.containsKey('parsedQuestions') && ocrResult['parsedQuestions'] != null ? ocrResult['parsedQuestions'] : null,
-          ].whereType<List<dynamic>>().expand((e) => e).toList(),
-          'rawText': rawText,
-          'latex': latex,
-          'confidence': confidence,
-        };
-        await _populateQueueFromOcr(preparedOcrData);
+        _creationError = 'Failed to start OCR session';
       }
     } on ApiException catch (e) {
-      _creationError = e.message;
+      if (e.statusCode == 401) {
+        _creationError = 'Session expired. Please login again.';
+      } else if (e.statusCode == 504 || e.statusCode == 408) {
+        _creationError = 'OCR timed out. Try a clearer/smaller image and retry.';
+      } else {
+        _creationError = e.message;
+      }
     } catch (e) {
-      _creationError = 'Scanning failed: ${e.toString()}';
+      _creationError = 'OCR Error: ${e.toString()}';
     } finally {
       _isScanning = false;
       notifyListeners();
@@ -161,6 +211,12 @@ class QuestionProvider with ChangeNotifier {
   bool nextQuestion() {
     if (hasNextQuestion) {
       _currentQueueIndex++;
+      _persistQueueState();
+      if (_queueSessionId != null) {
+        _apiService.setCurrentOcrSessionIndex(_queueSessionId!, _currentQueueIndex).catchError((e) {
+          debugPrint('Failed to sync index with backend: $e');
+        });
+      }
       notifyListeners();
       return true;
     }
@@ -171,6 +227,12 @@ class QuestionProvider with ChangeNotifier {
   bool previousQuestion() {
     if (hasPreviousQuestion) {
       _currentQueueIndex--;
+      _persistQueueState();
+      if (_queueSessionId != null) {
+        _apiService.setCurrentOcrSessionIndex(_queueSessionId!, _currentQueueIndex).catchError((e) {
+          debugPrint('Failed to sync index with backend: $e');
+        });
+      }
       notifyListeners();
       return true;
     }
@@ -181,6 +243,12 @@ class QuestionProvider with ChangeNotifier {
   bool jumpToIndex(int index) {
     if (index >= 0 && index < _questionQueue.length) {
       _currentQueueIndex = index;
+      _persistQueueState();
+      if (_queueSessionId != null) {
+        _apiService.setCurrentOcrSessionIndex(_queueSessionId!, _currentQueueIndex).catchError((e) {
+          debugPrint('Failed to sync index with backend: $e');
+        });
+      }
       notifyListeners();
       return true;
     }
@@ -190,11 +258,20 @@ class QuestionProvider with ChangeNotifier {
   /// Remove current question from queue
   bool removeCurrentQuestion() {
     if (_currentQueueIndex < _questionQueue.length) {
-      _questionQueue.removeAt(_currentQueueIndex);
+      final indexToDelete = _currentQueueIndex;
+      _questionQueue.removeAt(indexToDelete);
       if (_currentQueueIndex >= _questionQueue.length && _currentQueueIndex > 0) {
         _currentQueueIndex--;
       }
+      
+      _persistQueueState();
       notifyListeners();
+
+      if (_queueSessionId != null) {
+        _apiService.deleteOcrSessionItem(_queueSessionId!, indexToDelete).catchError((e) {
+          debugPrint('Failed to delete queue item on backend: $e');
+        });
+      }
       return true;
     }
     return false;
@@ -211,6 +288,7 @@ class QuestionProvider with ChangeNotifier {
       _verificationHistory.add(_questionQueue[_currentQueueIndex]);
       
       if (moveNext) nextQuestion();
+      _persistQueueState();
       notifyListeners();
     }
   }
@@ -221,6 +299,7 @@ class QuestionProvider with ChangeNotifier {
       _verificationHistory.add(_questionQueue[0]);
       _questionQueue.removeAt(0);
       _currentQueueIndex = 0;
+      _persistQueueState();
       notifyListeners();
     }
   }
@@ -236,6 +315,7 @@ class QuestionProvider with ChangeNotifier {
       final restored = _verificationHistory.removeLast();
       _questionQueue.insert(0, restored);
       _currentQueueIndex = 0;
+      _persistQueueState();
       notifyListeners();
       return true;
     }
@@ -246,7 +326,21 @@ class QuestionProvider with ChangeNotifier {
   void updateCurrentQuestion(ScanData updatedData) {
     if (_currentQueueIndex < _questionQueue.length) {
       _questionQueue[_currentQueueIndex] = updatedData;
+      _persistQueueState();
       notifyListeners();
+
+      if (_queueSessionId != null) {
+        _apiService.updateOcrSessionItem(
+          _queueSessionId!,
+          _currentQueueIndex,
+          questionText: updatedData.questionText,
+          options: updatedData.options,
+          questionNumber: updatedData.questionNumber,
+          verified: updatedData.verified,
+        ).catchError((e) {
+          debugPrint('Failed to update queue item on backend: $e');
+        });
+      }
     }
   }
 
@@ -256,6 +350,8 @@ class QuestionProvider with ChangeNotifier {
     _currentQueueIndex = 0;
     _verificationHistory.clear();
     _lastOcrResponse = null;
+    _queueSessionId = null;
+    _persistQueueState();
     notifyListeners();
   }
 
@@ -269,19 +365,45 @@ class QuestionProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final saved = await _apiService.createQuestionResilient(question, diagramFile: diagramFile);
+      Question saved;
+      if (_queueSessionId != null && _currentQueueIndex < _questionQueue.length) {
+        final response = await _apiService.verifyOcrSessionItem(
+          _queueSessionId!,
+          _currentQueueIndex,
+          chapter: question.chapter,
+          classNo: question.classNo,
+          correctAnswer: question.correctAnswer,
+          language: question.language,
+          questionText: question.questionText,
+          options: question.options,
+          diagramFile: diagramFile,
+        );
+        if (response['success'] == true && response['data'] != null) {
+          saved = Question.fromJson(response['data']);
+        } else {
+          throw ApiException('Verification failed: ${response['message'] ?? 'Unknown error'}', 400);
+        }
+      } else {
+        saved = await _apiService.createQuestionResilient(question, diagramFile: diagramFile);
+      }
+
       _questions.insert(0, saved);
       
       // Mark current queue item as verified if it exists
       if (_currentQueueIndex < _questionQueue.length) {
         markCurrentAsVerified(moveNext: true);
       }
+      _persistQueueState();
       
       _isSaving = false;
       notifyListeners();
       return true;
     } on ApiException catch (e) {
-      _creationError = e.message;
+      if (e.statusCode == 401) {
+        _creationError = 'Session expired. Please login again.';
+      } else {
+        _creationError = e.message;
+      }
       _isSaving = false;
       notifyListeners();
       return false;
@@ -363,11 +485,8 @@ class QuestionProvider with ChangeNotifier {
       if (response != null && response['success'] == true) {
         final data = response['data'];
         
-        // Store session ID for later reference
-        _queueSessionId = data['queueSessionId'];
-        
         // Populate queue from extracted questions
-        await _populateQueueFromOcr(data);
+        await _populateQueueFromOcrSession(data);
         
         _isScanning = false;
         _creationError = null;
@@ -475,8 +594,7 @@ class QuestionProvider with ChangeNotifier {
       
       if (response != null && response['success'] == true) {
         final data = response['data'];
-        _queueSessionId = data['queueSessionId'];
-        await _populateQueueFromOcr(data);
+        await _populateQueueFromOcrSession(data);
       }
     } catch (error) {
       throw Exception('Failed to extract questions: $error');
@@ -547,10 +665,72 @@ class QuestionProvider with ChangeNotifier {
       _currentQueueIndex = 0;
       _verificationHistory.clear();
       _lastOcrResponse = ocrData;
+      _persistQueueState();
 
       notifyListeners();
     } catch (error) {
       throw Exception('Failed to populate queue: $error');
+    }
+  }
+
+  /// Helper to populate queue from OCR API session response
+  Future<void> _populateQueueFromOcrSession(Map<String, dynamic> sessionData) async {
+    try {
+      _queueSessionId = (sessionData['sessionId'] ?? sessionData['queueSessionId'])?.toString();
+      _currentQueueIndex = (sessionData['currentIndex'] as num?)?.toInt() ?? 0;
+      
+      final items = sessionData['items'] as List?;
+      if (items == null || items.isEmpty) {
+        _questionQueue = [];
+        _currentQueueIndex = 0;
+        _persistQueueState();
+        notifyListeners();
+        return;
+      }
+
+      final scanDataList = <ScanData>[];
+      for (int i = 0; i < items.length; i++) {
+        final item = items[i];
+        if (item is Map) {
+          if (item['isDeleted'] == true) continue;
+          
+          final List<String> extractedOptions = [];
+          final rawOptions = item['options'];
+          if (rawOptions is List) {
+            for (var opt in rawOptions) {
+              if (opt is Map) {
+                extractedOptions.add(opt['text']?.toString() ?? '');
+              } else {
+                extractedOptions.add(opt?.toString() ?? '');
+              }
+            }
+          }
+          
+          while (extractedOptions.length < 4) {
+            extractedOptions.add('');
+          }
+          
+          final scanData = ScanData(
+            questionText: item['questionText'] ?? item['question'] ?? '',
+            options: extractedOptions.sublist(0, 4),
+            questionNumber: item['questionNumber']?.toString(),
+            detectionOrder: (item['detectionOrder'] as num?)?.toInt() ?? i,
+            rawOcrData: item['rawOcrData'] is Map ? Map<String, dynamic>.from(item['rawOcrData'] as Map) : null,
+            verified: item['verified'] ?? false,
+            verifiedAt: item['verifiedAt'] != null ? DateTime.tryParse(item['verifiedAt'].toString()) : null,
+          );
+          scanDataList.add(scanData);
+        }
+      }
+
+      _questionQueue = scanDataList;
+      if (_currentQueueIndex >= _questionQueue.length) {
+        _currentQueueIndex = _questionQueue.isEmpty ? 0 : _questionQueue.length - 1;
+      }
+      _persistQueueState();
+      notifyListeners();
+    } catch (error) {
+      throw Exception('Failed to populate queue from session: $error');
     }
   }
 }

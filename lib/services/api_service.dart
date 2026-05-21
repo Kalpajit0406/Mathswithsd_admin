@@ -30,9 +30,13 @@ class ApiService {
     try {
       final override = await AuthStorageService.getBaseUrlOverride();
       if (override != null && override.isNotEmpty) {
-        _resolvedBaseUrl = override;
-        debugPrint('[ApiService] Using stored base URL override: $override');
-        return override;
+        final overrideResolved = await _probeBaseUrl(override);
+        if (overrideResolved) {
+          _resolvedBaseUrl = override;
+          debugPrint('[ApiService] Using stored base URL override: $override');
+          return override;
+        }
+        debugPrint('[ApiService] Stored base URL override is unreachable, rediscovering: $override');
       }
     } catch (e) {
       debugPrint('[ApiService] Error reading base URL override: $e');
@@ -45,20 +49,104 @@ class ApiService {
     ];
     for (final c in candidates) {
       try {
-        final probeUri = Uri.parse('$c${AppConstants.questionsEndpoint}?classNo=1&language=English');
-        final resp = await http.get(probeUri).timeout(const Duration(seconds: 3));
-        if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        if (await _probeBaseUrl(c)) {
           _resolvedBaseUrl = c;
-          debugPrint('[ApiService] Resolved base URL to $c');
+          await AuthStorageService.saveBaseUrlOverride(c);
+          debugPrint('[ApiService] Resolved base URL to $c via health probe');
           return c;
         }
       } catch (e) {
         debugPrint('[ApiService] Probe failed for $c -> $e');
       }
     }
+
+    // Try LAN subnet discovery as a final fallback for physical devices.
+    try {
+      final discovered = await _discoverLanBackendBaseUrl();
+      if (discovered != null && discovered.isNotEmpty) {
+        _resolvedBaseUrl = discovered;
+        await AuthStorageService.saveBaseUrlOverride(discovered);
+        debugPrint('[ApiService] Resolved base URL via LAN discovery to $discovered');
+        return discovered;
+      }
+    } catch (e) {
+      debugPrint('[ApiService] LAN discovery failed: $e');
+    }
+
     debugPrint('[ApiService] Falling back to static base URL: $_staticBaseUrl');
     _resolvedBaseUrl = _staticBaseUrl;
     return _staticBaseUrl;
+  }
+
+  Future<bool> _probeBaseUrl(String baseUrl) async {
+    final probeUris = [
+      Uri.parse('$baseUrl/api/health'),
+      Uri.parse('$baseUrl/health'),
+      Uri.parse('$baseUrl/api/v1/health'),
+    ];
+
+    for (final probeUri in probeUris) {
+      try {
+        final resp = await http.get(probeUri).timeout(const Duration(seconds: 3));
+        if (resp.statusCode >= 200 && resp.statusCode < 300) {
+          return true;
+        }
+      } catch (_) {
+        // Try the next compatible endpoint.
+      }
+    }
+
+    return false;
+  }
+
+  Future<String?> _discoverLanBackendBaseUrl() async {
+    final interfaces = await NetworkInterface.list(
+      type: InternetAddressType.IPv4,
+      includeLoopback: false,
+    );
+
+    final candidates = <String>{};
+    for (final interface in interfaces) {
+      for (final address in interface.addresses) {
+        final octets = address.address.split('.');
+        if (octets.length != 4) continue;
+
+        final prefix = '${octets[0]}.${octets[1]}.${octets[2]}';
+        final lastOctet = int.tryParse(octets[3]);
+        final commonHosts = <int>{1, 2, 3, 4, 5, 10, 11, 20, 50, 100, 101, 110, 111, 120, 125, 150, 200, 254};
+        if (lastOctet != null) commonHosts.remove(lastOctet);
+
+        for (final host in commonHosts) {
+          candidates.add('http://$prefix.$host:5000');
+        }
+
+        // Full /24 scan only if common hosts fail later.
+        for (var host = 1; host <= 254; host++) {
+          if (lastOctet == host) continue;
+          candidates.add('http://$prefix.$host:5000');
+        }
+      }
+    }
+
+    for (final candidate in candidates) {
+      try {
+        final probeUris = [
+          Uri.parse('$candidate/api/health'),
+          Uri.parse('$candidate/health'),
+          Uri.parse('$candidate/api/v1/health'),
+        ];
+        for (final probeUri in probeUris) {
+          final resp = await http.get(probeUri).timeout(const Duration(milliseconds: 750));
+          if (resp.statusCode >= 200 && resp.statusCode < 300) {
+            return candidate;
+          }
+        }
+      } catch (_) {
+        // Continue scanning.
+      }
+    }
+
+    return null;
   }
 
   Future<Uri> _uri(String endpoint) async {
@@ -86,6 +174,57 @@ class ApiService {
     await AuthStorageService.clearAll();
     // Notify listeners to redirect to login (if using Provider or similar)
   }
+
+  Future<String> _requireAuthToken() async {
+    final token = await AuthStorageService.getToken();
+    if (token == null || token.trim().isEmpty) {
+      throw ApiException('Session expired. Please login again.', 401);
+    }
+    return token.trim();
+  }
+
+  /// Check if the backend server is reachable.
+  Future<bool> isBackendHealthy() async {
+    try {
+      final base = await _getBaseUrl();
+      final candidates = [
+        Uri.parse('$base/api/health'),
+        Uri.parse('$base/health'),
+        Uri.parse('$base/api/v1/health'),
+      ];
+      for (final uri in candidates) {
+        final response = await http.get(uri).timeout(const Duration(seconds: 5));
+        if (response.statusCode >= 200 && response.statusCode < 300) return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('[ApiService] Backend health check failed: $e');
+      return false;
+    }
+  }
+
+  /// Check if the OCR service is operational.
+  Future<bool> isOcrHealthy() async {
+    try {
+      final base = await _getBaseUrl();
+      final candidates = [
+        Uri.parse('$base/api/v1/admin/ocr/health'),
+        Uri.parse('$base/api/v1/ocr/health'),
+        Uri.parse('$base/api/health'),
+      ];
+      for (final uri in candidates) {
+        final response = await http.get(uri, headers: await _headers()).timeout(const Duration(seconds: 5));
+        if (response.statusCode >= 200 && response.statusCode < 300) return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('[ApiService] OCR health check failed: $e');
+      return false;
+    }
+  }
+
+  /// Returns the currently resolved base URL.
+  Future<String> getConfiguredBaseUrl() async => _getBaseUrl();
 
   dynamic _processResponse(http.Response response) {
     debugPrint('[ApiService] Response: ${response.statusCode} (${response.request?.url})');
@@ -153,6 +292,21 @@ class ApiService {
     ).timeout(const Duration(seconds: 20));
   }
 
+  Future<bool> validateSession() async {
+    try {
+      final response = await http.get(
+        await _uri('/api/v1/student/me'),
+        headers: await _headers(),
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode >= 200 && response.statusCode < 300) return true;
+      if (response.statusCode == 401 || response.statusCode == 403) return false;
+      return true;
+    } catch (_) {
+      // Network/server issue: keep existing session state, don't force logout.
+      return true;
+    }
+  }
+
   // ─── Questions ────────────────────────────────────────────────────────────────
 
   Future<List<Question>> getQuestions({int? classNo, String? language}) async {
@@ -179,12 +333,12 @@ class ApiService {
   }
 
   Future<String> uploadImage(File imageFile) async {
-    final token = await AuthStorageService.getToken();
+    final token = await _requireAuthToken();
     final request = http.MultipartRequest(
       'POST',
       await _uri(AppConstants.uploadImageEndpoint),
     );
-    request.headers['Authorization'] = 'Bearer ${token ?? ''}';
+    request.headers['Authorization'] = 'Bearer $token';
     request.headers['ngrok-skip-browser-warning'] = 'true';
     final bytes = await imageFile.readAsBytes();
     request.files.add(http.MultipartFile.fromBytes(
@@ -214,12 +368,15 @@ class ApiService {
       }
       
       final token = await AuthStorageService.getToken();
+      if (token == null || token.trim().isEmpty) {
+        throw ApiException('Session expired. Please login again.', 401);
+      }
       final request = http.MultipartRequest(
         'POST',
         Uri.parse('${await _getBaseUrl()}${AppConstants.processOcrEndpoint}'),
       );
 
-      request.headers['Authorization'] = 'Bearer ${token ?? ''}';
+      request.headers['Authorization'] = 'Bearer ${token.trim()}';
       request.headers['ngrok-skip-browser-warning'] = 'true';
       debugPrint('[ApiService] Multipart OCR request headers set with auth');
       
@@ -388,13 +545,13 @@ class ApiService {
   }
 
   Future<Question> createQuestionResilient(Question question, {File? diagramFile}) async {
-    final token = await AuthStorageService.getToken();
+    final token = await _requireAuthToken();
     final request = http.MultipartRequest(
       'POST',
       await _uri(AppConstants.createQuestionEndpoint),
     );
 
-    request.headers['Authorization'] = 'Bearer ${token ?? ''}';
+    request.headers['Authorization'] = 'Bearer $token';
     request.headers['ngrok-skip-browser-warning'] = 'true';
 
     // Add text fields
@@ -417,13 +574,13 @@ class ApiService {
   }
 
   Future<Question> updateQuestion(String id, Map<String, dynamic> updateData, {File? diagramFile}) async {
-    final token = await AuthStorageService.getToken();
+    final token = await _requireAuthToken();
     final request = http.MultipartRequest(
       'PUT',
       await _uri('/api/v1/question/update/$id'),
     );
 
-    request.headers['Authorization'] = 'Bearer ${token ?? ''}';
+    request.headers['Authorization'] = 'Bearer $token';
     request.headers['ngrok-skip-browser-warning'] = 'true';
 
     // Add text fields
@@ -451,6 +608,177 @@ class ApiService {
       headers: await _headers(),
     ).timeout(const Duration(seconds: 15));
     _processResponse(response);
+  }
+
+  // ─── OCR Verification Sessions ─────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> startOcrSession(File imageFile) async {
+    final token = await _requireAuthToken();
+    final request = http.MultipartRequest(
+      'POST',
+      await _uri('/api/v1/admin/ocr/session/start'),
+    );
+    request.headers['Authorization'] = 'Bearer $token';
+    request.headers['ngrok-skip-browser-warning'] = 'true';
+    
+    request.files.add(await http.MultipartFile.fromPath(
+      'image', 
+      imageFile.path,
+    ));
+
+    try {
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      final response = await http.Response.fromStream(streamedResponse);
+      return _processResponse(response);
+    } on TimeoutException {
+      throw ApiException('OCR request timed out. The image may be too large or the server is slow.', 408);
+    } on SocketException catch (e) {
+      final baseUrl = await getConfiguredBaseUrl();
+      throw ApiException('Cannot reach OCR server at $baseUrl. Is the backend running?\nError: ${e.message}', 503);
+    } catch (e) {
+      throw ApiException('OCR session start failed: $e', 500);
+    }
+  }
+
+  /// Start OCR session with automatic retries and health checks
+  Future<Map<String, dynamic>> startOcrSessionWithRetry(File imageFile, {int maxAttempts = 3}) async {
+    // First check if backend is healthy
+    final isHealthy = await isBackendHealthy();
+    if (!isHealthy) {
+      final baseUrl = await getConfiguredBaseUrl();
+      throw ApiException(
+        'Backend server unreachable at $baseUrl.\n\nPlease check:\n'
+        '1. Backend server is running\n'
+        '2. Device is on the same WiFi network\n'
+        '3. IP address is correct',
+        503
+      );
+    }
+
+    // Check OCR service specifically
+    final ocrHealthy = await isOcrHealthy();
+    if (!ocrHealthy) {
+      throw ApiException('OCR service is not responding. Please try again.', 503);
+    }
+
+    int attempt = 0;
+    Duration delay = const Duration(seconds: 2);
+
+    while (attempt < maxAttempts) {
+      try {
+        return await startOcrSession(imageFile);
+      } on ApiException {
+        rethrow;
+      } catch (e) {
+        attempt++;
+        if (attempt >= maxAttempts) {
+          throw ApiException('OCR session failed after $maxAttempts attempts: $e', 500);
+        }
+        debugPrint('[ApiService] OCR attempt $attempt failed, retrying in ${delay.inSeconds}s...');
+        await Future.delayed(delay);
+        delay = Duration(seconds: delay.inSeconds * 2); // exponential backoff
+      }
+    }
+    throw ApiException('OCR session failed after $maxAttempts attempts', 500);
+  }
+
+  Future<Map<String, dynamic>> getOcrSession(String sessionId) async {
+    final response = await http.get(
+      await _uri('/api/v1/admin/ocr/session/$sessionId'),
+      headers: await _headers(),
+    ).timeout(const Duration(seconds: 15));
+    return _processResponse(response);
+  }
+
+  Future<Map<String, dynamic>> updateOcrSessionItem(
+    String sessionId,
+    int index, {
+    String? questionText,
+    List<String>? options,
+    String? questionNumber,
+    bool? verified,
+  }) async {
+    final body = <String, dynamic>{};
+    if (questionText != null) body['questionText'] = questionText;
+    if (options != null) body['options'] = options;
+    if (questionNumber != null) body['questionNumber'] = questionNumber;
+    if (verified != null) body['verified'] = verified;
+
+    final response = await http.put(
+      await _uri('/api/v1/admin/ocr/session/$sessionId/item/$index'),
+      headers: await _headers(),
+      body: jsonEncode(body),
+    ).timeout(const Duration(seconds: 15));
+    return _processResponse(response);
+  }
+
+  Future<Map<String, dynamic>> deleteOcrSessionItem(String sessionId, int index) async {
+    final response = await http.delete(
+      await _uri('/api/v1/admin/ocr/session/$sessionId/item/$index'),
+      headers: await _headers(),
+    ).timeout(const Duration(seconds: 15));
+    return _processResponse(response);
+  }
+
+  Future<Map<String, dynamic>> verifyOcrSessionItem(
+    String sessionId,
+    int index, {
+    required String chapter,
+    required int classNo,
+    required String correctAnswer,
+    required String language,
+    String? questionText,
+    List<String>? options,
+    File? diagramFile,
+  }) async {
+    final token = await _requireAuthToken();
+    final request = http.MultipartRequest(
+      'POST',
+      await _uri('/api/v1/admin/ocr/session/$sessionId/item/$index/verify'),
+    );
+
+    request.headers['Authorization'] = 'Bearer $token';
+    request.headers['ngrok-skip-browser-warning'] = 'true';
+
+    request.fields['chapter'] = chapter;
+    request.fields['classNo'] = classNo.toString();
+    request.fields['correctAnswer'] = correctAnswer;
+    request.fields['language'] = language;
+    if (questionText != null) request.fields['questionText'] = questionText;
+    if (options != null) request.fields['options'] = jsonEncode(options);
+
+    if (diagramFile != null) {
+      request.files.add(await http.MultipartFile.fromPath('diagram', diagramFile.path));
+    }
+
+    final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+    final response = await http.Response.fromStream(streamedResponse);
+    return _processResponse(response);
+  }
+
+  Future<Map<String, dynamic>> setCurrentOcrSessionIndex(String sessionId, int index) async {
+    final response = await http.post(
+      await _uri('/api/v1/admin/ocr/session/$sessionId/index'),
+      headers: await _headers(),
+      body: jsonEncode({'index': index}),
+    ).timeout(const Duration(seconds: 15));
+    return _processResponse(response);
+  }
+
+  Future<Map<String, dynamic>> nextOcrSessionItem(String sessionId) async {
+    final response = await http.post(
+      await _uri('/api/v1/admin/ocr/session/$sessionId/next'),
+      headers: await _headers(),
+    ).timeout(const Duration(seconds: 15));
+    return _processResponse(response);
+  }
+
+  Future<Map<String, dynamic>> prevOcrSessionItem(String sessionId) async {
+    final response = await http.post(
+      await _uri('/api/v1/admin/ocr/session/$sessionId/prev'),
+      headers: await _headers(),
+    ).timeout(const Duration(seconds: 15));
+    return _processResponse(response);
   }
 
   // ─── Retry Methods ───────────────────────────────────────────────────────────

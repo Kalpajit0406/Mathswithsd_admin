@@ -27,6 +27,16 @@ class AuthProvider with ChangeNotifier {
       return;
     }
 
+    final sessionValid = await _apiService.validateSession();
+    if (!sessionValid) {
+      await AuthStorageService.clearAll();
+      _status = AuthStatus.unauthenticated;
+      _user = null;
+      _isAdmin = false;
+      notifyListeners();
+      return;
+    }
+
     final token = await AuthStorageService.getToken();
     final firstName = await AuthStorageService.getUserFirstName();
     final lastName = await AuthStorageService.getUserLastName();
