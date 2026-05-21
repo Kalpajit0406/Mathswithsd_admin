@@ -62,4 +62,13 @@ class AuthStorageService {
     final token = await getToken();
     return token != null && token.isNotEmpty;
   }
+
+  // Base URL override (manual developer/device override)
+  static Future<void> saveBaseUrlOverride(String url) async {
+    await _storage.write(key: AppConstants.baseUrlOverrideKey, value: url);
+  }
+
+  static Future<String?> getBaseUrlOverride() async {
+    return await _storage.read(key: AppConstants.baseUrlOverrideKey);
+  }
 }

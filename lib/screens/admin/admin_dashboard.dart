@@ -9,6 +9,7 @@ import 'manage_students_screen.dart';
 import 'create_test_screen.dart';
 import 'your_tests_screen.dart';
 import '../shared/announcements_screen.dart';
+import '../shared/settings_screen.dart';
 import 'create_question_screen.dart';
 import 'question_bank_screen.dart';
 import '../../widgets/fade_in_slide.dart';
@@ -144,7 +145,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         child: SizedBox(
           height: 60,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _buildNavItem(0, Icons.dashboard_rounded, 'Dashboard'),
               _buildNavItem(1, Icons.assignment_rounded, 'Tests', onTapOverride: () {
@@ -156,6 +157,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               }),
               _buildNavItem(3, Icons.people_rounded, 'Users', onTapOverride: () {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const ManageStudentsScreen()));
+              }),
+              _buildNavItem(4, Icons.settings_rounded, 'Settings', onTapOverride: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
               }),
             ],
           ),

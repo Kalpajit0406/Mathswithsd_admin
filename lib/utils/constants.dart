@@ -29,6 +29,7 @@ class AppConstants {
   static const String userClassKey = 'user_class';
   static const String userFirstNameKey = 'user_first_name';
   static const String userLastNameKey = 'user_last_name';
+  static const String baseUrlOverrideKey = 'api_base_url_override';
 
   // Class Chapters
   static const Map<int, List<String>> classChapters = {

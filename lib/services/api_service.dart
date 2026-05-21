@@ -20,7 +20,51 @@ class ApiException implements Exception {
 }
 
 class ApiService {
-  final String _baseUrl = AppConstants.baseUrl;
+  // Static value from build-time env; resolved at runtime by _getBaseUrl
+  final String _staticBaseUrl = AppConstants.baseUrl;
+  String? _resolvedBaseUrl;
+
+  Future<String> _getBaseUrl() async {
+    if (_resolvedBaseUrl != null && _resolvedBaseUrl!.isNotEmpty) return _resolvedBaseUrl!;
+    // Check for a manual override stored in secure storage
+    try {
+      final override = await AuthStorageService.getBaseUrlOverride();
+      if (override != null && override.isNotEmpty) {
+        _resolvedBaseUrl = override;
+        debugPrint('[ApiService] Using stored base URL override: $override');
+        return override;
+      }
+    } catch (e) {
+      debugPrint('[ApiService] Error reading base URL override: $e');
+    }
+
+    final candidates = <String>[
+      _staticBaseUrl,
+      'http://10.0.2.2:5000', // Android emulator
+      'http://localhost:5000', // Desktop
+    ];
+    for (final c in candidates) {
+      try {
+        final probeUri = Uri.parse('$c${AppConstants.questionsEndpoint}?classNo=1&language=English');
+        final resp = await http.get(probeUri).timeout(const Duration(seconds: 3));
+        if (resp.statusCode >= 200 && resp.statusCode < 300) {
+          _resolvedBaseUrl = c;
+          debugPrint('[ApiService] Resolved base URL to $c');
+          return c;
+        }
+      } catch (e) {
+        debugPrint('[ApiService] Probe failed for $c -> $e');
+      }
+    }
+    debugPrint('[ApiService] Falling back to static base URL: $_staticBaseUrl');
+    _resolvedBaseUrl = _staticBaseUrl;
+    return _staticBaseUrl;
+  }
+
+  Future<Uri> _uri(String endpoint) async {
+    final base = await _getBaseUrl();
+    return Uri.parse('$base$endpoint');
+  }
 
   Future<Map<String, String>> _headers({bool includeAuth = true}) async {
     final headers = <String, String>{
@@ -37,25 +81,65 @@ class ApiService {
     return headers;
   }
 
+  Future<void> _handleUnauthorized() async {
+    debugPrint('[ApiService] 401 Unauthorized - clearing all stored data');
+    await AuthStorageService.clearAll();
+    // Notify listeners to redirect to login (if using Provider or similar)
+  }
+
   dynamic _processResponse(http.Response response) {
+    debugPrint('[ApiService] Response: ${response.statusCode} (${response.request?.url})');
+    
+    // Handle 401 unauthorized
+    if (response.statusCode == 401) {
+      _handleUnauthorized();
+    }
+    
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (response.body.isEmpty) return {};
-      return jsonDecode(response.body);
+      if (response.body.isEmpty) {
+        debugPrint('[ApiService] Empty response body');
+        return {};
+      }
+      try {
+        final decoded = jsonDecode(response.body);
+        debugPrint('[ApiService] Response body (truncated): ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
+        return decoded;
+      } catch (e) {
+        debugPrint('[ApiService] JSON decode error: $e');
+        throw ApiException('Invalid JSON response: $e', response.statusCode);
+      }
     }
     String message = 'Request failed (${response.statusCode})';
     try {
       final body = jsonDecode(response.body);
       message = body['message'] ?? message;
-    } catch (_) {}
+    } catch (_) {
+      debugPrint('[ApiService] Error response body: ${response.body}');
+    }
+    debugPrint('[ApiService] Error: $message');
     throw ApiException(message, response.statusCode);
+  }
+
+  Future<void> _logRequest(String method, Uri uri, Map<String, String>? headers) async {
+    debugPrint('[ApiService] Request: $method ${uri.path}');
+    if (headers != null) {
+      final sanitized = Map<String, String>.from(headers);
+      if (sanitized.containsKey('Authorization')) {
+        sanitized['Authorization'] = sanitized['Authorization']!.replaceAll(RegExp(r'.{20}'), 'X');
+      }
+      debugPrint('[ApiService] Headers: $sanitized');
+    }
   }
 
   // ─── Auth ────────────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> login(String phone, String password) async {
+    final uri = await _uri(AppConstants.loginEndpoint);
+    final headers = await _headers(includeAuth: false);
+    await _logRequest('POST', uri, headers);
     final response = await http.post(
-      Uri.parse('$_baseUrl${AppConstants.loginEndpoint}'),
-      headers: await _headers(includeAuth: false),
+      uri,
+      headers: headers,
       body: jsonEncode({'studentPhone': phone, 'password': password}),
     ).timeout(const Duration(seconds: 20));
     return _processResponse(response);
@@ -63,7 +147,7 @@ class ApiService {
 
   Future<http.Response> register(Map<String, dynamic> data) async {
     return await http.post(
-      Uri.parse('$_baseUrl${AppConstants.registerEndpoint}'),
+      await _uri(AppConstants.registerEndpoint),
       headers: await _headers(includeAuth: false),
       body: jsonEncode(data),
     ).timeout(const Duration(seconds: 20));
@@ -76,8 +160,7 @@ class ApiService {
     if (classNo != null) params['classNo'] = classNo.toString();
     if (language != null) params['language'] = language;
 
-    final uri = Uri.parse('$_baseUrl${AppConstants.questionsEndpoint}')
-        .replace(queryParameters: params);
+    final uri = (await _uri(AppConstants.questionsEndpoint)).replace(queryParameters: params);
     final response = await http.get(uri, headers: await _headers())
         .timeout(const Duration(seconds: 15));
     final data = _processResponse(response);
@@ -87,7 +170,7 @@ class ApiService {
 
   Future<Question> createQuestion(Question question) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl${AppConstants.createQuestionEndpoint}'),
+      await _uri(AppConstants.createQuestionEndpoint),
       headers: await _headers(),
       body: jsonEncode(question.toJson()),
     ).timeout(const Duration(seconds: 15));
@@ -99,7 +182,7 @@ class ApiService {
     final token = await AuthStorageService.getToken();
     final request = http.MultipartRequest(
       'POST',
-      Uri.parse('$_baseUrl${AppConstants.uploadImageEndpoint}'),
+      await _uri(AppConstants.uploadImageEndpoint),
     );
     request.headers['Authorization'] = 'Bearer ${token ?? ''}';
     request.headers['ngrok-skip-browser-warning'] = 'true';
@@ -130,23 +213,21 @@ class ApiService {
         throw ApiException('Captured image is empty (0 bytes). Please try taking the photo again.', 400);
       }
       
+      final token = await AuthStorageService.getToken();
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('$_baseUrl${AppConstants.processOcrEndpoint}'),
+        Uri.parse('${await _getBaseUrl()}${AppConstants.processOcrEndpoint}'),
       );
 
-      final headers = await _headers();
-      // Boundary is set automatically by http package, so we remove manual Content-Type
-      headers.remove('Content-Type');
-      request.headers.addAll(headers);
+      request.headers['Authorization'] = 'Bearer ${token ?? ''}';
+      request.headers['ngrok-skip-browser-warning'] = 'true';
+      debugPrint('[ApiService] Multipart OCR request headers set with auth');
       
-      // Use fromPath for better memory efficiency and reliability
       request.files.add(await http.MultipartFile.fromPath(
         'image', 
         file.path,
       ));
 
-      // 60 second timeout for OCR processing which can be slow
       final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
       final response = await http.Response.fromStream(streamedResponse);
 
@@ -167,7 +248,7 @@ class ApiService {
 
   Future<TestConfig> createTest(Map<String, dynamic> testData) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl${AppConstants.createTestEndpoint}'),
+      await _uri(AppConstants.createTestEndpoint),
       headers: await _headers(),
       body: jsonEncode(testData),
     ).timeout(const Duration(seconds: 15));
@@ -177,7 +258,7 @@ class ApiService {
 
   Future<List<TestConfig>> getAllTests() async {
     final response = await http.get(
-      Uri.parse('$_baseUrl${AppConstants.testsEndpoint}'),
+      await _uri(AppConstants.testsEndpoint),
       headers: await _headers(),
     ).timeout(const Duration(seconds: 15));
     final data = _processResponse(response);
@@ -187,7 +268,7 @@ class ApiService {
 
   Future<List<exam.Exam>> fetchExams(String token) async {
     final response = await http.get(
-      Uri.parse('$_baseUrl${AppConstants.testsEndpoint}'),
+      await _uri(AppConstants.testsEndpoint),
       headers: await _headers(),
     ).timeout(const Duration(seconds: 15));
     final data = _processResponse(response);
@@ -197,7 +278,7 @@ class ApiService {
 
   Future<String> startAttempt(String examId, String token) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl${AppConstants.startAttemptEndpoint}'),
+      await _uri(AppConstants.startAttemptEndpoint),
       headers: await _headers(),
       body: jsonEncode({'examId': examId}),
     ).timeout(const Duration(seconds: 15));
@@ -222,7 +303,7 @@ class ApiService {
     };
 
     final response = await http.post(
-      Uri.parse('$_baseUrl${AppConstants.submitAttemptEndpoint}'),
+      await _uri(AppConstants.submitAttemptEndpoint),
       headers: await _headers(),
       body: jsonEncode(bodyData),
     ).timeout(const Duration(seconds: 15));
@@ -231,7 +312,7 @@ class ApiService {
 
   Future<List<Map<String, dynamic>>> getLeaderboard(String examId) async {
     final response = await http.get(
-      Uri.parse('$_baseUrl/api/v1/testResponse/leaderboard/$examId'),
+      await _uri('/api/v1/testResponse/leaderboard/$examId'),
       headers: await _headers(),
     ).timeout(const Duration(seconds: 15));
     final data = _processResponse(response);
@@ -245,7 +326,7 @@ class ApiService {
     final params = <String, String>{};
     if (targetClass != null) params['targetClass'] = targetClass;
     
-    final uri = Uri.parse('$_baseUrl${AppConstants.announcementsEndpoint}').replace(queryParameters: params);
+    final uri = (await _uri(AppConstants.announcementsEndpoint)).replace(queryParameters: params);
     final response = await http.get(
       uri,
       headers: await _headers(),
@@ -258,7 +339,7 @@ class ApiService {
 
   Future<Announcement> createAnnouncement(Map<String, dynamic> data) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl${AppConstants.announcementsEndpoint}/admin'),
+      await _uri('${AppConstants.announcementsEndpoint}/admin'),
       headers: await _headers(),
       body: jsonEncode(data),
     ).timeout(const Duration(seconds: 15));
@@ -270,7 +351,7 @@ class ApiService {
 
   Future<Map<String, List<StudentUser>>> getAllStudents() async {
     final response = await http.get(
-      Uri.parse('$_baseUrl${AppConstants.studentsEndpoint}'),
+      await _uri(AppConstants.studentsEndpoint),
       headers: await _headers(),
     ).timeout(const Duration(seconds: 15));
     final data = _processResponse(response);
@@ -290,7 +371,7 @@ class ApiService {
 
   Future<void> acceptStudent(String id) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl${AppConstants.acceptStudentEndpoint}'),
+      await _uri(AppConstants.acceptStudentEndpoint),
       headers: await _headers(),
       body: jsonEncode({'id': id}),
     ).timeout(const Duration(seconds: 10));
@@ -299,7 +380,7 @@ class ApiService {
 
   Future<void> rejectStudent(String id) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl${AppConstants.rejectStudentEndpoint}'),
+      await _uri(AppConstants.rejectStudentEndpoint),
       headers: await _headers(),
       body: jsonEncode({'id': id}),
     ).timeout(const Duration(seconds: 10));
@@ -310,7 +391,7 @@ class ApiService {
     final token = await AuthStorageService.getToken();
     final request = http.MultipartRequest(
       'POST',
-      Uri.parse('$_baseUrl${AppConstants.createQuestionEndpoint}'),
+      await _uri(AppConstants.createQuestionEndpoint),
     );
 
     request.headers['Authorization'] = 'Bearer ${token ?? ''}';
@@ -339,7 +420,7 @@ class ApiService {
     final token = await AuthStorageService.getToken();
     final request = http.MultipartRequest(
       'PUT',
-      Uri.parse('$_baseUrl/api/v1/question/update/$id'),
+      await _uri('/api/v1/question/update/$id'),
     );
 
     request.headers['Authorization'] = 'Bearer ${token ?? ''}';
@@ -366,7 +447,7 @@ class ApiService {
 
   Future<void> deleteQuestion(String id) async {
     final response = await http.delete(
-      Uri.parse('$_baseUrl/api/v1/question/delete/$id'),
+      await _uri('/api/v1/question/delete/$id'),
       headers: await _headers(),
     ).timeout(const Duration(seconds: 15));
     _processResponse(response);
@@ -498,7 +579,7 @@ class ApiService {
     Function(double)? onProgress,
   }) async {
     try {
-      final uri = Uri.parse('$_baseUrl/api/v1/pdf/extract-questions');
+      final uri = Uri.parse('${await _getBaseUrl()}/api/v1/pdf/extract-questions');
       final request = MultipartRequestWithProgress(
         'POST',
         uri,
@@ -538,7 +619,7 @@ class ApiService {
   Future<Map<String, dynamic>?> submitPdfByUrl(String url) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/api/v1/pdf/scan-url'),
+        Uri.parse('${await _getBaseUrl()}/api/v1/pdf/scan-url'),
         headers: await _headers(),
         body: jsonEncode({
           'url': url,
@@ -562,7 +643,7 @@ class ApiService {
   Future<Map<String, dynamic>> getPdfStatus(String pdfId) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/api/v1/pdf/status/$pdfId'),
+        Uri.parse('${await _getBaseUrl()}/api/v1/pdf/status/$pdfId'),
         headers: await _headers(),
       ).timeout(const Duration(seconds: 15));
 
@@ -577,7 +658,7 @@ class ApiService {
   Future<List<int>?> downloadPdfResult(String pdfId, String format) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/api/v1/pdf/download/$pdfId/$format'),
+        Uri.parse('${await _getBaseUrl()}/api/v1/pdf/download/$pdfId/$format'),
         headers: await _headers(),
       ).timeout(const Duration(seconds: 60));
 
@@ -596,7 +677,7 @@ class ApiService {
   Future<Map<String, dynamic>?> extractQuestionsFromPdfId(String pdfId) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/api/v1/pdf/extract-questions'),
+        Uri.parse('${await _getBaseUrl()}/api/v1/pdf/extract-questions'),
         headers: await _headers(),
         body: jsonEncode({
           'pdfId': pdfId,
@@ -614,7 +695,7 @@ class ApiService {
   Future<Map<String, dynamic>?> deletePdf(String pdfId) async {
     try {
       final response = await http.delete(
-        Uri.parse('$_baseUrl/api/v1/pdf/$pdfId'),
+        Uri.parse('${await _getBaseUrl()}/api/v1/pdf/$pdfId'),
         headers: await _headers(),
       ).timeout(const Duration(seconds: 15));
 
@@ -628,7 +709,7 @@ class ApiService {
   /// Returns event stream of page results as they complete
   Stream<Map<String, dynamic>> streamPdfPages(String pdfId) async* {
     try {
-      final uri = Uri.parse('$_baseUrl/api/v1/pdf/stream/$pdfId');
+      final uri = Uri.parse('${await _getBaseUrl()}/api/v1/pdf/stream/$pdfId');
       final headers = await _headers();
 
       final request = http.StreamedRequest('GET', uri);
