@@ -112,39 +112,43 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
   void _syncFromQueue() {
     final provider = Provider.of<QuestionProvider>(context, listen: false);
     final current = provider.currentQueueItem;
-    
+
     if (current != null) {
-      _questionCtrl.text = current.questionText;
-      for (int i = 0; i < 4; i++) {
-        if (current.options.length > i) {
-          _optCtrls[i].text = current.options[i];
-        } else {
-          _optCtrls[i].clear();
-        }
-      }
-      if (current.correctAnswer != null && current.correctAnswer!.isNotEmpty) {
-        _correctCtrl.text = current.correctAnswer!;
-      } else {
-        _correctCtrl.clear();
-      }
-      
-      // Calculate matching checkbox correct option index
-      int? foundIndex;
-      if (current.correctAnswer != null && current.correctAnswer!.isNotEmpty) {
+      // Always reset correct-answer state first so stale selection never persists
+      // across question navigation (Bug 3 fix).
+      _correctCtrl.clear();
+
+      // Wrap ALL field assignments in setState so the LaTeX preview widgets
+      // re-render immediately and option radio buttons become selectable.
+      setState(() {
+        _questionCtrl.text = current.questionText;
+
         for (int i = 0; i < 4; i++) {
-          if (_optCtrls[i].text.trim().toLowerCase() == current.correctAnswer!.trim().toLowerCase()) {
-            foundIndex = i;
-            break;
+          _optCtrls[i].text =
+              (current.options.length > i) ? current.options[i] : '';
+        }
+
+        // Re-compute correct-answer checkbox from stored correctAnswer field
+        int? foundIndex;
+        if (current.correctAnswer != null &&
+            current.correctAnswer!.isNotEmpty) {
+          _correctCtrl.text = current.correctAnswer!;
+          for (int i = 0; i < 4; i++) {
+            if (_optCtrls[i].text.trim().toLowerCase() ==
+                current.correctAnswer!.trim().toLowerCase()) {
+              foundIndex = i;
+              break;
+            }
           }
         }
-      }
-      
-      setState(() {
+
         _selectedCorrectOptionIndex = foundIndex;
-        _isManualInput = false;
+        _isManualInput = false; // keep form section visible via hasQueue flag
+        _diagramFile = null;   // clear old diagram so it doesn't carry over
       });
     }
   }
+
 
   void _clearForm() {
     _questionCtrl.clear();
