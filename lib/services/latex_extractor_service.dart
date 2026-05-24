@@ -178,7 +178,7 @@ class LatexExtractorService {
     
     try {
       // Improved split pattern: Handles '1.', '1)', '(1)', and numbered lines at the start of newlines
-      final splitPattern = RegExp(r'\n(?=\s*\d+[\.\)])|(?<=\n)\s*(?=\d+[\.\)])|(?<=\$) \s*(?=\d+[\.\)])');
+      final splitPattern = RegExp(r'\n(?=\s*\d+[\.\)](?!\d))|(?<=\n)\s*(?=\d+[\.\)](?!\d))|(?<=\$)\s*(?=\d+[\.\)](?!\d))');
       final sections = rawText.split(splitPattern);
       
       for (var section in sections) {

@@ -456,6 +456,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
         _syncFromQueue();
       } else {
         // Queue is done
+        provider.clearQueue();
         setState(() {
           _isManualInput = false;
         });
@@ -542,6 +543,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                     setState(() {
                       _showPdfPicker = false;
                     });
+                    _syncFromQueue();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Extracted ${questions.length} questions!')),
                     );
@@ -934,27 +936,69 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
   }
 
   Widget _buildHeader(QuestionProvider provider) {
-    return Column(
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Create Question',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w900,
-            color: Color(0xFF0F172A),
-            letterSpacing: -0.5,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Create Question',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0F172A),
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                provider.isScanning ? 'Processing scanned image with AI OCR...' : 'Scan physical papers or input equations manually',
+                style: const TextStyle(
+                  color: Color(0xFF75859D),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          provider.isScanning ? 'Processing scanned image with AI OCR...' : 'Scan physical papers or input equations manually',
-          style: const TextStyle(
-            color: Color(0xFF75859D),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+        if (provider.questionQueue.isNotEmpty)
+          TextButton.icon(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Discard Scan Session'),
+                  content: const Text('Are you sure you want to discard all remaining scanned questions?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _clearForm();
+                        provider.clearQueue();
+                        setState(() {
+                          _isManualInput = false;
+                        });
+                      },
+                      child: const Text('Discard', style: TextStyle(color: Color(0xFFBA1A1A))),
+                    ),
+                  ],
+                ),
+              );
+            },
+            icon: const Icon(Icons.delete_sweep_rounded, color: Color(0xFFBA1A1A)),
+            label: const Text(
+              'Discard Scan',
+              style: TextStyle(color: Color(0xFFBA1A1A), fontWeight: FontWeight.bold),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -1200,6 +1244,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                       if (provider.isQueueActive) {
                         _syncFromQueue();
                       } else {
+                        _clearForm();
                         setState(() {
                           _isManualInput = false;
                         });
