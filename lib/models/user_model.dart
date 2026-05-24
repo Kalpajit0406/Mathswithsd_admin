@@ -33,7 +33,7 @@ class AppUser {
       lastName: json['lastName'] ?? '',
       phone: json['studentPhone'] ?? json['studentMobile'],
       role: json['role'],
-      classNo: json['classNo'],
+      classNo: json['classNo'] != null ? int.tryParse(json['classNo'].toString()) : null,
       verified: json['verified'],
       isRejected: json['isRejected'] ?? false,
       isBlacklisted: json['isBlacklisted'] ?? false,
@@ -70,7 +70,7 @@ class StudentUser {
       firstName: json['firstName'] ?? '',
       lastName: json['lastName'] ?? '',
       phone: json['studentPhone'] ?? json['studentMobile'],
-      classNo: json['classNo'],
+      classNo: json['classNo'] != null ? int.tryParse(json['classNo'].toString()) : null,
       verified: json['verified'],
       isRejected: json['isRejected'] ?? false,
     );
