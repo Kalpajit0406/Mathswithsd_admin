@@ -8,6 +8,12 @@ enum AuthStatus { initial, loading, authenticated, unauthenticated, error }
 class AuthProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
 
+  AuthProvider() {
+    ApiService.onUnauthorized = () {
+      logout();
+    };
+  }
+
   AuthStatus _status = AuthStatus.initial;
   AppUser? _user;
   String? _errorMessage;

@@ -439,6 +439,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
     }
 
     final provider = Provider.of<QuestionProvider>(context, listen: false);
+    final bool isQueueFlow = provider.questionQueue.isNotEmpty;
+    final bool wasLastQuestion = isQueueFlow && !provider.hasNextQuestion;
+
     final q = Question(
       questionText: _questionCtrl.text.trim(),
       options: options,
@@ -454,29 +457,72 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
     if (success) {
       _clearForm();
       
-      // NOTE: provider.saveQuestion() already called markCurrentAsVerified(moveNext: true)
-      // which internally advances the queue index via nextQuestion().
-      // Do NOT call provider.nextQuestion() again here — that would double-skip.
-      if (provider.isQueueActive) {
+      if (isQueueFlow && wasLastQuestion) {
+        // Show completion dialog and redirect
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: const [
+                Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 28),
+                SizedBox(width: 8),
+                Text('All Questions Saved'),
+              ],
+            ),
+            content: const Text(
+              'All questions in this scan session have been successfully verified and saved to the database.',
+              style: TextStyle(fontSize: 15),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                },
+                child: const Text(
+                  'OK',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0051D5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ).then((_) {
+          provider.clearQueue();
+          if (mounted) {
+            setState(() {
+              _isManualInput = false;
+            });
+            _clearForm();
+          }
+        });
+      } else if (provider.questionQueue.isNotEmpty) {
         _syncFromQueue();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('✓ Question saved! Loading next...'),
+            backgroundColor: const Color(0xFF4CAF50),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
       } else {
-        // Queue is done — all questions processed
-        provider.clearQueue();
+        // Manual input flow: question saved and reset form
         setState(() {
           _isManualInput = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('✓ Question saved successfully!'),
+            backgroundColor: const Color(0xFF4CAF50),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
       }
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: provider.isQueueActive
-              ? const Text('✓ Question saved! Loading next...')
-              : const Text('✓ All questions saved successfully!'),
-          backgroundColor: const Color(0xFF4CAF50),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
     } else {
       final errorText = provider.creationError ?? 'Failed to save';
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1382,7 +1428,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
             child: provider.isSaving
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                 : Text(
-                    provider.questionQueue.length > 1 ? 'Save & Next Question' : 'Save Form Question',
+                    provider.questionQueue.isNotEmpty
+                        ? (provider.hasNextQuestion ? 'Save & Next Question' : 'Save & Finish')
+                        : 'Save Question',
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
                   ),
           ),

@@ -20,6 +20,7 @@ class ApiException implements Exception {
 }
 
 class ApiService {
+  static VoidCallback? onUnauthorized;
   // Static value from build-time env; resolved at runtime by _getBaseUrl
   final String _staticBaseUrl = AppConstants.baseUrl;
   String? _resolvedBaseUrl;
@@ -79,23 +80,13 @@ class ApiService {
   }
 
   Future<bool> _probeBaseUrl(String baseUrl) async {
-    final probeUris = [
-      Uri.parse('$baseUrl/api/health'),
-      Uri.parse('$baseUrl/health'),
-      Uri.parse('$baseUrl/api/v1/health'),
-    ];
-
-    for (final probeUri in probeUris) {
-      try {
-        final resp = await http.get(probeUri).timeout(const Duration(seconds: 3));
-        if (resp.statusCode >= 200 && resp.statusCode < 300) {
-          return true;
-        }
-      } catch (_) {
-        // Try the next compatible endpoint.
+    try {
+      final probeUri = Uri.parse('$baseUrl/health');
+      final resp = await http.get(probeUri).timeout(const Duration(milliseconds: 1000));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return true;
       }
-    }
-
+    } catch (_) {}
     return false;
   }
 
@@ -120,7 +111,7 @@ class ApiService {
           candidates.add('http://$prefix.$host:5000');
         }
 
-        // Full /24 scan only if common hosts fail later.
+        // Full /24 scan
         for (var host = 1; host <= 254; host++) {
           if (lastOctet == host) continue;
           candidates.add('http://$prefix.$host:5000');
@@ -128,21 +119,26 @@ class ApiService {
       }
     }
 
-    for (final candidate in candidates) {
-      try {
-        final probeUris = [
-          Uri.parse('$candidate/api/health'),
-          Uri.parse('$candidate/health'),
-          Uri.parse('$candidate/api/v1/health'),
-        ];
-        for (final probeUri in probeUris) {
-          final resp = await http.get(probeUri).timeout(const Duration(milliseconds: 750));
-          if (resp.statusCode >= 200 && resp.statusCode < 300) {
-            return candidate;
-          }
+    if (candidates.isEmpty) return null;
+
+    final candidateList = candidates.toList();
+    String? foundUrl;
+
+    const batchSize = 40;
+    for (var i = 0; i < candidateList.length; i += batchSize) {
+      final end = (i + batchSize < candidateList.length) ? i + batchSize : candidateList.length;
+      final batch = candidateList.sublist(i, end);
+
+      await Future.wait(batch.map((url) async {
+        if (foundUrl != null) return;
+        final ok = await _probeBaseUrl(url);
+        if (ok) {
+          foundUrl = url;
         }
-      } catch (_) {
-        // Continue scanning.
+      }));
+
+      if (foundUrl != null) {
+        return foundUrl;
       }
     }
 
@@ -172,7 +168,7 @@ class ApiService {
   Future<void> _handleUnauthorized() async {
     debugPrint('[ApiService] 401 Unauthorized - clearing all stored data');
     await AuthStorageService.clearAll();
-    // Notify listeners to redirect to login (if using Provider or similar)
+    onUnauthorized?.call();
   }
 
   Future<String> _requireAuthToken() async {
