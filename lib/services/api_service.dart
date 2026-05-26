@@ -380,9 +380,11 @@ class ApiService {
       request.headers['ngrok-skip-browser-warning'] = 'true';
       debugPrint('[ApiService] Multipart OCR request headers set with auth');
       
-      request.files.add(await http.MultipartFile.fromPath(
+      final bytes = await file.readAsBytes();
+      request.files.add(http.MultipartFile.fromBytes(
         'image', 
-        file.path,
+        bytes,
+        filename: file.path.split('/').last,
       ));
 
       final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
@@ -613,20 +615,34 @@ class ApiService {
   // ─── OCR Verification Sessions ─────────────────────────────────────────────
 
   Future<Map<String, dynamic>> startOcrSession(File imageFile) async {
-    final token = await _requireAuthToken();
-    final request = http.MultipartRequest(
-      'POST',
-      await _uri('/api/v1/admin/ocr/session/start'),
-    );
-    request.headers['Authorization'] = 'Bearer $token';
-    request.headers['ngrok-skip-browser-warning'] = 'true';
-    
-    request.files.add(await http.MultipartFile.fromPath(
-      'image', 
-      imageFile.path,
-    ));
-
     try {
+      debugPrint("[ApiService] startOcrSession file path: ${imageFile.path}");
+      final bool exists = await imageFile.exists();
+      if (!exists) {
+        throw ApiException('Image file does not exist at path: ${imageFile.path}', 400);
+      }
+      
+      final int length = await imageFile.length();
+      debugPrint("[ApiService] startOcrSession File length: $length bytes");
+      if (length == 0) {
+        throw ApiException('Captured image is empty (0 bytes). Please try taking the photo again.', 400);
+      }
+
+      final token = await _requireAuthToken();
+      final request = http.MultipartRequest(
+        'POST',
+        await _uri('/api/v1/admin/ocr/session/start'),
+      );
+      request.headers['Authorization'] = 'Bearer $token';
+      request.headers['ngrok-skip-browser-warning'] = 'true';
+      
+      final bytes = await imageFile.readAsBytes();
+      request.files.add(http.MultipartFile.fromBytes(
+        'image', 
+        bytes,
+        filename: imageFile.path.split('/').last,
+      ));
+
       final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
       final response = await http.Response.fromStream(streamedResponse);
       return _processResponse(response);
@@ -636,6 +652,7 @@ class ApiService {
       final baseUrl = await getConfiguredBaseUrl();
       throw ApiException('Cannot reach OCR server at $baseUrl. Is the backend running?\nError: ${e.message}', 503);
     } catch (e) {
+      if (e is ApiException) rethrow;
       throw ApiException('OCR session start failed: $e', 500);
     }
   }

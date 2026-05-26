@@ -155,10 +155,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               _buildNavItem(2, Icons.quiz_rounded, 'Bank', onTapOverride: () {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionBankScreen()));
               }),
-              _buildNavItem(3, Icons.people_rounded, 'Users', onTapOverride: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const ManageStudentsScreen()));
-              }),
-              _buildNavItem(4, Icons.settings_rounded, 'Settings', onTapOverride: () {
+              _buildNavItem(3, Icons.settings_rounded, 'Settings', onTapOverride: () {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
               }),
             ],

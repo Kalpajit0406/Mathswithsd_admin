@@ -244,17 +244,44 @@ class _QuestionCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 ...List.generate(question.options.length, (i) {
                   final isCorrect = question.options[i] == question.correctAnswer;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isCorrect
+                          ? const Color(0xFFE8F5E9)
+                          : const Color(0xFFF8F9FA),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isCorrect
+                            ? const Color(0xFF43A047)
+                            : Colors.grey.shade200,
+                        width: isCorrect ? 1.5 : 1,
+                      ),
+                    ),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${String.fromCharCode(65 + i)}) ', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        Expanded(child: Text(question.options[i])),
-                        if (isCorrect) const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                        Text(
+                          '${String.fromCharCode(65 + i)}) ',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isCorrect
+                                ? const Color(0xFF2E7D32)
+                                : const Color(0xFF0F172A),
+                          ),
+                        ),
+                        Expanded(child: LaTeXWidget(text: question.options[i])),
+                        if (isCorrect)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 6, top: 2),
+                            child: Icon(Icons.check_circle, color: Color(0xFF43A047), size: 16),
+                          ),
                       ],
                     ),
                   );
                 }),
+
               ],
             ),
           ),

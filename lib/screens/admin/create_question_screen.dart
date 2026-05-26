@@ -454,12 +454,13 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
     if (success) {
       _clearForm();
       
-      // Move to next question if queue has more items
-      if (provider.hasNextQuestion) {
-        provider.nextQuestion();
+      // NOTE: provider.saveQuestion() already called markCurrentAsVerified(moveNext: true)
+      // which internally advances the queue index via nextQuestion().
+      // Do NOT call provider.nextQuestion() again here — that would double-skip.
+      if (provider.isQueueActive) {
         _syncFromQueue();
       } else {
-        // Queue is done
+        // Queue is done — all questions processed
         provider.clearQueue();
         setState(() {
           _isManualInput = false;
@@ -468,7 +469,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: provider.hasNextQuestion
+          content: provider.isQueueActive
               ? const Text('✓ Question saved! Loading next...')
               : const Text('✓ All questions saved successfully!'),
           backgroundColor: const Color(0xFF4CAF50),

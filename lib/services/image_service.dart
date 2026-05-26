@@ -10,9 +10,12 @@ class ImageService {
     final primaryColor = Theme.of(context).primaryColor;
     try {
       // 1. Pick Image with resolution constraints to save memory
-      // 1600px is still high quality for Mathpix but much safer for RAM
+      // 3000px provides ultra high quality for OCR formulas while being safe on 4GB RAM devices
       final XFile? photo = await _picker.pickImage(
         source: source,
+        maxWidth: 3000,
+        maxHeight: 3000,
+        imageQuality: 95,
       );
 
       if (photo == null) return null;
@@ -21,7 +24,7 @@ class ImageService {
       final croppedFile = await ImageCropper().cropImage(
         sourcePath: photo.path,
         compressFormat: ImageCompressFormat.jpg,
-        compressQuality: 80,
+        compressQuality: 90,
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Crop Question',
