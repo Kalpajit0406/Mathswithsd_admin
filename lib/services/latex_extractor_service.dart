@@ -73,7 +73,10 @@ class LatexExtractorService {
     
     // Fix OCR errors
     cleaned = cleaned.replaceAll('−', '-');
-    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ');
+    // Replace spaces and tabs with single space, but preserve newlines
+    cleaned = cleaned.replaceAll(RegExp(r'[ \t]+'), ' ');
+    // Collapse consecutive newlines (3 or more) to a maximum of 2 newlines
+    cleaned = cleaned.replaceAll(RegExp(r'\n{3,}'), '\n\n');
     
     return cleaned.trim();
   }

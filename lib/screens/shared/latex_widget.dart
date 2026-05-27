@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -109,6 +110,7 @@ class _LaTeXWidgetState extends State<LaTeXWidget> {
       ..loadHtmlString(_baseHtml)
       ..setNavigationDelegate(NavigationDelegate(
         onPageFinished: (_) {
+          if (!mounted) return;
           _updateContent();
           setState(() => _isLoaded = true);
         },
@@ -124,13 +126,8 @@ class _LaTeXWidgetState extends State<LaTeXWidget> {
   }
 
   void _updateContent() {
-    final escaped = widget.text
-        .replaceAll('\\', '\\\\')
-        .replaceAll('"', '\\"')
-        .replaceAll("'", "\\'")
-        .replaceAll('\n', '\\n')
-        .replaceAll('\r', '');
-    _controller.runJavaScript("renderContent('$escaped');");
+    final encoded = jsonEncode(widget.text.replaceAll('\r', ''));
+    _controller.runJavaScript('renderContent($encoded);');
   }
 
   @override
@@ -155,7 +152,7 @@ class InlineMathText extends StatelessWidget {
     this.color,
   });
 
-  bool get _hasMath => text.contains(r'$') || text.contains(r'\(') || text.contains(r'\[') || text.contains(r'\');
+  bool get _hasMath => text.contains(r'$') || text.contains(r'\(') || text.contains(r'\[') || text.contains('\\');
 
   @override
   Widget build(BuildContext context) {

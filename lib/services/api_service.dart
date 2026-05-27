@@ -330,6 +330,7 @@ class ApiService {
 
   Future<String> uploadImage(File imageFile) async {
     final token = await _requireAuthToken();
+    final client = http.Client();
     final request = http.MultipartRequest(
       'POST',
       await _uri(AppConstants.uploadImageEndpoint),
@@ -343,13 +344,18 @@ class ApiService {
       filename: imageFile.path.split('/').last,
     ));
 
-    final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
-    final response = await http.Response.fromStream(streamedResponse);
-    final data = _processResponse(response);
-    return data['data']['url'];
+    try {
+      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 30));
+      final response = await http.Response.fromStream(streamedResponse);
+      final data = _processResponse(response);
+      return data['data']['url'];
+    } finally {
+      client.close();
+    }
   }
 
   Future<Map<String, dynamic>> processOcrImage(File file) async {
+    final client = http.Client();
     try {
       debugPrint("[ApiService] processOcrImage file path: ${file.path}");
       final bool exists = await file.exists();
@@ -383,7 +389,7 @@ class ApiService {
         filename: file.path.split('/').last,
       ));
 
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 60));
       final response = await http.Response.fromStream(streamedResponse);
 
       final data = _processResponse(response);
@@ -395,6 +401,8 @@ class ApiService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('OCR upload failed: ${e.toString()}', 500);
+    } finally {
+      client.close();
     }
   }
 
@@ -544,6 +552,7 @@ class ApiService {
 
   Future<Question> createQuestionResilient(Question question, {File? diagramFile}) async {
     final token = await _requireAuthToken();
+    final client = http.Client();
     final request = http.MultipartRequest(
       'POST',
       await _uri(AppConstants.createQuestionEndpoint),
@@ -565,14 +574,19 @@ class ApiService {
       request.files.add(await http.MultipartFile.fromPath('diagram', diagramFile.path));
     }
 
-    final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
-    final response = await http.Response.fromStream(streamedResponse);
-    final data = _processResponse(response);
-    return Question.fromJson(data['data']);
+    try {
+      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 30));
+      final response = await http.Response.fromStream(streamedResponse);
+      final data = _processResponse(response);
+      return Question.fromJson(data['data']);
+    } finally {
+      client.close();
+    }
   }
 
   Future<Question> updateQuestion(String id, Map<String, dynamic> updateData, {File? diagramFile}) async {
     final token = await _requireAuthToken();
+    final client = http.Client();
     final request = http.MultipartRequest(
       'PUT',
       await _uri('/api/v1/question/update/$id'),
@@ -594,10 +608,14 @@ class ApiService {
       request.files.add(await http.MultipartFile.fromPath('diagram', diagramFile.path));
     }
 
-    final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
-    final response = await http.Response.fromStream(streamedResponse);
-    final data = _processResponse(response);
-    return Question.fromJson(data['data']);
+    try {
+      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 30));
+      final response = await http.Response.fromStream(streamedResponse);
+      final data = _processResponse(response);
+      return Question.fromJson(data['data']);
+    } finally {
+      client.close();
+    }
   }
 
   Future<void> deleteQuestion(String id) async {
@@ -611,6 +629,7 @@ class ApiService {
   // ─── OCR Verification Sessions ─────────────────────────────────────────────
 
   Future<Map<String, dynamic>> startOcrSession(File imageFile) async {
+    final client = http.Client();
     try {
       debugPrint("[ApiService] startOcrSession file path: ${imageFile.path}");
       final bool exists = await imageFile.exists();
@@ -639,7 +658,7 @@ class ApiService {
         filename: imageFile.path.split('/').last,
       ));
 
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 60));
       final response = await http.Response.fromStream(streamedResponse);
       return _processResponse(response);
     } on TimeoutException {
@@ -650,6 +669,8 @@ class ApiService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('OCR session start failed: $e', 500);
+    } finally {
+      client.close();
     }
   }
 
@@ -745,6 +766,7 @@ class ApiService {
     File? diagramFile,
   }) async {
     final token = await _requireAuthToken();
+    final client = http.Client();
     final request = http.MultipartRequest(
       'POST',
       await _uri('/api/v1/admin/ocr/session/$sessionId/item/$index/verify'),
@@ -764,9 +786,13 @@ class ApiService {
       request.files.add(await http.MultipartFile.fromPath('diagram', diagramFile.path));
     }
 
-    final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
-    final response = await http.Response.fromStream(streamedResponse);
-    return _processResponse(response);
+    try {
+      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 30));
+      final response = await http.Response.fromStream(streamedResponse);
+      return _processResponse(response);
+    } finally {
+      client.close();
+    }
   }
 
   Future<Map<String, dynamic>> setCurrentOcrSessionIndex(String sessionId, int index) async {
@@ -919,6 +945,7 @@ class ApiService {
     File pdfFile, {
     Function(double)? onProgress,
   }) async {
+    final client = http.Client();
     try {
       final uri = Uri.parse('${await _getBaseUrl()}/api/v1/pdf/extract-questions');
       final request = MultipartRequestWithProgress(
@@ -945,13 +972,15 @@ class ApiService {
         ),
       );
 
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 120));
+      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 120));
       final response = await http.Response.fromStream(streamedResponse);
 
       final data = _processResponse(response);
       return data;
     } catch (e) {
       throw ApiException('PDF upload failed: $e', 500);
+    } finally {
+      client.close();
     }
   }
 

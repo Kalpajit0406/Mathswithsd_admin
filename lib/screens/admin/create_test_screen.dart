@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/admin_provider.dart';
 import '../../utils/constants.dart';
 
@@ -27,6 +28,110 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
   final _mediums = ['Bengali', 'English', 'Both'];
   final _questionOptions = ['10', '20', '30', '40', '50', '80', '100'];
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndLoadDraft();
+    });
+  }
+
+  Future<void> _saveDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('test_draft_date', _selectedDate);
+      await prefs.setString('test_draft_time', _selectedTime);
+      await prefs.setString('test_draft_class', _selectedClass);
+      await prefs.setString('test_draft_medium', _selectedMedium);
+      await prefs.setString('test_draft_questions', _selectedQuestions);
+      await prefs.setString('test_draft_duration', _totalTime);
+      await prefs.setDouble('test_draft_negative_marking', _negativeMarking);
+      await prefs.setDouble('test_draft_marks_per_question', _marksPerQuestion);
+      await prefs.setStringList('test_draft_chapters', _selectedChapters);
+    } catch (e) {
+      debugPrint('Failed to save test draft: $e');
+    }
+  }
+
+  Future<void> _clearDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('test_draft_date');
+      await prefs.remove('test_draft_time');
+      await prefs.remove('test_draft_class');
+      await prefs.remove('test_draft_medium');
+      await prefs.remove('test_draft_questions');
+      await prefs.remove('test_draft_duration');
+      await prefs.remove('test_draft_negative_marking');
+      await prefs.remove('test_draft_marks_per_question');
+      await prefs.remove('test_draft_chapters');
+    } catch (e) {
+      debugPrint('Failed to clear test draft: $e');
+    }
+  }
+
+  Future<void> _checkAndLoadDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hasDraft = prefs.containsKey('test_draft_date') || 
+                       prefs.containsKey('test_draft_chapters');
+      if (!hasDraft) return;
+
+      final date = prefs.getString('test_draft_date') ?? '';
+      final time = prefs.getString('test_draft_time') ?? '';
+      final classNo = prefs.getString('test_draft_class') ?? '10';
+      final medium = prefs.getString('test_draft_medium') ?? 'English';
+      final questions = prefs.getString('test_draft_questions') ?? '20';
+      final duration = prefs.getString('test_draft_duration') ?? '30';
+      final negativeMarking = prefs.getDouble('test_draft_negative_marking') ?? 0.0;
+      final marksPerQuestion = prefs.getDouble('test_draft_marks_per_question') ?? 1.0;
+      final chapters = prefs.getStringList('test_draft_chapters') ?? [];
+
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Resume Draft?', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: const Text('You have an unsaved draft from a previous session. Would you like to resume editing?'),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await _clearDraft();
+                if (mounted) Navigator.pop(context);
+              },
+              child: const Text('Discard', style: TextStyle(color: Colors.red)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _selectedDate = date;
+                  _selectedTime = time;
+                  _selectedClass = classNo;
+                  _selectedMedium = medium;
+                  _selectedQuestions = questions;
+                  _totalTime = duration;
+                  _negativeMarking = negativeMarking;
+                  _marksPerQuestion = marksPerQuestion;
+                  _selectedChapters = List<String>.from(chapters);
+                });
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0051D5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Resume', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      debugPrint('Failed to check and load draft: $e');
+    }
+  }
+
   Future<void> _pickDate() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -45,6 +150,7 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
       setState(() {
         _selectedDate = '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
       });
+      _saveDraft();
     }
   }
 
@@ -64,6 +170,7 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
       final m = picked.minute.toString().padLeft(2, '0');
       final period = picked.period == DayPeriod.am ? 'AM' : 'PM';
       setState(() => _selectedTime = '$h:$m $period');
+      _saveDraft();
     }
   }
 
@@ -75,6 +182,7 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
         _selectedChapters.add(ch);
       }
     });
+    _saveDraft();
   }
 
   Future<void> _publishTest() async {
@@ -84,6 +192,24 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
     }
     if (_selectedTime.isEmpty) {
       _showSnack('Please select a time');
+      return;
+    }
+    if (_selectedChapters.isEmpty) {
+      _showSnack('Please select at least one chapter');
+      return;
+    }
+    final duration = int.tryParse(_totalTime) ?? 0;
+    if (duration <= 0) {
+      _showSnack('Please enter a valid duration greater than 0');
+      return;
+    }
+    final qCount = int.tryParse(_selectedQuestions) ?? 0;
+    if (qCount <= 0) {
+      _showSnack('Please select a valid question count');
+      return;
+    }
+    if (_marksPerQuestion <= 0) {
+      _showSnack('Marks per question must be greater than 0');
       return;
     }
 
@@ -102,6 +228,8 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
 
     if (!mounted) return;
     if (success) {
+      await _clearDraft();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Test published successfully!'), backgroundColor: Colors.green),
       );
@@ -163,7 +291,10 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
               _buildTextField(
                 label: 'Duration (Minutes)',
                 initialValue: _totalTime,
-                onChanged: (v) => _totalTime = v,
+                onChanged: (v) {
+                  _totalTime = v;
+                  _saveDraft();
+                },
                 icon: Icons.timer_outlined,
               ),
             ]),
@@ -174,30 +305,43 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
                 _classes, (val) => setState(() {
                   _selectedClass = val!;
                   _selectedChapters.clear();
+                  _saveDraft();
                 }), Icons.class_),
               const SizedBox(height: 16),
               _buildDropdown('Language', _selectedMedium, _mediums, _mediums,
-                (val) => setState(() => _selectedMedium = val!), Icons.translate),
+                (val) => setState(() {
+                  _selectedMedium = val!;
+                  _saveDraft();
+                }), Icons.translate),
             ]),
             const SizedBox(height: 20),
 
             _sectionCard('Grading & Scope', [
                _buildDropdown('Questions Count', _selectedQuestions, _questionOptions, _questionOptions,
-                (val) => setState(() => _selectedQuestions = val!), Icons.help_outline),
+                (val) => setState(() {
+                  _selectedQuestions = val!;
+                  _saveDraft();
+                }), Icons.help_outline),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(child: _buildTextField(
                     label: 'Marks/Q', 
                     initialValue: _marksPerQuestion.toString(),
-                    onChanged: (v) => _marksPerQuestion = double.tryParse(v) ?? 1.0,
+                    onChanged: (v) {
+                      _marksPerQuestion = double.tryParse(v) ?? 1.0;
+                      _saveDraft();
+                    },
                     icon: Icons.add_circle_outline,
                   )),
                   const SizedBox(width: 12),
                   Expanded(child: _buildTextField(
                     label: 'Negative/Q', 
                     initialValue: _negativeMarking.toString(),
-                    onChanged: (v) => _negativeMarking = double.tryParse(v) ?? 0.0,
+                    onChanged: (v) {
+                      _negativeMarking = double.tryParse(v) ?? 0.0;
+                      _saveDraft();
+                    },
                     icon: Icons.remove_circle_outline,
                   )),
                 ],

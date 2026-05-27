@@ -12,6 +12,7 @@ enum QueueNavigationMode { sequential, random, skip }
 class QuestionProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
   static const String _queuePrefsKey = 'ocr_question_queue_state_v1';
+  static const int _maxQueueSize = 100;
 
   // Questions database
   List<Question> _questions = [];
@@ -116,10 +117,14 @@ class QuestionProvider with ChangeNotifier {
       _currentQueueIndex = (decoded['currentQueueIndex'] as num?)?.toInt() ?? 0;
       
       if (items != null) {
-        _questionQueue = items
+        final cappedItems = items.take(_maxQueueSize);
+        _questionQueue = cappedItems
             .whereType<Map>()
             .map((item) => ScanData.fromJson(Map<String, dynamic>.from(item)))
             .toList();
+        if (items.length > _maxQueueSize) {
+          debugPrint('OCR queue capped at $_maxQueueSize items during restore.');
+        }
         if (_questionQueue.isNotEmpty && _currentQueueIndex >= _questionQueue.length) {
           _currentQueueIndex = _questionQueue.length - 1;
         }
@@ -629,7 +634,8 @@ class QuestionProvider with ChangeNotifier {
 
       // Convert to ScanData objects
       final scanDataList = <ScanData>[];
-      for (int i = 0; i < questions.length; i++) {
+      final limit = questions.length > _maxQueueSize ? _maxQueueSize : questions.length;
+      for (int i = 0; i < limit; i++) {
         final q = questions[i];
         
         final List<String> extractedOptions = [];
@@ -658,6 +664,10 @@ class QuestionProvider with ChangeNotifier {
           verified: false,
         );
         scanDataList.add(scanData);
+      }
+
+      if (questions.length > _maxQueueSize) {
+        debugPrint('OCR queue capped at $_maxQueueSize items during OCR import.');
       }
 
       // Clear existing queue and populate
@@ -689,7 +699,8 @@ class QuestionProvider with ChangeNotifier {
       }
 
       final scanDataList = <ScanData>[];
-      for (int i = 0; i < items.length; i++) {
+      final limit = items.length > _maxQueueSize ? _maxQueueSize : items.length;
+      for (int i = 0; i < limit; i++) {
         final item = items[i];
         if (item is Map) {
           if (item['isDeleted'] == true) continue;
@@ -721,6 +732,10 @@ class QuestionProvider with ChangeNotifier {
           );
           scanDataList.add(scanData);
         }
+      }
+
+      if (items.length > _maxQueueSize) {
+        debugPrint('OCR queue capped at $_maxQueueSize items during session restore.');
       }
 
       _questionQueue = scanDataList;
