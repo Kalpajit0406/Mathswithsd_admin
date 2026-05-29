@@ -25,6 +25,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _currentIndex = 0;
   final ImageService _imageService = ImageService();
 
+  late final List<Widget> _pages = [
+    _buildHomeTab(),
+    const YourTestsScreen(),
+    const QuestionBankScreen(),
+    const SettingsScreen(),
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -67,114 +74,98 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FB),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
-        title: Row(
-          children: [
-            const Icon(Icons.school_rounded, color: Color(0xFF0051D5), size: 26),
-            const SizedBox(width: 8),
-            const Text(
-              'MathsAdmin',
-              style: TextStyle(
-                color: Color(0xFF0F172A),
-                fontWeight: FontWeight.w900,
-                fontSize: 22,
-                letterSpacing: -0.5,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: Stack(
-              children: [
-                const Icon(Icons.notifications_none_rounded, color: Color(0xFF75859D), size: 26),
-                Positioned(
-                  right: 2,
-                  top: 2,
-                  child: Container(
-                    width: 7,
-                    height: 7,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFBA1A1A),
-                      shape: BoxShape.circle,
+    return PopScope(
+      canPop: _currentIndex == 0,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        setState(() {
+          _currentIndex = 0;
+        });
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF7F9FB),
+        appBar: _currentIndex == 0
+            ? AppBar(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+                title: Row(
+                  children: [
+                    const Icon(Icons.school_rounded, color: Color(0xFF0051D5), size: 26),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'MathsAdmin',
+                      style: TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 22,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  Container(
+                    margin: const EdgeInsets.only(right: 16, left: 8),
+                    child: const CircleAvatar(
+                      backgroundColor: Color(0xFF0051D5),
+                      radius: 16,
+                      child: Text(
+                        'T',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
                     ),
                   ),
-                ),
+                ],
+              )
+            : null,
+        drawer: const _AdminDrawer(),
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _pages,
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        floatingActionButton: Container(
+          margin: const EdgeInsets.only(top: 20),
+          child: FloatingActionButton(
+            onPressed: () => _navigateToCreateQuestion(),
+            backgroundColor: const Color(0xFF0051D5),
+            shape: const CircleBorder(),
+            elevation: 6,
+            child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
+          ),
+        ),
+        bottomNavigationBar: BottomAppBar(
+          color: Colors.white,
+          shape: const CircularNotchedRectangle(),
+          notchMargin: 8.0,
+          elevation: 15,
+          shadowColor: Colors.black.withOpacity(0.08),
+          child: SizedBox(
+            height: 60,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildNavItem(0, Icons.dashboard_rounded, 'Dashboard'),
+                _buildNavItem(1, Icons.assignment_rounded, 'Tests'),
+                const SizedBox(width: 48), // Space for FAB
+                _buildNavItem(2, Icons.quiz_rounded, 'Bank'),
+                _buildNavItem(3, Icons.settings_rounded, 'Settings'),
               ],
             ),
-            onPressed: () {},
-          ),
-          Container(
-            margin: const EdgeInsets.only(right: 16, left: 8),
-            child: const CircleAvatar(
-              backgroundColor: Color(0xFF0051D5),
-              radius: 16,
-              child: Text(
-                'T',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-            ),
-          ),
-        ],
-      ),
-      drawer: const _AdminDrawer(),
-      body: _buildBody(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: Container(
-        margin: const EdgeInsets.only(top: 20),
-        child: FloatingActionButton(
-          onPressed: () => _navigateToCreateQuestion(),
-          backgroundColor: const Color(0xFF0051D5),
-          shape: const CircleBorder(),
-          elevation: 6,
-          child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
-        ),
-      ),
-      bottomNavigationBar: BottomAppBar(
-        color: Colors.white,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8.0,
-        elevation: 15,
-        shadowColor: Colors.black.withOpacity(0.08),
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildNavItem(0, Icons.dashboard_rounded, 'Dashboard'),
-              _buildNavItem(1, Icons.assignment_rounded, 'Tests', onTapOverride: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const YourTestsScreen()));
-              }),
-              const SizedBox(width: 48), // Space for FAB
-              _buildNavItem(2, Icons.quiz_rounded, 'Bank', onTapOverride: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionBankScreen()));
-              }),
-              _buildNavItem(3, Icons.settings_rounded, 'Settings', onTapOverride: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
-              }),
-            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label, {VoidCallback? onTapOverride}) {
+  Widget _buildNavItem(int index, IconData icon, String label) {
     final isActive = _currentIndex == index;
     final color = isActive ? const Color(0xFF0051D5) : const Color(0xFF75859D);
     return InkWell(
       onTap: () {
-        if (onTapOverride != null) {
-          onTapOverride();
-        } else {
-          setState(() => _currentIndex = index);
-        }
+        setState(() => _currentIndex = index);
       },
       customBorder: const CircleBorder(),
       child: Column(
@@ -196,7 +187,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildHomeTab() {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),

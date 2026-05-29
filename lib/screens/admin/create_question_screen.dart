@@ -497,6 +497,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
               _isManualInput = false;
             });
             _clearForm();
+            Navigator.pop(context); // Close the Create Question screen
           }
         });
       } else if (provider.questionQueue.isNotEmpty) {

@@ -26,10 +26,12 @@ class _YourTestsScreenState extends State<YourTestsScreen> {
       backgroundColor: const Color(0xFFF7F9FB),
       appBar: AppBar(
         backgroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF191C1E)),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF191C1E)),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
         title: const Text('Assessments', style: TextStyle(color: Color(0xFF191C1E), fontWeight: FontWeight.w700)),
         elevation: 0,
       ),

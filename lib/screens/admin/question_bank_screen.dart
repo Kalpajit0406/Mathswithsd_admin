@@ -310,15 +310,43 @@ class _QuestionCard extends StatelessWidget {
   void _confirmDelete(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Question?'),
         content: const Text('This action cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
           TextButton(
-            onPressed: () {
-              Provider.of<QuestionProvider>(context, listen: false).deleteQuestion(question.id!);
-              Navigator.pop(context);
+            onPressed: () async {
+              Navigator.pop(dialogContext); // close confirmation dialog
+              
+              // show loading dialog
+              BuildContext? loadingContext;
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (ctx) {
+                  loadingContext = ctx;
+                  return const Center(child: CircularProgressIndicator());
+                },
+              );
+
+              final success = await Provider.of<QuestionProvider>(context, listen: false).deleteQuestion(question.id!);
+              
+              if (loadingContext != null && loadingContext!.mounted) {
+                Navigator.pop(loadingContext!); // close loading dialog
+              }
+
+              if (context.mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Question deleted successfully.')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to delete question.')),
+                  );
+                }
+              }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
@@ -364,73 +392,101 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
   Widget build(BuildContext context) {
     final chapters = AppConstants.classChapters[_selectedClass] ?? [];
     
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Question'),
-        actions: [
-          TextButton(
-            onPressed: _save,
-            child: const Text('SAVE', style: TextStyle(color: Colors.white)),
+    return Consumer<QuestionProvider>(
+      builder: (context, provider, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Edit Question'),
+            actions: [
+              provider.isSaving
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.0),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      ),
+                    )
+                  : TextButton(
+                      onPressed: _save,
+                      child: const Text('SAVE', style: TextStyle(color: Colors.white)),
+                    ),
+            ],
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-             TextFormField(
-              controller: _questionCtrl,
-              maxLines: 5,
-              decoration: const InputDecoration(labelText: 'Question Text', border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 16),
-             Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    value: _selectedClass,
-                    onChanged: (v) => setState(() {
-                      _selectedClass = v!;
-                      _selectedChapter = AppConstants.classChapters[v]?.first;
-                    }),
-                    items: [9,10,11,12].map((c) => DropdownMenuItem(value: c, child: Text('Class $c'))).toList(),
-                    decoration: const InputDecoration(labelText: 'Class'),
+          body: Column(
+            children: [
+              if (provider.isSaving) const LinearProgressIndicator(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        enabled: !provider.isSaving,
+                        controller: _questionCtrl,
+                        maxLines: 5,
+                        decoration: const InputDecoration(labelText: 'Question Text', border: OutlineInputBorder()),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<int>(
+                              value: _selectedClass,
+                              onChanged: provider.isSaving ? null : (v) => setState(() {
+                                _selectedClass = v!;
+                                _selectedChapter = AppConstants.classChapters[v]?.first;
+                              }),
+                              items: [9,10,11,12].map((c) => DropdownMenuItem(value: c, child: Text('Class $c'))).toList(),
+                              decoration: const InputDecoration(labelText: 'Class'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedLanguage,
+                              onChanged: provider.isSaving ? null : (v) => setState(() => _selectedLanguage = v!),
+                              items: ['English', 'Bengali', 'Both'].map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+                              decoration: const InputDecoration(labelText: 'Language'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: _selectedChapter,
+                        onChanged: provider.isSaving ? null : (v) => setState(() => _selectedChapter = v),
+                        items: chapters.map((ch) => DropdownMenuItem(value: ch, child: Text(ch))).toList(),
+                        decoration: const InputDecoration(labelText: 'Chapter'),
+                      ),
+                      const SizedBox(height: 24),
+                      ...List.generate(4, (i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: TextFormField(
+                          enabled: !provider.isSaving,
+                          controller: _optCtrls[i],
+                          decoration: InputDecoration(labelText: 'Option ${String.fromCharCode(65 + i)}'),
+                        ),
+                      )),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        enabled: !provider.isSaving,
+                        controller: _correctCtrl,
+                        decoration: const InputDecoration(labelText: 'Correct Answer (Exact Text)'),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedLanguage,
-                    onChanged: (v) => setState(() => _selectedLanguage = v!),
-                    items: ['English', 'Bengali', 'Both'].map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
-                    decoration: const InputDecoration(labelText: 'Language'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedChapter,
-              onChanged: (v) => setState(() => _selectedChapter = v),
-              items: chapters.map((ch) => DropdownMenuItem(value: ch, child: Text(ch))).toList(),
-              decoration: const InputDecoration(labelText: 'Chapter'),
-            ),
-            const SizedBox(height: 24),
-            ...List.generate(4, (i) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: TextFormField(
-                controller: _optCtrls[i],
-                decoration: InputDecoration(labelText: 'Option ${String.fromCharCode(65 + i)}'),
               ),
-            )),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _correctCtrl,
-              decoration: const InputDecoration(labelText: 'Correct Answer (Exact Text)'),
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
