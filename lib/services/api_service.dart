@@ -554,6 +554,33 @@ class ApiService {
     _processResponse(response);
   }
 
+  Future<void> bulkAcceptStudents(List<String> ids) async {
+    final response = await http.post(
+      await _uri(AppConstants.bulkAcceptStudentsEndpoint),
+      headers: await _headers(),
+      body: jsonEncode({'ids': ids}),
+    ).timeout(const Duration(seconds: 15));
+    _processResponse(response);
+  }
+
+  Future<void> bulkRejectStudents(List<String> ids) async {
+    final response = await http.post(
+      await _uri(AppConstants.bulkRejectStudentsEndpoint),
+      headers: await _headers(),
+      body: jsonEncode({'ids': ids}),
+    ).timeout(const Duration(seconds: 15));
+    _processResponse(response);
+  }
+
+  Future<void> bulkDeleteStudents(List<String> ids) async {
+    final response = await http.post(
+      await _uri(AppConstants.bulkDeleteStudentsEndpoint),
+      headers: await _headers(),
+      body: jsonEncode({'ids': ids}),
+    ).timeout(const Duration(seconds: 15));
+    _processResponse(response);
+  }
+
   Future<Question> createQuestionResilient(Question question, {File? diagramFile}) async {
     final token = await _requireAuthToken();
     final client = http.Client();

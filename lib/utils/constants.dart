@@ -18,6 +18,9 @@ class AppConstants {
   static const String studentsEndpoint = '/api/v1/student/students';
   static const String acceptStudentEndpoint = '/api/v1/student/accept';
   static const String rejectStudentEndpoint = '/api/v1/student/reject';
+  static const String bulkAcceptStudentsEndpoint = '/api/v1/student/bulk-accept';
+  static const String bulkRejectStudentsEndpoint = '/api/v1/student/bulk-reject';
+  static const String bulkDeleteStudentsEndpoint = '/api/v1/student/bulk-delete';
   static const String startAttemptEndpoint = '/api/v1/testResponse/start';
   static const String submitAttemptEndpoint = '/api/v1/testResponse/submit';
   static const String testResponseEndpoint = '/api/v1/testResponse';

@@ -96,6 +96,36 @@ class AdminProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> bulkAcceptStudents(List<String> ids) async {
+    try {
+      await _apiService.bulkAcceptStudents(ids);
+      await loadStudents();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> bulkRejectStudents(List<String> ids) async {
+    try {
+      await _apiService.bulkRejectStudents(ids);
+      await loadStudents();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> bulkDeleteStudents(List<String> ids) async {
+    try {
+      await _apiService.bulkDeleteStudents(ids);
+      await loadStudents();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // ─── Tests ────────────────────────────────────────────────────────────────────
 
   Future<void> loadTests() async {

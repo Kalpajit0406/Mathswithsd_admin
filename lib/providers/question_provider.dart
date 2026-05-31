@@ -687,35 +687,43 @@ class QuestionProvider with ChangeNotifier {
       // Convert to ScanData objects
       final scanDataList = <ScanData>[];
       final limit = questions.length > _maxQueueSize ? _maxQueueSize : questions.length;
-      for (int i = 0; i < limit; i++) {
-        final q = questions[i];
-        
-        final List<String> extractedOptions = [];
-        final rawOptions = q['options'];
-        if (rawOptions is List) {
-          for (var opt in rawOptions) {
-            if (opt is Map) {
-              extractedOptions.add(opt['text']?.toString() ?? '');
-            } else {
-              extractedOptions.add(opt?.toString() ?? '');
+      
+      const int chunkSize = 15;
+      for (int i = 0; i < limit; i += chunkSize) {
+        final end = (i + chunkSize < limit) ? i + chunkSize : limit;
+        for (int j = i; j < end; j++) {
+          final q = questions[j];
+          if (q is Map) {
+            final List<String> extractedOptions = [];
+            final rawOptions = q['options'];
+            if (rawOptions is List) {
+              for (var opt in rawOptions) {
+                if (opt is Map) {
+                  extractedOptions.add(opt['text']?.toString() ?? '');
+                } else {
+                  extractedOptions.add(opt?.toString() ?? '');
+                }
+              }
             }
+            
+            // Ensure exactly 4 options
+            while (extractedOptions.length < 4) {
+              extractedOptions.add('');
+            }
+            
+            final scanData = ScanData(
+              questionText: q['questionText'] ?? q['question'] ?? '',
+              options: extractedOptions.sublist(0, 4),
+              questionNumber: q['questionNumber']?.toString(),
+              detectionOrder: (q['detectionOrder'] as num?)?.toInt() ?? j,
+              rawOcrData: q['rawOcrData'] is Map ? Map<String, dynamic>.from(q['rawOcrData'] as Map) : null,
+              verified: false,
+            );
+            scanDataList.add(scanData);
           }
         }
-        
-        // Ensure exactly 4 options
-        while (extractedOptions.length < 4) {
-          extractedOptions.add('');
-        }
-        
-        final scanData = ScanData(
-          questionText: q['questionText'] ?? q['question'] ?? '',
-          options: extractedOptions.sublist(0, 4),
-          questionNumber: q['questionNumber']?.toString(),
-          detectionOrder: q['detectionOrder'] ?? i,
-          rawOcrData: q['rawOcrData'] ?? q,
-          verified: false,
-        );
-        scanDataList.add(scanData);
+        // Yield execution to the event loop so the UI remains fluid
+        await Future.delayed(Duration.zero);
       }
 
       if (questions.length > _maxQueueSize) {
@@ -726,9 +734,14 @@ class QuestionProvider with ChangeNotifier {
       _questionQueue = scanDataList;
       _currentQueueIndex = 0;
       _verificationHistory.clear();
-      _lastOcrResponse = ocrData;
-      _persistQueueState();
 
+      // OPTIMIZATION: Do not persist the bulky questions/detailed_info field to SharedPreferences.
+      // This saves significant memory, serialization overhead, and disk IO time.
+      _lastOcrResponse = Map<String, dynamic>.from(ocrData)
+        ..remove('questions')
+        ..remove('detailed_info');
+
+      _persistQueueState();
       notifyListeners();
     } catch (error) {
       throw Exception('Failed to populate queue: $error');
@@ -752,38 +765,45 @@ class QuestionProvider with ChangeNotifier {
 
       final scanDataList = <ScanData>[];
       final limit = items.length > _maxQueueSize ? _maxQueueSize : items.length;
-      for (int i = 0; i < limit; i++) {
-        final item = items[i];
-        if (item is Map) {
-          if (item['isDeleted'] == true) continue;
-          
-          final List<String> extractedOptions = [];
-          final rawOptions = item['options'];
-          if (rawOptions is List) {
-            for (var opt in rawOptions) {
-              if (opt is Map) {
-                extractedOptions.add(opt['text']?.toString() ?? '');
-              } else {
-                extractedOptions.add(opt?.toString() ?? '');
+
+      const int chunkSize = 15;
+      for (int i = 0; i < limit; i += chunkSize) {
+        final end = (i + chunkSize < limit) ? i + chunkSize : limit;
+        for (int j = i; j < end; j++) {
+          final item = items[j];
+          if (item is Map) {
+            if (item['isDeleted'] == true) continue;
+            
+            final List<String> extractedOptions = [];
+            final rawOptions = item['options'];
+            if (rawOptions is List) {
+              for (var opt in rawOptions) {
+                if (opt is Map) {
+                  extractedOptions.add(opt['text']?.toString() ?? '');
+                } else {
+                  extractedOptions.add(opt?.toString() ?? '');
+                }
               }
             }
+            
+            while (extractedOptions.length < 4) {
+              extractedOptions.add('');
+            }
+            
+            final scanData = ScanData(
+              questionText: item['questionText'] ?? item['question'] ?? '',
+              options: extractedOptions.sublist(0, 4),
+              questionNumber: item['questionNumber']?.toString(),
+              detectionOrder: (item['detectionOrder'] as num?)?.toInt() ?? j,
+              rawOcrData: item['rawOcrData'] is Map ? Map<String, dynamic>.from(item['rawOcrData'] as Map) : null,
+              verified: item['verified'] ?? false,
+              verifiedAt: item['verifiedAt'] != null ? DateTime.tryParse(item['verifiedAt'].toString()) : null,
+            );
+            scanDataList.add(scanData);
           }
-          
-          while (extractedOptions.length < 4) {
-            extractedOptions.add('');
-          }
-          
-          final scanData = ScanData(
-            questionText: item['questionText'] ?? item['question'] ?? '',
-            options: extractedOptions.sublist(0, 4),
-            questionNumber: item['questionNumber']?.toString(),
-            detectionOrder: (item['detectionOrder'] as num?)?.toInt() ?? i,
-            rawOcrData: item['rawOcrData'] is Map ? Map<String, dynamic>.from(item['rawOcrData'] as Map) : null,
-            verified: item['verified'] ?? false,
-            verifiedAt: item['verifiedAt'] != null ? DateTime.tryParse(item['verifiedAt'].toString()) : null,
-          );
-          scanDataList.add(scanData);
         }
+        // Yield execution to the event loop so the UI remains fluid
+        await Future.delayed(Duration.zero);
       }
 
       if (items.length > _maxQueueSize) {
