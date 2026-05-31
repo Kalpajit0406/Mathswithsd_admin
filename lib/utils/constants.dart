@@ -15,6 +15,7 @@ class AppConstants {
   static const String testsEndpoint = '/api/v1/tests';
   static const String createTestEndpoint = '/api/v1/tests/create';
   static const String announcementsEndpoint = '/api/v1/announcements'; // Will be mocked
+  static const String bulkDeleteAnnouncementsEndpoint = '/api/v1/announcements/bulk-delete';
   static const String studentsEndpoint = '/api/v1/student/students';
   static const String acceptStudentEndpoint = '/api/v1/student/accept';
   static const String rejectStudentEndpoint = '/api/v1/student/reject';

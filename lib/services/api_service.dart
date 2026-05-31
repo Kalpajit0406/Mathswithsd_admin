@@ -514,6 +514,15 @@ class ApiService {
     return Announcement.fromJson(responseData['data'] ?? responseData);
   }
 
+  Future<void> bulkDeleteAnnouncements(List<String> ids) async {
+    final response = await http.post(
+      await _uri(AppConstants.bulkDeleteAnnouncementsEndpoint),
+      headers: await _headers(),
+      body: jsonEncode({'ids': ids}),
+    ).timeout(const Duration(seconds: 15));
+    _processResponse(response);
+  }
+
   // ─── Students ─────────────────────────────────────────────────────────────────
 
   Future<Map<String, List<StudentUser>>> getAllStudents() async {

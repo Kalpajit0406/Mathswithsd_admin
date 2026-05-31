@@ -55,6 +55,16 @@ class ExamProvider with ChangeNotifier, NotifierResourceDisposal {
     notifyListeners();
   }
 
+  Future<bool> bulkDeleteAnnouncements(List<String> ids, {String? targetClass}) async {
+    try {
+      await _apiService.bulkDeleteAnnouncements(ids);
+      await loadAnnouncements(targetClass: targetClass);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<void> loadTests() async {
     _testsState = LoadState.loading;
     notifyListeners();
