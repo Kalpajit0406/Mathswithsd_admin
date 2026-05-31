@@ -16,6 +16,8 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
   late TabController _tabController;
   bool _isSelectionMode = false;
   final Set<String> _selectedStudentIds = {};
+  String _searchQuery = '';
+  String? _classFilter;
 
   @override
   void initState() {
@@ -287,6 +289,73 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
     });
   }
 
+  Widget _buildFilterBar(List<String> allClasses) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Colors.white,
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              onChanged: (val) => setState(() => _searchQuery = val),
+              decoration: InputDecoration(
+                hintText: 'Search by name or phone...',
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                filled: true,
+                fillColor: const Color(0xFFF1F5F9),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        onPressed: () {
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String?>(
+                value: _classFilter,
+                hint: const Text('Class', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                icon: const Icon(Icons.filter_list, color: Color(0xFF009688)),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('All Classes', style: TextStyle(fontSize: 14)),
+                  ),
+                  ...allClasses.map((cls) => DropdownMenuItem<String?>(
+                        value: cls,
+                        child: Text('Class $cls', style: const TextStyle(fontSize: 14)),
+                      )),
+                ],
+                onChanged: (val) {
+                  setState(() {
+                    _classFilter = val;
+                  });
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -345,41 +414,87 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
               color: const Color(0xFF009688),
             );
           }
-          return TabBarView(
-            controller: _tabController,
+
+          // Gather all available classes dynamically from database list
+          final allStudents = [
+            ...provider.pendingStudents,
+            ...provider.verifiedStudents,
+            ...provider.rejectedStudents
+          ];
+          final allClasses = allStudents
+              .map((s) => s.classNo?.toString())
+              .whereType<String>()
+              .toSet()
+              .toList()
+            ..sort((a, b) {
+              final aNum = int.tryParse(a) ?? 0;
+              final bNum = int.tryParse(b) ?? 0;
+              return aNum.compareTo(bNum);
+            });
+
+          // Local filter logic
+          List<StudentUser> filterStudents(List<StudentUser> list) {
+            return list.where((s) {
+              final matchesSearch = _searchQuery.isEmpty ||
+                  s.fullName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                  (s.phone != null && s.phone!.contains(_searchQuery));
+              final matchesClass = _classFilter == null || s.classNo?.toString() == _classFilter;
+              return matchesSearch && matchesClass;
+            }).toList();
+          }
+
+          final filteredPending = filterStudents(provider.pendingStudents);
+          final filteredVerified = filterStudents(provider.verifiedStudents);
+          final filteredRejected = filterStudents(provider.rejectedStudents);
+
+          return Column(
             children: [
-              _StudentList(
-                students: provider.pendingStudents,
-                showActions: true,
-                onAccept: (id) => provider.acceptStudent(id),
-                onReject: (id) => provider.rejectStudent(id),
-                emptyMsg: 'No pending registrations',
-                isSelectionMode: _isSelectionMode,
-                selectedStudentIds: _selectedStudentIds,
-                onLongPressCard: _enterSelectionMode,
-                onTapCard: _toggleSelection,
-              ),
-              _StudentList(
-                students: provider.verifiedStudents,
-                showActions: false,
-                onAccept: (_) async => false,
-                onReject: (_) async => false,
-                emptyMsg: 'No verified students',
-                isSelectionMode: _isSelectionMode,
-                selectedStudentIds: _selectedStudentIds,
-                onLongPressCard: _enterSelectionMode,
-                onTapCard: _toggleSelection,
-              ),
-              _StudentList(
-                students: provider.rejectedStudents,
-                showActions: false,
-                onAccept: (_) async => false,
-                onReject: (_) async => false,
-                emptyMsg: 'No rejected students',
-                isSelectionMode: _isSelectionMode,
-                selectedStudentIds: _selectedStudentIds,
-                onLongPressCard: _enterSelectionMode,
-                onTapCard: _toggleSelection,
+              _buildFilterBar(allClasses),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _StudentList(
+                      students: filteredPending,
+                      showActions: true,
+                      onAccept: (id) => provider.acceptStudent(id),
+                      onReject: (id) => provider.rejectStudent(id),
+                      emptyMsg: _searchQuery.isNotEmpty || _classFilter != null
+                          ? 'No matching pending students'
+                          : 'No pending registrations',
+                      isSelectionMode: _isSelectionMode,
+                      selectedStudentIds: _selectedStudentIds,
+                      onLongPressCard: _enterSelectionMode,
+                      onTapCard: _toggleSelection,
+                    ),
+                    _StudentList(
+                      students: filteredVerified,
+                      showActions: false,
+                      onAccept: (_) async => false,
+                      onReject: (_) async => false,
+                      emptyMsg: _searchQuery.isNotEmpty || _classFilter != null
+                          ? 'No matching verified students'
+                          : 'No verified students',
+                      isSelectionMode: _isSelectionMode,
+                      selectedStudentIds: _selectedStudentIds,
+                      onLongPressCard: _enterSelectionMode,
+                      onTapCard: _toggleSelection,
+                    ),
+                    _StudentList(
+                      students: filteredRejected,
+                      showActions: false,
+                      onAccept: (_) async => false,
+                      onReject: (_) async => false,
+                      emptyMsg: _searchQuery.isNotEmpty || _classFilter != null
+                          ? 'No matching rejected students'
+                          : 'No rejected students',
+                      isSelectionMode: _isSelectionMode,
+                      selectedStudentIds: _selectedStudentIds,
+                      onLongPressCard: _enterSelectionMode,
+                      onTapCard: _toggleSelection,
+                    ),
+                  ],
+                ),
               ),
             ],
           );
@@ -390,7 +505,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
   }
 }
 
-class _StudentList extends StatelessWidget {
+class _StudentList extends StatefulWidget {
   final List<StudentUser> students;
   final bool showActions;
   final Future<bool> Function(String) onAccept;
@@ -414,8 +529,79 @@ class _StudentList extends StatelessWidget {
   });
 
   @override
+  State<_StudentList> createState() => _StudentListState();
+}
+
+class _StudentListState extends State<_StudentList> {
+  final Map<String, GlobalKey> _itemKeys = {};
+  final GlobalKey _listKey = GlobalKey();
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  String? _getStudentIdAtPosition(Offset globalPosition) {
+    for (final entry in _itemKeys.entries) {
+      final context = entry.value.currentContext;
+      if (context == null) continue;
+
+      final renderBox = context.findRenderObject() as RenderBox?;
+      if (renderBox == null) continue;
+
+      final localPosition = renderBox.globalToLocal(globalPosition);
+      final boxSize = renderBox.size;
+
+      if (localPosition.dx >= 0 &&
+          localPosition.dx <= boxSize.width &&
+          localPosition.dy >= 0 &&
+          localPosition.dy <= boxSize.height) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
+
+  void _detectAndSelectItems(Offset globalPosition) {
+    final studentId = _getStudentIdAtPosition(globalPosition);
+    if (studentId != null) {
+      if (!widget.selectedStudentIds.contains(studentId)) {
+        widget.onTapCard(studentId);
+      }
+    }
+  }
+
+  void _handleEdgeScrolling(Offset globalPosition) {
+    final listRenderBox = _listKey.currentContext?.findRenderObject() as RenderBox?;
+    if (listRenderBox == null) return;
+
+    final localPos = listRenderBox.globalToLocal(globalPosition);
+    final height = listRenderBox.size.height;
+
+    if (localPos.dy < 80) {
+      final target = _scrollController.offset - 15;
+      if (target >= _scrollController.position.minScrollExtent) {
+        _scrollController.jumpTo(target);
+      }
+    } else if (localPos.dy > height - 80) {
+      final target = _scrollController.offset + 15;
+      if (target <= _scrollController.position.maxScrollExtent) {
+        _scrollController.jumpTo(target);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (students.isEmpty) {
+    if (widget.students.isEmpty) {
       return Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32.0),
@@ -436,7 +622,7 @@ class _StudentList extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                emptyMsg,
+                widget.emptyMsg,
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
@@ -459,20 +645,39 @@ class _StudentList extends StatelessWidget {
       );
     }
     return RefreshIndicator(
+      key: _listKey,
       color: const Color(0xFF009688),
       onRefresh: () => Provider.of<AdminProvider>(context, listen: false).loadStudents(),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: students.length,
-        itemBuilder: (context, i) => _StudentCard(
-          student: students[i],
-          showActions: showActions,
-          onAccept: onAccept,
-          onReject: onReject,
-          isSelectionMode: isSelectionMode,
-          isSelected: selectedStudentIds.contains(students[i].id),
-          onLongPress: () => onLongPressCard(students[i].id),
-          onTap: () => onTapCard(students[i].id),
+      child: GestureDetector(
+        onLongPressStart: (details) {
+          final studentId = _getStudentIdAtPosition(details.globalPosition);
+          if (studentId != null) {
+            widget.onLongPressCard(studentId);
+            Feedback.forLongPress(context);
+          }
+        },
+        onLongPressMoveUpdate: (details) {
+          _detectAndSelectItems(details.globalPosition);
+          _handleEdgeScrolling(details.globalPosition);
+        },
+        child: ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.all(16),
+          itemCount: widget.students.length,
+          itemBuilder: (context, i) {
+            final student = widget.students[i];
+            final key = _itemKeys.putIfAbsent(student.id, () => GlobalKey());
+            return _StudentCard(
+              key: key,
+              student: student,
+              showActions: widget.showActions,
+              onAccept: widget.onAccept,
+              onReject: widget.onReject,
+              isSelectionMode: widget.isSelectionMode,
+              isSelected: widget.selectedStudentIds.contains(student.id),
+              onTap: () => widget.onTapCard(student.id),
+            );
+          },
         ),
       ),
     );
@@ -486,17 +691,16 @@ class _StudentCard extends StatefulWidget {
   final Future<bool> Function(String) onReject;
   final bool isSelectionMode;
   final bool isSelected;
-  final VoidCallback onLongPress;
   final VoidCallback onTap;
 
   const _StudentCard({
+    super.key,
     required this.student,
     required this.showActions,
     required this.onAccept,
     required this.onReject,
     required this.isSelectionMode,
     required this.isSelected,
-    required this.onLongPress,
     required this.onTap,
   });
 
@@ -523,7 +727,6 @@ class _StudentCardState extends State<_StudentCard> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: widget.isSelectionMode ? widget.onTap : null,
-        onLongPress: widget.onLongPress,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -575,45 +778,46 @@ class _StudentCardState extends State<_StudentCard> {
                 ],
               ),
               if (widget.showActions && !widget.isSelectionMode) ...[
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isActing ? null : () async {
-                        setState(() => _isActing = true);
-                        await widget.onReject(s.id);
-                        if (mounted) setState(() => _isActing = false);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _isActing ? null : () async {
+                          setState(() => _isActing = true);
+                          await widget.onReject(s.id);
+                          if (mounted) setState(() => _isActing = false);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('Decline'),
                       ),
-                      child: const Text('Decline'),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isActing ? null : () async {
-                        setState(() => _isActing = true);
-                        await widget.onAccept(s.id);
-                        if (mounted) setState(() => _isActing = false);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF43A047),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isActing ? null : () async {
+                          setState(() => _isActing = true);
+                          await widget.onAccept(s.id);
+                          if (mounted) setState(() => _isActing = false);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF43A047),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: _isActing
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Text('Accept', style: TextStyle(color: Colors.white)),
                       ),
-                      child: _isActing
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Accept', style: TextStyle(color: Colors.white)),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

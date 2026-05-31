@@ -19,6 +19,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   int? _filterClass;
   String? _filterLanguage;
   String? _filterChapter;
+  bool _isSelectionMode = false;
+  final Set<String> _selectedQuestionIds = {};
 
   final ScrollController _scrollController = ScrollController();
 
@@ -51,18 +53,133 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     );
   }
 
+  Future<void> _bulkDelete(BuildContext context) async {
+    final ids = _selectedQuestionIds.toList();
+    if (ids.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Bulk Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to permanently delete these ${ids.length} question(s) from the database? This is irreversible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(20.0),
+            child: CircularProgressIndicator(color: Color(0xFF0051D5)),
+          ),
+        ),
+      ),
+    );
+
+    final provider = Provider.of<QuestionProvider>(context, listen: false);
+    final success = await provider.bulkDeleteQuestions(ids);
+
+    if (context.mounted) Navigator.pop(context); // Close loading dialog
+
+    if (success) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Successfully deleted ${ids.length} question(s)'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      setState(() {
+        _isSelectionMode = false;
+        _selectedQuestionIds.clear();
+      });
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Some questions could not be deleted. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FB),
       appBar: AppBar(
-        title: const Text('Question Bank'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadQuestions,
-          ),
-        ],
+        backgroundColor: _isSelectionMode ? const Color(0xFF0051D5) : const Color(0xFF009688),
+        leading: _isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () {
+                  setState(() {
+                    _isSelectionMode = false;
+                    _selectedQuestionIds.clear();
+                  });
+                },
+              )
+            : IconButton(
+                icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+        title: _isSelectionMode
+            ? Text('${_selectedQuestionIds.length} Selected', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))
+            : const Text('Question Bank', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+        actions: _isSelectionMode
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.select_all, color: Colors.white),
+                  tooltip: 'Select All',
+                  onPressed: () {
+                    final provider = Provider.of<QuestionProvider>(context, listen: false);
+                    final visibleIds = provider.questions.map((q) => q.id!).toList();
+                    setState(() {
+                      final allSelected = visibleIds.every((id) => _selectedQuestionIds.contains(id));
+                      if (allSelected) {
+                        _selectedQuestionIds.removeAll(visibleIds);
+                        _isSelectionMode = false;
+                      } else {
+                        _selectedQuestionIds.addAll(visibleIds);
+                      }
+                    });
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.white),
+                  tooltip: 'Delete Selected',
+                  onPressed: () => _bulkDelete(context),
+                ),
+              ]
+            : [
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  onPressed: _loadQuestions,
+                ),
+              ],
       ),
       body: Column(
         children: [
@@ -112,7 +229,34 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                           ),
                         );
                       }
-                      return _QuestionCard(question: provider.questions[index]);
+                      final q = provider.questions[index];
+                      return GestureDetector(
+                        onLongPress: () {
+                          setState(() {
+                            _isSelectionMode = true;
+                            _selectedQuestionIds.add(q.id!);
+                          });
+                        },
+                        onTap: () {
+                          if (_isSelectionMode) {
+                            setState(() {
+                              if (_selectedQuestionIds.contains(q.id!)) {
+                                _selectedQuestionIds.remove(q.id!);
+                                if (_selectedQuestionIds.isEmpty) {
+                                  _isSelectionMode = false;
+                                }
+                              } else {
+                                _selectedQuestionIds.add(q.id!);
+                              }
+                            });
+                          }
+                        },
+                        child: _QuestionCard(
+                          question: q,
+                          isSelectionMode: _isSelectionMode,
+                          isSelected: _selectedQuestionIds.contains(q.id!),
+                        ),
+                      );
                     },
                   ),
                 );
@@ -287,16 +431,26 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
 
 class _QuestionCard extends StatelessWidget {
   final Question question;
-  const _QuestionCard({required this.question});
+  final bool isSelectionMode;
+  final bool isSelected;
+
+  const _QuestionCard({
+    required this.question,
+    required this.isSelectionMode,
+    required this.isSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isSelected ? const Color(0xFFF0F5FF) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: isSelected ? const Color(0xFF0051D5) : Colors.grey.shade200,
+          width: isSelected ? 1.5 : 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,18 +460,28 @@ class _QuestionCard extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
+                if (isSelectionMode) ...[
+                  Checkbox(
+                    value: isSelected,
+                    activeColor: const Color(0xFF0051D5),
+                    onChanged: (_) {}, // Handled by GestureDetector at parent level
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 _badge('Class ${question.classNo}', const Color(0xFFE0F7FA), const Color(0xFF006064)),
                 const SizedBox(width: 8),
                 _badge(question.language, const Color(0xFFF3E5F5), const Color(0xFF4A148C)),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blue),
-                  onPressed: () => _editQuestion(context),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
-                  onPressed: () => _confirmDelete(context),
-                ),
+                if (!isSelectionMode) ...[
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blue),
+                    onPressed: () => _editQuestion(context),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                    onPressed: () => _confirmDelete(context),
+                  ),
+                ],
               ],
             ),
           ),

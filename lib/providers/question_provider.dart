@@ -512,6 +512,15 @@ class QuestionProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> bulkDeleteQuestions(List<String> ids) async {
+    try {
+      final results = await Future.wait(ids.map((id) => deleteQuestion(id)));
+      return results.every((res) => res == true);
+    } catch (_) {
+      return false;
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // PDF DOCUMENT PROCESSING
   // ═══════════════════════════════════════════════════════════════════════════
