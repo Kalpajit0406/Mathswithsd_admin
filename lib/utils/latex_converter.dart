@@ -4,6 +4,17 @@ class LatexToReadableConverter {
 
     String result = latex;
 
+    // Fix raw \sqrt missing arguments to prevent parsing crash
+    result = result.replaceAll(RegExp(r'\\sqrt\s*(?![\{\[\w\d\\])'), r'\sqrt{}');
+
+    // First insert spaces around math delimiters if they are missing
+    result = result.replaceAllMapped(RegExp(r'(\w)(\$\$)'), (m) => '${m[1]} ${m[2]}');
+    result = result.replaceAllMapped(RegExp(r'(\$\$)(\w)'), (m) => '${m[1]} ${m[2]}');
+    result = result.replaceAllMapped(RegExp(r'(\w)(?<!\\)\$(?!\$)'), (m) => '${m[1]} \$');
+    result = result.replaceAllMapped(RegExp(r'(?<!\\)\$(?!\$)(\w)'), (m) => '\$ ${m[1]}');
+    result = result.replaceAllMapped(RegExp(r'(\w)(\\\(|\\\[)'), (m) => '${m[1]} ${m[2]}');
+    result = result.replaceAllMapped(RegExp(r'(\\\)|\\\])(\w)'), (m) => '${m[1]} ${m[2]}');
+
     // Remove LaTeX block equation display elements
     result = result.replaceAll(r'$$', '');
     result = result.replaceAll(RegExp(r'(?<!\\)\$'), '');

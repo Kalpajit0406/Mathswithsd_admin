@@ -23,11 +23,33 @@ class LaTeXWidget extends StatelessWidget {
         text.contains('\\');
   }
 
+  static String formatMathSpacing(String val) {
+    String result = val;
+
+    // Fix raw \sqrt missing arguments to prevent parsing crash
+    result = result.replaceAll(RegExp(r'\\sqrt\s*(?![\{\[\w\d\\])'), r'\sqrt{}');
+
+    // 1. Double dollar block math
+    result = result.replaceAllMapped(RegExp(r'(\w)(\$\$)'), (m) => '${m[1]} ${m[2]}');
+    result = result.replaceAllMapped(RegExp(r'(\$\$)(\w)'), (m) => '${m[1]} ${m[2]}');
+
+    // 2. Single dollar inline math (ignoring escaped \$)
+    result = result.replaceAllMapped(RegExp(r'(\w)(?<!\\)\$(?!\$)'), (m) => '${m[1]} \$');
+    result = result.replaceAllMapped(RegExp(r'(?<!\\)\$(?!\$)(\w)'), (m) => '\$ ${m[1]}');
+
+    // 3. LaTeX inline/block brackets
+    result = result.replaceAllMapped(RegExp(r'(\w)(\\\(|\\\[)'), (m) => '${m[1]} ${m[2]}');
+    result = result.replaceAllMapped(RegExp(r'(\\\)|\\\])(\w)'), (m) => '${m[1]} ${m[2]}');
+
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final formattedText = formatMathSpacing(text);
     if (!_hasMath) {
       return Text(
-        text,
+        formattedText,
         textAlign: textAlign,
         style: const TextStyle(
           fontSize: 15,
@@ -37,7 +59,7 @@ class LaTeXWidget extends StatelessWidget {
       );
     }
     return _WebViewLaTeXRenderer(
-      text: text,
+      text: formattedText,
       height: height,
       textAlign: textAlign,
     );
