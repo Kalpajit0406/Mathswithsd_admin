@@ -19,6 +19,15 @@ class QuestionProvider with ChangeNotifier {
   QuestionLoadState _loadState = QuestionLoadState.idle;
   String? _error;
 
+  int _currentPage = 1;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+  static const int _pageSize = 10;
+
+  int get currentPage => _currentPage;
+  bool get hasMore => _hasMore;
+  bool get isLoadingMore => _isLoadingMore;
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ENHANCED QUEUE SYSTEM
   // ═══════════════════════════════════════════════════════════════════════════
@@ -155,13 +164,31 @@ class QuestionProvider with ChangeNotifier {
   // QUESTION LOADING
   // ═══════════════════════════════════════════════════════════════════════════
 
-  Future<void> loadQuestions({int? classNo, String? language}) async {
-    _loadState = QuestionLoadState.loading;
-    _error = null;
-    notifyListeners();
+  Future<void> loadQuestions({int? classNo, String? language, bool clearCache = true}) async {
+    if (clearCache) {
+      _loadState = QuestionLoadState.loading;
+      _error = null;
+      _currentPage = 1;
+      _hasMore = true;
+      _questions = [];
+      notifyListeners();
+    }
 
     try {
-      _questions = await _apiService.getQuestions(classNo: classNo, language: language);
+      final newQuestions = await _apiService.getQuestions(
+        classNo: classNo,
+        language: language,
+        page: _currentPage,
+        pageSize: _pageSize,
+      );
+      
+      if (clearCache) {
+        _questions = newQuestions;
+      } else {
+        _questions.addAll(newQuestions);
+      }
+      
+      _hasMore = newQuestions.length >= _pageSize;
       _loadState = QuestionLoadState.loaded;
     } on ApiException catch (e) {
       _error = e.message;
@@ -171,6 +198,31 @@ class QuestionProvider with ChangeNotifier {
       _loadState = QuestionLoadState.error;
     }
     notifyListeners();
+  }
+
+  Future<void> loadMoreQuestions({int? classNo, String? language}) async {
+    if (_isLoadingMore || !_hasMore) return;
+    _isLoadingMore = true;
+    notifyListeners();
+
+    try {
+      _currentPage++;
+      final newQuestions = await _apiService.getQuestions(
+        classNo: classNo,
+        language: language,
+        page: _currentPage,
+        pageSize: _pageSize,
+      );
+      
+      _questions.addAll(newQuestions);
+      _hasMore = newQuestions.length >= _pageSize;
+    } catch (e) {
+      _currentPage--;
+      debugPrint('Failed to load more questions: $e');
+    } finally {
+      _isLoadingMore = false;
+      notifyListeners();
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

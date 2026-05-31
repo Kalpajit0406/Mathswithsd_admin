@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 /// LaTeX math rendering widget using WebView with MathJax and dynamic height calculation
-class LaTeXWidget extends StatefulWidget {
+class LaTeXWidget extends StatelessWidget {
   final String text;
   final double? height;
   final TextAlign? textAlign;
@@ -15,11 +15,51 @@ class LaTeXWidget extends StatefulWidget {
     this.textAlign,
   });
 
+  bool get _hasMath {
+    return text.contains(r'$') ||
+        text.contains(r'\(') ||
+        text.contains(r'\[') ||
+        text.contains(r'$$') ||
+        text.contains('\\');
+  }
+
   @override
-  State<LaTeXWidget> createState() => _LaTeXWidgetState();
+  Widget build(BuildContext context) {
+    if (!_hasMath) {
+      return Text(
+        text,
+        textAlign: textAlign,
+        style: const TextStyle(
+          fontSize: 15,
+          color: Color(0xFF1A1A2E),
+          height: 1.4,
+        ),
+      );
+    }
+    return _WebViewLaTeXRenderer(
+      text: text,
+      height: height,
+      textAlign: textAlign,
+    );
+  }
 }
 
-class _LaTeXWidgetState extends State<LaTeXWidget> {
+class _WebViewLaTeXRenderer extends StatefulWidget {
+  final String text;
+  final double? height;
+  final TextAlign? textAlign;
+
+  const _WebViewLaTeXRenderer({
+    required this.text,
+    this.height,
+    this.textAlign,
+  });
+
+  @override
+  State<_WebViewLaTeXRenderer> createState() => _WebViewLaTeXRendererState();
+}
+
+class _WebViewLaTeXRendererState extends State<_WebViewLaTeXRenderer> {
   late WebViewController _controller;
   bool _isLoaded = false;
   double _contentHeight = 45.0; // Start with compact default height
@@ -118,7 +158,7 @@ class _LaTeXWidgetState extends State<LaTeXWidget> {
   }
 
   @override
-  void didUpdateWidget(covariant LaTeXWidget oldWidget) {
+  void didUpdateWidget(covariant _WebViewLaTeXRenderer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.text != widget.text && _isLoaded) {
       _updateContent();

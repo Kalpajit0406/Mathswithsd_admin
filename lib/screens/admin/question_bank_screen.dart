@@ -20,12 +20,28 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   String? _filterLanguage;
   String? _filterChapter;
 
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadQuestions();
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      final provider = Provider.of<QuestionProvider>(context, listen: false);
+      provider.loadMoreQuestions(classNo: _filterClass, language: _filterLanguage);
+    }
   }
 
   void _loadQuestions() {
@@ -55,26 +71,118 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             child: Consumer<QuestionProvider>(
               builder: (context, provider, _) {
                 if (provider.loadState == QuestionLoadState.loading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const _SkeletonLoaderList();
                 }
                 if (provider.loadState == QuestionLoadState.error) {
-                  return Center(child: Text(provider.error ?? 'Error loading questions'));
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Text(
+                        provider.error ?? 'Error loading questions',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  );
                 }
                 if (provider.questions.isEmpty) {
-                  return const Center(child: Text('No questions found matching filters.'));
+                  return _buildEmptyState();
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: provider.questions.length,
-                  itemBuilder: (context, index) {
-                    return _QuestionCard(question: provider.questions[index]);
+                return RefreshIndicator(
+                  color: const Color(0xFF0051D5),
+                  onRefresh: () async {
+                    _loadQuestions();
                   },
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: provider.questions.length + (provider.hasMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == provider.questions.length) {
+                        return const Padding(
+                          padding: EdgeInsets.only(top: 8.0),
+                          child: _PulsingShimmer(
+                            child: Column(
+                              children: [
+                                _SkeletonQuestionCard(),
+                                _SkeletonQuestionCard(),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      return _QuestionCard(question: provider.questions[index]);
+                    },
+                  ),
                 );
               },
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0051D5).withOpacity(0.05),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.quiz_outlined,
+                size: 64,
+                color: Color(0xFF0051D5),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'No Questions Found',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'There are no questions matching your selected filters. Try changing your class or language criteria, or clear filters to view all questions.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF64748B),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _filterClass = null;
+                  _filterLanguage = null;
+                  _filterChapter = null;
+                });
+                _loadQuestions();
+              },
+              icon: const Icon(Icons.filter_alt_off_outlined),
+              label: const Text('Clear Filters'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0051D5),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -506,5 +614,144 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Question updated!')));
     }
+  }
+}
+
+class _PulsingShimmer extends StatefulWidget {
+  final Widget child;
+  const _PulsingShimmer({required this.child});
+
+  @override
+  State<_PulsingShimmer> createState() => _PulsingShimmerState();
+}
+
+class _PulsingShimmerState extends State<_PulsingShimmer> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.35, end: 0.85).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _animation.value,
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class _SkeletonLoaderList extends StatelessWidget {
+  const _SkeletonLoaderList();
+
+  @override
+  Widget build(BuildContext context) {
+    return _PulsingShimmer(
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 3,
+        itemBuilder: (context, index) => const _SkeletonQuestionCard(),
+      ),
+    );
+  }
+}
+
+class _SkeletonQuestionCard extends StatelessWidget {
+  const _SkeletonQuestionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header info skeleton
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                _skeletonBox(width: 60, height: 20, borderRadius: 6),
+                const SizedBox(width: 8),
+                _skeletonBox(width: 80, height: 20, borderRadius: 6),
+                const Spacer(),
+                _skeletonBox(width: 24, height: 24, borderRadius: 12),
+                const SizedBox(width: 8),
+                _skeletonBox(width: 24, height: 24, borderRadius: 12),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          // Content skeleton
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _skeletonBox(width: 120, height: 14),
+                const SizedBox(height: 16),
+                _skeletonBox(width: double.infinity, height: 16),
+                const SizedBox(height: 8),
+                _skeletonBox(width: double.infinity, height: 16),
+                const SizedBox(height: 8),
+                _skeletonBox(width: 200, height: 16),
+                const SizedBox(height: 24),
+                const Text('Options:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+                const SizedBox(height: 12),
+                ...List.generate(4, (i) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      _skeletonBox(width: 24, height: 24, borderRadius: 12),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _skeletonBox(width: double.infinity, height: 20, borderRadius: 8),
+                      ),
+                    ],
+                  ),
+                )),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _skeletonBox({required double width, required double height, double borderRadius = 4}) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+    );
   }
 }

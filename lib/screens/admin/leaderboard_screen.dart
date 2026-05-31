@@ -56,7 +56,47 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         : _error != null 
           ? Center(child: Text(_error!))
           : _data.isEmpty
-            ? const Center(child: Text('No submissions yet for this test.'))
+            ? Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0051D5).withOpacity(0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.emoji_events_outlined,
+                          size: 64,
+                          color: Color(0xFF0051D5),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'No Submissions Yet',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'No students have completed or submitted this test yet. Once students submit, their ranks and scores will appear here.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF64748B),
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
             : ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: _data.length,

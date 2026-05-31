@@ -116,13 +116,44 @@ class _StudentList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (students.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.people_outline, size: 72, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            Text(emptyMsg, style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
-          ],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF009688).withOpacity(0.05),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.people_outline,
+                  size: 64,
+                  color: Color(0xFF009688),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                emptyMsg,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'No student registration records are currently listed under this category.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF64748B),
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }

@@ -82,7 +82,9 @@ class ApiService {
   Future<bool> _probeBaseUrl(String baseUrl) async {
     try {
       final probeUri = Uri.parse('$baseUrl/health');
-      final resp = await http.get(probeUri).timeout(const Duration(milliseconds: 1000));
+      final isRemote = baseUrl.startsWith('https://');
+      final timeoutMs = isRemote ? 8000 : 1500;
+      final resp = await http.get(probeUri).timeout(Duration(milliseconds: timeoutMs));
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         return true;
       }
@@ -305,10 +307,12 @@ class ApiService {
 
   // ─── Questions ────────────────────────────────────────────────────────────────
 
-  Future<List<Question>> getQuestions({int? classNo, String? language}) async {
+  Future<List<Question>> getQuestions({int? classNo, String? language, int? page, int? pageSize}) async {
     final params = <String, String>{};
     if (classNo != null) params['classNo'] = classNo.toString();
     if (language != null) params['language'] = language;
+    if (page != null) params['page'] = page.toString();
+    if (pageSize != null) params['pageSize'] = pageSize.toString();
 
     final uri = (await _uri(AppConstants.questionsEndpoint)).replace(queryParameters: params);
     final response = await http.get(uri, headers: await _headers())
@@ -881,14 +885,14 @@ class ApiService {
   }
 
   /// Get questions with retry
-  Future<List<Question>> getQuestionsWithRetry({int? classNo, String? language}) async {
+  Future<List<Question>> getQuestionsWithRetry({int? classNo, String? language, int? page, int? pageSize}) async {
     int attempt = 0;
     const maxAttempts = 3;
     Duration delay = const Duration(seconds: 1);
 
     while (attempt < maxAttempts) {
       try {
-        return await getQuestions(classNo: classNo, language: language);
+        return await getQuestions(classNo: classNo, language: language, page: page, pageSize: pageSize);
       } on ApiException catch (e) {
         attempt++;
         if (attempt >= maxAttempts) rethrow;

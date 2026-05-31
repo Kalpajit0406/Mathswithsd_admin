@@ -2,7 +2,7 @@ class AppConstants {
   // Use local LAN IP since you are testing on a physical device
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.37.148.107:5000',
+    defaultValue: 'https://math-app-backend-2.onrender.com',
   );
   // static const String baseUrl = 'http://10.0.2.2:5000'; // For emulator
   // API Endpoints

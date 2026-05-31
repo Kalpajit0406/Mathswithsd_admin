@@ -60,13 +60,44 @@ class _YourTestsScreenState extends State<YourTestsScreen> {
           }
           if (provider.tests.isEmpty) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.fact_check_outlined, size: 80, color: Colors.grey.shade200),
-                  const SizedBox(height: 16),
-                  const Text('No tests created yet.', style: TextStyle(color: Colors.grey, fontSize: 16)),
-                ],
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0051D5).withOpacity(0.05),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.fact_check_outlined,
+                        size: 64,
+                        color: Color(0xFF0051D5),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'No Assessments Found',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'There are no exams or assessments created yet. Go back to the dashboard to create a new test.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF64748B),
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           }
