@@ -348,37 +348,72 @@ class _AdminDashboardState extends State<AdminDashboard>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           FadeInSlide(
-            duration: const Duration(milliseconds: 550),
+            duration: const Duration(milliseconds: 600),
             slideOffset: 24,
-            child: const Text(
-              'Welcome Back,\nEducator SD 🎓',
-              style: TextStyle(
-                fontSize: 34,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF0F172A),
-                height: 1.15,
-                letterSpacing: -1,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          FadeInSlide(
-            duration: const Duration(milliseconds: 550),
-            delay: const Duration(milliseconds: 100),
-            slideOffset: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF316BF3).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                '12 new assessment responses received today.',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0051D5),
-                ),
+            child: GlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Welcome Back,\nSoumen Sir 🎓',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                            height: 1.2,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0051D5).withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF0051D5).withValues(alpha: 0.2)),
+                        ),
+                        child: const Icon(
+                          Icons.admin_panel_settings_rounded,
+                          color: Color(0xFF0051D5),
+                          size: 28,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0051D5).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF0051D5).withValues(alpha: 0.15)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.notifications_active_outlined,
+                          color: Color(0xFF0051D5),
+                          size: 16,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '12 new assessment responses received today.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0051D5),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
