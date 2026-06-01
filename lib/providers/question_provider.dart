@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/question_model.dart';
@@ -6,7 +7,6 @@ import '../services/api_service.dart';
 import 'dart:io';
 
 enum QuestionLoadState { idle, loading, loaded, error }
-enum QueueNavigationMode { sequential, random, skip }
 
 /// Enhanced provider with multi-question queue management
 class QuestionProvider with ChangeNotifier {
@@ -37,9 +37,6 @@ class QuestionProvider with ChangeNotifier {
   
   /// Current position in queue (0-based index)
   int _currentQueueIndex = 0;
-  
-  /// Navigation mode for queue (sequential, random, skip)
-  QueueNavigationMode _queueNavigationMode = QueueNavigationMode.sequential;
   
   /// Verification history for undo/recovery
   final List<ScanData> _verificationHistory = [];
@@ -109,6 +106,40 @@ class QuestionProvider with ChangeNotifier {
       await prefs.setString(_queuePrefsKey, jsonEncode(state));
     } catch (_) {
       // Queue persistence is best-effort; scanning should continue even if disk write fails.
+    }
+  }
+
+  Future<void> _syncCurrentIndexWithBackend() async {
+    if (_queueSessionId == null) return;
+    try {
+      await _apiService.setCurrentOcrSessionIndex(_queueSessionId!, _currentQueueIndex);
+    } catch (e) {
+      debugPrint('Failed to sync index with backend: $e');
+    }
+  }
+
+  Future<void> _deleteQueueItemOnBackend(int indexToDelete) async {
+    if (_queueSessionId == null) return;
+    try {
+      await _apiService.deleteOcrSessionItem(_queueSessionId!, indexToDelete);
+    } catch (e) {
+      debugPrint('Failed to delete queue item on backend: $e');
+    }
+  }
+
+  Future<void> _updateQueueItemOnBackend(ScanData updatedData) async {
+    if (_queueSessionId == null) return;
+    try {
+      await _apiService.updateOcrSessionItem(
+        _queueSessionId!,
+        _currentQueueIndex,
+        questionText: updatedData.questionText,
+        options: updatedData.options,
+        questionNumber: updatedData.questionNumber,
+        verified: updatedData.verified,
+      );
+    } catch (e) {
+      debugPrint('Failed to update queue item on backend: $e');
     }
   }
 
@@ -269,11 +300,7 @@ class QuestionProvider with ChangeNotifier {
     if (hasNextQuestion) {
       _currentQueueIndex++;
       _persistQueueState();
-      if (_queueSessionId != null) {
-        _apiService.setCurrentOcrSessionIndex(_queueSessionId!, _currentQueueIndex).catchError((e) {
-          debugPrint('Failed to sync index with backend: $e');
-        });
-      }
+      unawaited(_syncCurrentIndexWithBackend());
       notifyListeners();
       return true;
     }
@@ -285,11 +312,7 @@ class QuestionProvider with ChangeNotifier {
     if (hasPreviousQuestion) {
       _currentQueueIndex--;
       _persistQueueState();
-      if (_queueSessionId != null) {
-        _apiService.setCurrentOcrSessionIndex(_queueSessionId!, _currentQueueIndex).catchError((e) {
-          debugPrint('Failed to sync index with backend: $e');
-        });
-      }
+      unawaited(_syncCurrentIndexWithBackend());
       notifyListeners();
       return true;
     }
@@ -301,11 +324,7 @@ class QuestionProvider with ChangeNotifier {
     if (index >= 0 && index < _questionQueue.length) {
       _currentQueueIndex = index;
       _persistQueueState();
-      if (_queueSessionId != null) {
-        _apiService.setCurrentOcrSessionIndex(_queueSessionId!, _currentQueueIndex).catchError((e) {
-          debugPrint('Failed to sync index with backend: $e');
-        });
-      }
+      unawaited(_syncCurrentIndexWithBackend());
       notifyListeners();
       return true;
     }
@@ -324,11 +343,7 @@ class QuestionProvider with ChangeNotifier {
       _persistQueueState();
       notifyListeners();
 
-      if (_queueSessionId != null) {
-        _apiService.deleteOcrSessionItem(_queueSessionId!, indexToDelete).catchError((e) {
-          debugPrint('Failed to delete queue item on backend: $e');
-        });
-      }
+      unawaited(_deleteQueueItemOnBackend(indexToDelete));
       return true;
     }
     return false;
@@ -386,18 +401,7 @@ class QuestionProvider with ChangeNotifier {
       _persistQueueState();
       notifyListeners();
 
-      if (_queueSessionId != null) {
-        _apiService.updateOcrSessionItem(
-          _queueSessionId!,
-          _currentQueueIndex,
-          questionText: updatedData.questionText,
-          options: updatedData.options,
-          questionNumber: updatedData.questionNumber,
-          verified: updatedData.verified,
-        ).catchError((e) {
-          debugPrint('Failed to update queue item on backend: $e');
-        });
-      }
+        unawaited(_updateQueueItemOnBackend(updatedData));
     }
   }
 
@@ -677,83 +681,6 @@ class QuestionProvider with ChangeNotifier {
       _creationError = 'Failed to delete PDF: $error';
       notifyListeners();
       return false;
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // HELPER: POPULATE QUEUE FROM OCR RESPONSE
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /// Helper to populate queue from OCR API response
-  /// Called after both image and PDF OCR to populate the question queue
-  Future<void> _populateQueueFromOcr(Map<String, dynamic> ocrData) async {
-    try {
-      final questions = ocrData['questions'] as List?;
-      if (questions == null || questions.isEmpty) {
-        return;
-      }
-
-      // Convert to ScanData objects
-      final scanDataList = <ScanData>[];
-      final limit = questions.length > _maxQueueSize ? _maxQueueSize : questions.length;
-      
-      const int chunkSize = 15;
-      for (int i = 0; i < limit; i += chunkSize) {
-        final end = (i + chunkSize < limit) ? i + chunkSize : limit;
-        for (int j = i; j < end; j++) {
-          final q = questions[j];
-          if (q is Map) {
-            final List<String> extractedOptions = [];
-            final rawOptions = q['options'];
-            if (rawOptions is List) {
-              for (var opt in rawOptions) {
-                if (opt is Map) {
-                  extractedOptions.add(opt['text']?.toString() ?? '');
-                } else {
-                  extractedOptions.add(opt?.toString() ?? '');
-                }
-              }
-            }
-            
-            // Ensure exactly 4 options
-            while (extractedOptions.length < 4) {
-              extractedOptions.add('');
-            }
-            
-            final scanData = ScanData(
-              questionText: q['questionText'] ?? q['question'] ?? '',
-              options: extractedOptions.sublist(0, 4),
-              questionNumber: q['questionNumber']?.toString(),
-              detectionOrder: (q['detectionOrder'] as num?)?.toInt() ?? j,
-              rawOcrData: q['rawOcrData'] is Map ? Map<String, dynamic>.from(q['rawOcrData'] as Map) : null,
-              verified: false,
-            );
-            scanDataList.add(scanData);
-          }
-        }
-        // Yield execution to the event loop so the UI remains fluid
-        await Future.delayed(Duration.zero);
-      }
-
-      if (questions.length > _maxQueueSize) {
-        debugPrint('OCR queue capped at $_maxQueueSize items during OCR import.');
-      }
-
-      // Clear existing queue and populate
-      _questionQueue = scanDataList;
-      _currentQueueIndex = 0;
-      _verificationHistory.clear();
-
-      // OPTIMIZATION: Do not persist the bulky questions/detailed_info field to SharedPreferences.
-      // This saves significant memory, serialization overhead, and disk IO time.
-      _lastOcrResponse = Map<String, dynamic>.from(ocrData)
-        ..remove('questions')
-        ..remove('detailed_info');
-
-      _persistQueueState();
-      notifyListeners();
-    } catch (error) {
-      throw Exception('Failed to populate queue: $error');
     }
   }
 
