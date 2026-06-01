@@ -870,7 +870,7 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                     )
                   : TextButton(
                       onPressed: _save,
-                      child: const Text('SAVE', style: TextStyle(color: Colors.white)),
+                      child: const Text('SAVE', style: TextStyle(color: Color(0xFF0051D5), fontWeight: FontWeight.bold)),
                     ),
             ],
           ),
@@ -898,7 +898,14 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                                 _selectedClass = v!;
                                 _selectedChapter = AppConstants.classChapters[v]?.first;
                               }),
-                              items: [9, 10, 11, 12, 13].map((c) => DropdownMenuItem(value: c, child: Text(c == 13 ? 'Joint Entrance' : 'Class $c'))).toList(),
+                              items: (() {
+                                final list = [9, 10, 11, 12, 13];
+                                if (!list.contains(_selectedClass)) {
+                                  list.add(_selectedClass);
+                                  list.sort();
+                                }
+                                return list.map((c) => DropdownMenuItem(value: c, child: Text(c == 13 ? 'Joint Entrance' : 'Class $c'))).toList();
+                              })(),
                               decoration: const InputDecoration(labelText: 'Class'),
                             ),
                           ),
@@ -907,7 +914,13 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                             child: DropdownButtonFormField<String>(
                               value: _selectedLanguage,
                               onChanged: provider.isSaving ? null : (v) => setState(() => _selectedLanguage = v!),
-                              items: ['English', 'Bengali', 'Both'].map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+                              items: (() {
+                                final list = ['English', 'Bengali', 'Both'];
+                                if (!list.contains(_selectedLanguage)) {
+                                  list.add(_selectedLanguage);
+                                }
+                                return list.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList();
+                              })(),
                               decoration: const InputDecoration(labelText: 'Language'),
                             ),
                           ),
@@ -917,7 +930,13 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                       DropdownButtonFormField<String>(
                         value: _selectedChapter,
                         onChanged: provider.isSaving ? null : (v) => setState(() => _selectedChapter = v),
-                        items: chapters.map((ch) => DropdownMenuItem(value: ch, child: Text(ch))).toList(),
+                        items: (() {
+                          final uniqueChapters = List<String>.from(chapters);
+                          if (_selectedChapter != null && !uniqueChapters.contains(_selectedChapter)) {
+                            uniqueChapters.insert(0, _selectedChapter!);
+                          }
+                          return uniqueChapters.map((ch) => DropdownMenuItem(value: ch, child: Text(ch))).toList();
+                        })(),
                         decoration: const InputDecoration(labelText: 'Chapter'),
                       ),
                       const SizedBox(height: 24),
@@ -942,6 +961,36 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                 ),
               ),
             ],
+          ),
+          bottomNavigationBar: Container(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 12,
+              bottom: 12 + MediaQuery.of(context).viewInsets.bottom,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: Colors.grey.shade200)),
+            ),
+            child: ElevatedButton(
+              onPressed: provider.isSaving ? null : _save,
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
+                backgroundColor: const Color(0xFF0051D5),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: provider.isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
           ),
         );
       },
