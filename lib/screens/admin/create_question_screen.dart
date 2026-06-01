@@ -975,7 +975,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                           child: _buildDropdown<int>(
                             label: 'Class',
                             value: _selectedClass,
-                            items: [9, 10, 11, 12].map((c) => DropdownMenuItem(value: c, child: Text('Class $c'))).toList(),
+                            items: [9, 10, 11, 12, 13].map((c) => DropdownMenuItem(value: c, child: Text(c == 13 ? 'Joint Entrance' : 'Class $c'))).toList(),
                             onChanged: (val) {
                               setState(() {
                                 _selectedClass = val!;

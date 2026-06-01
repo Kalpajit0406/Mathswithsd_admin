@@ -9,6 +9,7 @@ class AppUser {
   final bool? verified;
   final bool? isRejected;
   final bool? isBlacklisted;
+  final bool? isJoint;
   final String token;
 
   AppUser({
@@ -21,6 +22,7 @@ class AppUser {
     this.verified,
     this.isRejected,
     this.isBlacklisted,
+    this.isJoint,
     required this.token,
   });
 
@@ -37,6 +39,7 @@ class AppUser {
       verified: json['verified'],
       isRejected: json['isRejected'] ?? false,
       isBlacklisted: json['isBlacklisted'] ?? false,
+      isJoint: json['isJoint'] ?? false,
       token: token,
     );
   }
@@ -50,6 +53,7 @@ class StudentUser {
   final int? classNo;
   final bool? verified;
   final bool? isRejected;
+  final bool? isJoint;
   final String? fatherName;
   final String? motherName;
   final String? dateOfBirth;
@@ -64,6 +68,7 @@ class StudentUser {
     this.classNo,
     this.verified,
     this.isRejected,
+    this.isJoint,
     this.fatherName,
     this.motherName,
     this.dateOfBirth,
@@ -82,6 +87,7 @@ class StudentUser {
       classNo: json['classNo'] != null ? int.tryParse(json['classNo'].toString()) : null,
       verified: json['verified'],
       isRejected: json['isRejected'] ?? false,
+      isJoint: json['isJoint'] ?? false,
       fatherName: json['fatherName'],
       motherName: json['motherName'],
       dateOfBirth: json['dateOfBirth'],

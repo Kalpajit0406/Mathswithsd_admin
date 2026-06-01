@@ -24,7 +24,7 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
   double _marksPerQuestion = 1.0;
   List<String> _selectedChapters = [];
 
-  final _classes = ['9', '10', '11', '12'];
+  final _classes = ['9', '10', '11', '12', '13'];
   final _mediums = ['Bengali', 'English', 'Both'];
   final _questionOptions = ['10', '20', '30', '40', '50', '80', '100'];
 
@@ -301,7 +301,7 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
             const SizedBox(height: 20),
 
             _sectionCard('Target & Language', [
-              _buildDropdown('Target Class', _selectedClass, _classes.map((c) => 'Class $c').toList(),
+              _buildDropdown('Target Class', _selectedClass, _classes.map((c) => c == '13' ? 'Joint Entrance' : 'Class $c').toList(),
                 _classes, (val) => setState(() {
                   _selectedClass = val!;
                   _selectedChapters.clear();

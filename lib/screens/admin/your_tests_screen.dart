@@ -151,7 +151,7 @@ class _TestCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Class ${test.classNo} • ${test.language}',
+                        '${test.classNo == 13 ? 'Joint Entrance' : 'Class ${test.classNo}'} • ${test.language}',
                         style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
                       ),
                       const SizedBox(height: 4),
@@ -179,7 +179,7 @@ class _TestCard extends StatelessWidget {
                     Navigator.push(context, MaterialPageRoute(
                       builder: (_) => LeaderboardScreen(
                         examId: test.id,
-                        testTitle: 'Class ${test.classNo} - ${test.date}',
+                        testTitle: '${test.classNo == 13 ? 'Joint Entrance' : 'Class ${test.classNo}'} - ${test.date}',
                       ),
                     ));
                   },

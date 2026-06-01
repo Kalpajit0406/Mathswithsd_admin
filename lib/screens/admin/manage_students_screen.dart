@@ -1060,15 +1060,40 @@ class _ProfileEditCard extends StatefulWidget {
 class _ProfileEditCardState extends State<_ProfileEditCard> {
   bool _isActing = false;
 
+  int? _getInt(dynamic val) {
+    if (val == null) return null;
+    return int.tryParse(val.toString());
+  }
+
+  bool? _getBool(dynamic val) {
+    if (val == null) return null;
+    return val == true || val.toString() == 'true';
+  }
+
+  String _getClassDisplay(int? classNo, bool? isJoint) {
+    if (classNo == null) return 'N/A';
+    if (isJoint == true && (classNo == 11 || classNo == 12)) {
+      return '$classNo Joint';
+    }
+    return classNo.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = widget.student;
     final edit = s.pendingProfileEdit!;
     final reqClass = edit['classNo'];
     final reqLang = edit['language'];
+    final reqJoint = edit['isJoint'];
 
-    final classChanged = reqClass != null && reqClass != s.classNo;
-    final langChanged = reqLang != null && reqLang != s.language;
+    final parsedReqClass = _getInt(reqClass);
+    final parsedReqJoint = _getBool(reqJoint);
+
+    final oldClassStr = _getClassDisplay(s.classNo, s.isJoint);
+    final newClassStr = _getClassDisplay(parsedReqClass ?? s.classNo, parsedReqJoint ?? s.isJoint);
+
+    final classChanged = oldClassStr != newClassStr;
+    final langChanged = reqLang != null && reqLang.toString() != s.language;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1119,8 +1144,8 @@ class _ProfileEditCardState extends State<_ProfileEditCard> {
                 children: [
                   _changeRow(
                     'Class',
-                    s.classNo?.toString() ?? 'N/A',
-                    reqClass?.toString() ?? 'N/A',
+                    oldClassStr,
+                    newClassStr,
                     classChanged,
                   ),
                   const SizedBox(height: 8),
