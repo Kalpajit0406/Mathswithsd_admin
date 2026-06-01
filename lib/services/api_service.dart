@@ -590,6 +590,15 @@ class ApiService {
     _processResponse(response);
   }
 
+  Future<void> approveProfileEdit(String studentId, bool approve) async {
+    final response = await http.post(
+      await _uri(AppConstants.approveProfileEditEndpoint),
+      headers: await _headers(),
+      body: jsonEncode({'id': studentId, 'approve': approve}),
+    ).timeout(const Duration(seconds: 10));
+    _processResponse(response);
+  }
+
   Future<Question> createQuestionResilient(Question question, {File? diagramFile}) async {
     final token = await _requireAuthToken();
     final client = http.Client();

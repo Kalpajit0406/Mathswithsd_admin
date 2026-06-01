@@ -126,6 +126,16 @@ class AdminProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> resolveProfileEdit(String studentId, bool approve) async {
+    try {
+      await _apiService.approveProfileEdit(studentId, approve);
+      await loadStudents();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // ─── Tests ────────────────────────────────────────────────────────────────────
 
   Future<void> loadTests() async {

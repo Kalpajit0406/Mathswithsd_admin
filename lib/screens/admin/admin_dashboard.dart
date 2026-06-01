@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
+import 'dart:ui';
+import 'dart:math' as math;
 
 import '../../providers/auth_provider.dart';
 import '../../services/image_service.dart';
@@ -13,6 +15,7 @@ import '../shared/settings_screen.dart';
 import 'create_question_screen.dart';
 import 'question_bank_screen.dart';
 import '../../widgets/fade_in_slide.dart';
+import '../../widgets/glass_card.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -21,9 +24,10 @@ class AdminDashboard extends StatefulWidget {
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
-class _AdminDashboardState extends State<AdminDashboard> {
+class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
   final ImageService _imageService = ImageService();
+  late AnimationController _bgAnimationController;
 
   late final List<Widget> _pages = [
     _buildHomeTab(),
@@ -35,8 +39,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   void initState() {
     super.initState();
+    _bgAnimationController = AnimationController(
+      duration: const Duration(seconds: 20),
+      vsync: this,
+    )..repeat(reverse: true);
     // Check for lost data if the app was killed during camera session
     _checkLostData();
+  }
+
+  @override
+  void dispose() {
+    _bgAnimationController.dispose();
+    super.dispose();
   }
 
   Future<void> _checkLostData() async {
@@ -83,10 +97,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         });
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F9FB),
+        backgroundColor: Colors.transparent,
         appBar: _currentIndex == 0
             ? AppBar(
-                backgroundColor: Colors.white,
+                backgroundColor: Colors.transparent,
                 elevation: 0,
                 scrolledUnderElevation: 0,
                 iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
@@ -121,9 +135,68 @@ class _AdminDashboardState extends State<AdminDashboard> {
               )
             : null,
         drawer: const _AdminDrawer(),
-        body: IndexedStack(
-          index: _currentIndex,
-          children: _pages,
+        body: Stack(
+          children: [
+            // Drifting ambient glows
+            AnimatedBuilder(
+              animation: _bgAnimationController,
+              builder: (context, child) {
+                final progress = _bgAnimationController.value;
+                final x1 = 0.2 + 0.5 * math.sin(progress * 2 * math.pi);
+                final y1 = 0.3 + 0.4 * math.cos(progress * 2 * math.pi);
+                final x2 = 0.8 + 0.4 * math.cos(progress * 2 * math.pi + math.pi / 2);
+                final y2 = 0.7 + 0.3 * math.sin(progress * 2 * math.pi + math.pi / 2);
+
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Container(
+                        color: const Color(0xFFF8FAFC),
+                      ),
+                    ),
+                    Positioned(
+                      left: MediaQuery.of(context).size.width * x1 - 180,
+                      top: MediaQuery.of(context).size.height * y1 - 180,
+                      child: Container(
+                        width: 360,
+                        height: 360,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFF009688).withOpacity(0.08),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: MediaQuery.of(context).size.width * x2 - 180,
+                      top: MediaQuery.of(context).size.height * y2 - 180,
+                      child: Container(
+                        width: 360,
+                        height: 360,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFF0051D5).withOpacity(0.08),
+                        ),
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
+                        child: const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+            
+            // Content
+            Positioned.fill(
+              child: IndexedStack(
+                index: _currentIndex,
+                children: _pages,
+              ),
+            ),
+          ],
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         floatingActionButton: Container(
@@ -323,20 +396,9 @@ class _ActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFECEEF0), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
+      borderRadius: 20,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -344,7 +406,7 @@ class _ActionCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: iconBgColor.withOpacity(0.4),
+              color: iconBgColor.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: iconColor, size: 22),

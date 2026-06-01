@@ -446,6 +446,8 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
           final filteredPending = filterStudents(provider.pendingStudents);
           final filteredVerified = filterStudents(provider.verifiedStudents);
           final filteredRejected = filterStudents(provider.rejectedStudents);
+          final editStudents = allStudents.where((s) => s.pendingProfileEdit != null).toList();
+          final filteredProfileEdits = filterStudents(editStudents);
 
           return Column(
             children: [
@@ -454,14 +456,12 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    _StudentList(
-                      students: filteredPending,
-                      showActions: true,
-                      onAccept: (id) => provider.acceptStudent(id),
-                      onReject: (id) => provider.rejectStudent(id),
-                      emptyMsg: _searchQuery.isNotEmpty || _classFilter != null
-                          ? 'No matching pending students'
-                          : 'No pending registrations',
+                    _PendingTabContent(
+                      pendingRegistrations: filteredPending,
+                      profileEdits: filteredProfileEdits,
+                      onAcceptRegistration: (id) => provider.acceptStudent(id),
+                      onRejectRegistration: (id) => provider.rejectStudent(id),
+                      onResolveProfileEdit: (id, approve) => provider.resolveProfileEdit(id, approve),
                       isSelectionMode: _isSelectionMode,
                       selectedStudentIds: _selectedStudentIds,
                       onLongPressCard: _enterSelectionMode,
@@ -848,6 +848,354 @@ class _ErrorWidget extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PendingTabContent extends StatefulWidget {
+  final List<StudentUser> pendingRegistrations;
+  final List<StudentUser> profileEdits;
+  final Future<bool> Function(String) onAcceptRegistration;
+  final Future<bool> Function(String) onRejectRegistration;
+  final Function(String, bool) onResolveProfileEdit;
+  final bool isSelectionMode;
+  final Set<String> selectedStudentIds;
+  final Function(String) onLongPressCard;
+  final Function(String) onTapCard;
+
+  const _PendingTabContent({
+    required this.pendingRegistrations,
+    required this.profileEdits,
+    required this.onAcceptRegistration,
+    required this.onRejectRegistration,
+    required this.onResolveProfileEdit,
+    required this.isSelectionMode,
+    required this.selectedStudentIds,
+    required this.onLongPressCard,
+    required this.onTapCard,
+  });
+
+  @override
+  State<_PendingTabContent> createState() => _PendingTabContentState();
+}
+
+class _PendingTabContentState extends State<_PendingTabContent> {
+  int _activeSubTab = 0; // 0: Registrations, 1: Profile Edits
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Sub-tabs toggle bar
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _activeSubTab = 0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: _activeSubTab == 0 ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: _activeSubTab == 0
+                          ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
+                          : null,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Registrations (${widget.pendingRegistrations.length})',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: _activeSubTab == 0 ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _activeSubTab = 1),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: _activeSubTab == 1 ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: _activeSubTab == 1
+                          ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
+                          : null,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Profile Edits (${widget.profileEdits.length})',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: _activeSubTab == 1 ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Active Sub-tab View
+        Expanded(
+          child: _activeSubTab == 0
+              ? _StudentList(
+                  students: widget.pendingRegistrations,
+                  showActions: true,
+                  onAccept: widget.onAcceptRegistration,
+                  onReject: widget.onRejectRegistration,
+                  emptyMsg: 'No pending registrations',
+                  isSelectionMode: widget.isSelectionMode,
+                  selectedStudentIds: widget.selectedStudentIds,
+                  onLongPressCard: widget.onLongPressCard,
+                  onTapCard: widget.onTapCard,
+                )
+              : _ProfileEditsList(
+                  students: widget.profileEdits,
+                  onResolve: widget.onResolveProfileEdit,
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileEditsList extends StatelessWidget {
+  final List<StudentUser> students;
+  final Function(String, bool) onResolve;
+
+  const _ProfileEditsList({
+    required this.students,
+    required this.onResolve,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (students.isEmpty) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF009688).withOpacity(0.05),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.edit_note_rounded,
+                  size: 64,
+                  color: Color(0xFF009688),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'No pending profile edits',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'There are no profile modification requests waiting for teacher approval.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF64748B),
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      color: const Color(0xFF009688),
+      onRefresh: () => Provider.of<AdminProvider>(context, listen: false).loadStudents(),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: students.length,
+        itemBuilder: (context, i) {
+          return _ProfileEditCard(
+            student: students[i],
+            onResolve: onResolve,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ProfileEditCard extends StatefulWidget {
+  final StudentUser student;
+  final Function(String, bool) onResolve;
+
+  const _ProfileEditCard({
+    required this.student,
+    required this.onResolve,
+  });
+
+  @override
+  State<_ProfileEditCard> createState() => _ProfileEditCardState();
+}
+
+class _ProfileEditCardState extends State<_ProfileEditCard> {
+  bool _isActing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.student;
+    final edit = s.pendingProfileEdit!;
+    final reqClass = edit['classNo'];
+    final reqLang = edit['language'];
+
+    final classChanged = reqClass != null && reqClass != s.classNo;
+    final langChanged = reqLang != null && reqLang != s.language;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 3,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0F2FE),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.edit_note_rounded, color: Color(0xFF0284C7), size: 28),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s.fullName,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+                      ),
+                      const SizedBox(height: 2),
+                      Text('📱 ${s.phone ?? 'N/A'}', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                children: [
+                  _changeRow(
+                    'Class',
+                    s.classNo?.toString() ?? 'N/A',
+                    reqClass?.toString() ?? 'N/A',
+                    classChanged,
+                  ),
+                  const SizedBox(height: 8),
+                  _changeRow(
+                    'Medium',
+                    s.language ?? 'N/A',
+                    reqLang?.toString() ?? 'N/A',
+                    langChanged,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _isActing ? null : () async {
+                      setState(() => _isActing = true);
+                      await widget.onResolve(s.id, false);
+                      if (mounted) setState(() => _isActing = false);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('Decline'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isActing ? null : () async {
+                      setState(() => _isActing = true);
+                      await widget.onResolve(s.id, true);
+                      if (mounted) setState(() => _isActing = false);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF009688),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: _isActing
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('Approve', style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _changeRow(String label, String oldValue, String newValue, bool hasChanged) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B), fontSize: 13)),
+        Row(
+          children: [
+            Text(oldValue, style: TextStyle(color: Colors.grey.shade600, fontSize: 13, decoration: hasChanged ? TextDecoration.lineThrough : null)),
+            if (hasChanged) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_right_alt_rounded, color: Color(0xFF009688), size: 16),
+              const SizedBox(width: 4),
+              Text(
+                newValue,
+                style: const TextStyle(color: Color(0xFF009688), fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            ],
+          ],
+        ),
+      ],
     );
   }
 }

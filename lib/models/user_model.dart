@@ -42,7 +42,6 @@ class AppUser {
   }
 }
 
-// For manage students screen
 class StudentUser {
   final String id;
   final String firstName;
@@ -51,6 +50,11 @@ class StudentUser {
   final int? classNo;
   final bool? verified;
   final bool? isRejected;
+  final String? fatherName;
+  final String? motherName;
+  final String? dateOfBirth;
+  final String? language;
+  final Map<String, dynamic>? pendingProfileEdit;
 
   StudentUser({
     required this.id,
@@ -60,6 +64,11 @@ class StudentUser {
     this.classNo,
     this.verified,
     this.isRejected,
+    this.fatherName,
+    this.motherName,
+    this.dateOfBirth,
+    this.language,
+    this.pendingProfileEdit,
   });
 
   String get fullName => '$firstName $lastName';
@@ -73,6 +82,11 @@ class StudentUser {
       classNo: json['classNo'] != null ? int.tryParse(json['classNo'].toString()) : null,
       verified: json['verified'],
       isRejected: json['isRejected'] ?? false,
+      fatherName: json['fatherName'],
+      motherName: json['motherName'],
+      dateOfBirth: json['dateOfBirth'],
+      language: json['language'],
+      pendingProfileEdit: json['pendingProfileEdit'],
     );
   }
 }

@@ -142,10 +142,12 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   });
                 },
               )
-            : IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              ),
+            : (Navigator.canPop(context)
+                ? IconButton(
+                    icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  )
+                : null),
         title: _isSelectionMode
             ? Text('${_selectedQuestionIds.length} Selected', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))
             : const Text('Question Bank', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
