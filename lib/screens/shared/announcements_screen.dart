@@ -500,11 +500,14 @@ class _AnnouncementCard extends StatelessWidget {
                       const Spacer(),
                       const Icon(Icons.schedule, size: 14, color: Colors.grey),
                       const SizedBox(width: 4),
-                      Text(
-                        ann.formattedDate,
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
+                      Flexible(
+                        child: Text(
+                          ann.formattedDate,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

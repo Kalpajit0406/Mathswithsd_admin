@@ -516,12 +516,22 @@ class _AdminDrawer extends StatelessWidget {
                     child: Text('S', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
                   ),
                   const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Soumen Sir', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF0F172A), fontSize: 18)),
-                      Text('Lead Educator', style: TextStyle(color: Color(0xFF75859D), fontWeight: FontWeight.w500, fontSize: 14)),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Soumen Sir',
+                          style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF0F172A), fontSize: 18),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Lead Educator',
+                          style: TextStyle(color: Color(0xFF75859D), fontWeight: FontWeight.w500, fontSize: 14),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   )
                 ],
               ),

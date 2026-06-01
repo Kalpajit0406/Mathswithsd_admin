@@ -1431,34 +1431,44 @@ class _ProfileEditCardState extends State<_ProfileEditCard> {
             fontSize: 13,
           ),
         ),
-        Row(
-          children: [
-            Text(
-              oldValue,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 13,
-                decoration: hasChanged ? TextDecoration.lineThrough : null,
-              ),
-            ),
-            if (hasChanged) ...[
-              const SizedBox(width: 4),
-              const Icon(
-                Icons.arrow_right_alt_rounded,
-                color: Color(0xFF009688),
-                size: 16,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                newValue,
-                style: const TextStyle(
-                  color: Color(0xFF009688),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+        const SizedBox(width: 8),
+        Flexible(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  oldValue,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 13,
+                    decoration: hasChanged ? TextDecoration.lineThrough : null,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (hasChanged) ...[
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.arrow_right_alt_rounded,
+                  color: Color(0xFF009688),
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    newValue,
+                    style: const TextStyle(
+                      color: Color(0xFF009688),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ],
     );

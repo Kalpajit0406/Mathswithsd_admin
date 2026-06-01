@@ -139,17 +139,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                ElevatedButton(
-                  onPressed: _saveBaseUrl,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF006064),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _saveBaseUrl,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF006064),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Save Override', textAlign: TextAlign.center),
                   ),
-                  child: const Text('Save Override'),
                 ),
                 const SizedBox(width: 8),
-                OutlinedButton(
-                  onPressed: _clearOverride,
-                  child: const Text('Clear Override'),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _clearOverride,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Clear Override', textAlign: TextAlign.center),
+                  ),
                 ),
               ],
             ),

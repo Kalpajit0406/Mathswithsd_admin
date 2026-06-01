@@ -11,6 +11,7 @@ enum QuestionLoadState { idle, loading, loaded, error }
 /// Enhanced provider with multi-question queue management
 class QuestionProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
+  String get baseUrl => _apiService.baseUrl;
   static const String _queuePrefsKey = 'ocr_question_queue_state_v1';
   static const int _maxQueueSize = 100;
 

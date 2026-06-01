@@ -676,12 +676,14 @@ class _QuestionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 LaTeXWidget(text: question.questionText),
-                if (question.diagram != null) ...[
+                if (question.diagram != null && question.diagram!.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
-                      question.diagram!,
+                      question.diagram!.startsWith('http')
+                          ? question.diagram!
+                          : '${Provider.of<QuestionProvider>(context, listen: false).baseUrl}${question.diagram}',
                       height: 120,
                       width: double.infinity,
                       fit: BoxFit.contain,

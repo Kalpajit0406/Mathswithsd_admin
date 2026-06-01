@@ -216,29 +216,32 @@ class _TestCard extends StatelessWidget {
                   '${test.marksPerQuestion} pts',
                 ),
                 const Spacer(),
-                TextButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => LeaderboardScreen(
-                          examId: test.id,
-                          testTitle:
-                              '${test.classNo == 13 ? 'Joint Entrance' : 'Class ${test.classNo}'} - ${test.date}',
+                Flexible(
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LeaderboardScreen(
+                            examId: test.id,
+                            testTitle:
+                                '${test.classNo == 13 ? 'Joint Entrance' : 'Class ${test.classNo}'} - ${test.date}',
+                          ),
                         ),
+                      );
+                    },
+                    icon: const Icon(Icons.leaderboard_outlined, size: 18),
+                    label: const Text(
+                      'Leaderboard',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF0051D5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.leaderboard_outlined, size: 18),
-                  label: const Text(
-                    'Leaderboard',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF0051D5),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
                     ),
                   ),
                 ),

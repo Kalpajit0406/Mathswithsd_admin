@@ -25,6 +25,8 @@ class ApiService {
   final String _staticBaseUrl = AppConstants.baseUrl;
   String? _resolvedBaseUrl;
 
+  String get baseUrl => _resolvedBaseUrl ?? _staticBaseUrl;
+
   Future<String> _getBaseUrl() async {
     if (_resolvedBaseUrl != null && _resolvedBaseUrl!.isNotEmpty) return _resolvedBaseUrl!;
     // Check for a manual override stored in secure storage
