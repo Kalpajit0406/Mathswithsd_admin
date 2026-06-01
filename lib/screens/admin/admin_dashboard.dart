@@ -66,21 +66,77 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          backgroundColor: const Color(0xFFF7F9FB),
+          backgroundColor: Colors.transparent,
           appBar: AppBar(
-            backgroundColor: const Color(0xFF0F172A),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
               onPressed: () => Navigator.pop(context),
             ),
             title: const Text(
               'Create Question',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20),
+              style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 20),
             ),
-            elevation: 0,
           ),
-          // Pass file directly: tab scans it in initState via postFrameCallback
-          body: CreateQuestionTab(initialScanFile: fileToProcess),
+          body: Stack(
+            children: [
+              // Drifting ambient glows
+              AnimatedBuilder(
+                animation: _bgAnimationController,
+                builder: (context, child) {
+                  final progress = _bgAnimationController.value;
+                  final x1 = 0.2 + 0.5 * math.sin(progress * 2 * math.pi);
+                  final y1 = 0.3 + 0.4 * math.cos(progress * 2 * math.pi);
+                  final x2 = 0.8 + 0.4 * math.cos(progress * 2 * math.pi + math.pi / 2);
+                  final y2 = 0.7 + 0.3 * math.sin(progress * 2 * math.pi + math.pi / 2);
+
+                  return Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Container(
+                          color: const Color(0xFFF8FAFC),
+                        ),
+                      ),
+                      Positioned(
+                        left: MediaQuery.of(context).size.width * x1 - 180,
+                        top: MediaQuery.of(context).size.height * y1 - 180,
+                        child: Container(
+                          width: 360,
+                          height: 360,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF009688).withOpacity(0.08),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: MediaQuery.of(context).size.width * x2 - 180,
+                        top: MediaQuery.of(context).size.height * y2 - 180,
+                        child: Container(
+                          width: 360,
+                          height: 360,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF0051D5).withOpacity(0.08),
+                          ),
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
+                          child: const SizedBox.shrink(),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+              Positioned.fill(
+                child: CreateQuestionTab(initialScanFile: fileToProcess),
+              ),
+            ],
+          ),
         ),
       ),
     );

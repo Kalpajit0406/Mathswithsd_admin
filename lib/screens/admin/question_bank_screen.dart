@@ -129,9 +129,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FB),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: _isSelectionMode ? const Color(0xFF0051D5) : const Color(0xFF009688),
+        backgroundColor: _isSelectionMode ? const Color(0xFF0051D5) : Colors.transparent,
         leading: _isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
@@ -144,13 +144,13 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               )
             : (Navigator.canPop(context)
                 ? IconButton(
-                    icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
                     onPressed: () => Navigator.pop(context),
                   )
                 : null),
         title: _isSelectionMode
             ? Text('${_selectedQuestionIds.length} Selected', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))
-            : const Text('Question Bank', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+            : const Text('Question Bank', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5)),
         actions: _isSelectionMode
             ? [
                 IconButton(
@@ -178,7 +178,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               ]
             : [
                 IconButton(
-                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  icon: const Icon(Icons.refresh),
                   onPressed: _loadQuestions,
                 ),
               ],

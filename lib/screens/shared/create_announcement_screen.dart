@@ -60,12 +60,12 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1565C0),
+        backgroundColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('New Announcement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+        title: const Text('New Announcement', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5)),
         elevation: 0,
       ),
       body: SingleChildScrollView(

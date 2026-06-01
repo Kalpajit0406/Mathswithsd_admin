@@ -76,16 +76,16 @@ class AppTheme {
         color: Colors.white,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF0F172A),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         titleTextStyle: TextStyle(
           fontWeight: FontWeight.w800,
           fontSize: 20,
-          color: Colors.white,
+          color: Color(0xFF0F172A),
           letterSpacing: -0.5,
         ),
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: Color(0xFF0F172A)),
       ),
     );
   }

@@ -70,19 +70,24 @@ class _TeacherAnalyticsDashboardState extends State<TeacherAnalyticsDashboard> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FB),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF4A148C),
+        backgroundColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'Class Analytics',
           style: TextStyle(
-            color: Colors.white,
+            color: Color(0xFF0F172A),
             fontWeight: FontWeight.w800,
             fontSize: 22,
+            letterSpacing: -0.5,
           ),
         ),
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF0F172A)),
             onPressed: _loadAnalytics,
           ),
           const SizedBox(width: 8),

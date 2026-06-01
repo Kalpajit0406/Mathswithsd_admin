@@ -360,7 +360,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: _isSelectionMode ? const Color(0xFF0051D5) : const Color(0xFF009688),
+        backgroundColor: _isSelectionMode ? const Color(0xFF0051D5) : Colors.transparent,
         leading: _isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
@@ -372,12 +372,12 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
                 },
               )
             : IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: const Color(0xFF0F172A), size: 20),
                 onPressed: () => Navigator.pop(context),
               ),
         title: _isSelectionMode
             ? Text('${_selectedStudentIds.length} Selected', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))
-            : const Text('Manage Students', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+            : const Text('Manage Students', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5)),
         actions: _isSelectionMode
             ? [
                 IconButton(
@@ -389,9 +389,9 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
             : null,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
+          labelColor: const Color(0xFF0051D5),
+          unselectedLabelColor: const Color(0xFF75859D),
+          indicatorColor: const Color(0xFF0051D5),
           indicatorWeight: 3,
           labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
           tabs: const [

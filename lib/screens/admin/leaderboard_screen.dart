@@ -43,11 +43,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FB),
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Leaderboard', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text(widget.testTitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text('Leaderboard', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5)),
+            Text(widget.testTitle, style: const TextStyle(fontSize: 12, color: Color(0xFF75859D), fontWeight: FontWeight.w600)),
           ],
         ),
       ),

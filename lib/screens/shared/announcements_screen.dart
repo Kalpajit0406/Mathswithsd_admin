@@ -174,7 +174,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: _isSelectionMode ? const Color(0xFF0051D5) : const Color(0xFF1565C0),
+        backgroundColor: _isSelectionMode ? const Color(0xFF0051D5) : Colors.transparent,
         leading: _isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
@@ -186,12 +186,12 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                 },
               )
             : IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
                 onPressed: () => Navigator.pop(context),
               ),
         title: _isSelectionMode
             ? Text('${_selectedAnnouncementIds.length} Selected', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))
-            : const Text('Announcements', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+            : const Text('Announcements', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5)),
         actions: _isSelectionMode
             ? [
                 IconButton(
@@ -218,7 +218,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
             : (widget.isAdmin
                 ? [
                     IconButton(
-                      icon: const Icon(Icons.playlist_add_check_rounded, color: Colors.white, size: 28),
+                      icon: const Icon(Icons.playlist_add_check_rounded, color: Color(0xFF0F172A), size: 28),
                       tooltip: 'Select Announcements',
                       onPressed: () {
                         setState(() {

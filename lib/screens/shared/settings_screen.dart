@@ -90,15 +90,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Settings')),
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text('Settings'),
+          backgroundColor: Colors.transparent,
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: const Color(0xFF006064),
+        backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

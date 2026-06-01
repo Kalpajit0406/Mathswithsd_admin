@@ -252,12 +252,12 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FB),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF191C1E)),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('New Assessment', style: TextStyle(color: Color(0xFF191C1E), fontWeight: FontWeight.w700)),
+        title: const Text('New Assessment', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5)),
         elevation: 0,
       ),
       body: SingleChildScrollView(
