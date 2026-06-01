@@ -6,27 +6,26 @@ import 'dart:io';
 
 import '../providers/question_provider.dart';
 
-/**
- * PDF Document Picker Widget
- * 
- * Features:
- * - Select PDF, DOCX, PPTX, EPUB files
- * - Show file preview with size
- * - Progress indication during upload
- * - Error handling with retry
- * - Extraction progress with polling
- */
+/// PDF Document Picker Widget
+///
+/// Features:
+/// - Select PDF, DOCX, PPTX, EPUB files
+/// - Show file preview with size
+/// - Progress indication during upload
+/// - Error handling with retry
+/// - Extraction progress with polling
 class PdfPickerWidget extends StatefulWidget {
   final Function(String pdfId)? onPdfSelected;
-  final Function(List<dynamic> questions, String sessionId)? onQuestionsExtracted;
+  final Function(List<dynamic> questions, String sessionId)?
+  onQuestionsExtracted;
   final bool enableDirectExtraction;
 
   const PdfPickerWidget({
-    Key? key,
+    super.key,
     this.onPdfSelected,
     this.onQuestionsExtracted,
     this.enableDirectExtraction = true,
-  }) : super(key: key);
+  });
 
   @override
   State<PdfPickerWidget> createState() => _PdfPickerWidgetState();
@@ -34,14 +33,19 @@ class PdfPickerWidget extends StatefulWidget {
 
 class _PdfPickerWidgetState extends State<PdfPickerWidget> {
   File? _selectedFile;
-  bool _isUploading = false;
+  final bool _isUploading = false;
   bool _isExtracting = false;
   double _uploadProgress = 0.0;
   String? _errorMessage;
   String? _statusMessage;
 
   final List<String> _supportedFormats = [
-    'pdf', 'docx', 'pptx', 'epub', 'doc', 'pages'
+    'pdf',
+    'docx',
+    'pptx',
+    'epub',
+    'doc',
+    'pages',
   ];
 
   @override
@@ -91,15 +95,15 @@ class _PdfPickerWidgetState extends State<PdfPickerWidget> {
             children: [
               Text(
                 'Upload PDF or Document',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               Text(
                 'PDF, DOCX, PPTX, EPUB supported',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
               ),
             ],
           ),
@@ -117,9 +121,9 @@ class _PdfPickerWidgetState extends State<PdfPickerWidget> {
     return Container(
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.1),
+        color: Colors.blue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -141,7 +145,7 @@ class _PdfPickerWidgetState extends State<PdfPickerWidget> {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.2),
+                        color: Colors.blue.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -156,10 +160,7 @@ class _PdfPickerWidgetState extends State<PdfPickerWidget> {
                     SizedBox(width: 8),
                     Text(
                       '$fileSizeMB MB',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -185,9 +186,9 @@ class _PdfPickerWidgetState extends State<PdfPickerWidget> {
     return Container(
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
+        color: Colors.red.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.withOpacity(0.3)),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -208,9 +209,9 @@ class _PdfPickerWidgetState extends State<PdfPickerWidget> {
     return Container(
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
+        color: Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -305,12 +306,12 @@ class _PdfPickerWidgetState extends State<PdfPickerWidget> {
         if (_selectedFile != null && widget.enableDirectExtraction)
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: _isUploading || _isExtracting ? null : _extractQuestions,
+              onPressed: _isUploading || _isExtracting
+                  ? null
+                  : _extractQuestions,
               icon: Icon(Icons.cloud_upload),
               label: Text('Upload & Extract'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
             ),
           ),
       ],
@@ -370,7 +371,8 @@ class _PdfPickerWidgetState extends State<PdfPickerWidget> {
           if (mounted) {
             setState(() {
               _uploadProgress = progress;
-              _statusMessage = 'Uploading... ${(progress * 100).toStringAsFixed(1)}%';
+              _statusMessage =
+                  'Uploading... ${(progress * 100).toStringAsFixed(1)}%';
             });
           }
         },
@@ -414,19 +416,17 @@ class _PdfPickerWidgetState extends State<PdfPickerWidget> {
   }
 }
 
-/**
- * PDF Extraction Status Widget
- * Shows polling status and progress for PDF processing
- */
+/// PDF Extraction Status Widget
+/// Shows polling status and progress for PDF processing
 class PdfExtractionStatusWidget extends StatefulWidget {
   final String pdfId;
   final Function(Map<String, dynamic>)? onComplete;
 
   const PdfExtractionStatusWidget({
-    Key? key,
+    super.key,
     required this.pdfId,
     this.onComplete,
-  }) : super(key: key);
+  });
 
   @override
   State<PdfExtractionStatusWidget> createState() =>

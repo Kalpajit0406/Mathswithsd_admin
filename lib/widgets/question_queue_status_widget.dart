@@ -60,15 +60,15 @@ class QuestionQueueStatusWidget extends StatelessWidget {
               child: Text(
                 'Question Verification',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF0F172A),
-                    ),
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0F172A),
+                ),
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF4A148C).withOpacity(0.1),
+                color: const Color(0xFF4A148C).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -116,7 +116,7 @@ class QuestionQueueStatusWidget extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: const Color(0xFF4A148C).withOpacity(0.7),
+                  color: const Color(0xFF4A148C).withValues(alpha: 0.7),
                 ),
               ),
           ],
@@ -125,7 +125,10 @@ class QuestionQueueStatusWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildNavigationButtons(BuildContext context, QuestionProvider provider) {
+  Widget _buildNavigationButtons(
+    BuildContext context,
+    QuestionProvider provider,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -249,17 +252,14 @@ class QueueSummaryWidget extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
-                children: List.generate(
-                  provider.questionQueue.length,
-                  (index) {
-                    final item = provider.questionQueue[index];
-                    final isActive = index == provider.currentQueueIndex;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _buildQueueItemTile(context, item, index, isActive),
-                    );
-                  },
-                ),
+                children: List.generate(provider.questionQueue.length, (index) {
+                  final item = provider.questionQueue[index];
+                  final isActive = index == provider.currentQueueIndex;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _buildQueueItemTile(context, item, index, isActive),
+                  );
+                }),
               ),
             ),
           ],
@@ -279,7 +279,9 @@ class QueueSummaryWidget extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF4A148C).withOpacity(0.1) : Colors.transparent,
+          color: isActive
+              ? const Color(0xFF4A148C).withValues(alpha: 0.1)
+              : Colors.transparent,
           border: Border.all(
             color: isActive ? const Color(0xFF4A148C) : const Color(0xFFE2E8F0),
             width: isActive ? 2 : 1,
@@ -293,7 +295,9 @@ class QueueSummaryWidget extends StatelessWidget {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: isActive ? const Color(0xFF4A148C) : const Color(0xFFE2E8F0),
+                color: isActive
+                    ? const Color(0xFF4A148C)
+                    : const Color(0xFFE2E8F0),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -332,7 +336,9 @@ class QueueSummaryWidget extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: isActive ? const Color(0xFF4A148C) : const Color(0xFF0F172A),
+                      color: isActive
+                          ? const Color(0xFF4A148C)
+                          : const Color(0xFF0F172A),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -346,13 +352,17 @@ class QueueSummaryWidget extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50).withOpacity(0.2),
+                  color: const Color(0xFF4CAF50).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.check_circle, size: 14, color: Color(0xFF4CAF50)),
+                    Icon(
+                      Icons.check_circle,
+                      size: 14,
+                      color: Color(0xFF4CAF50),
+                    ),
                     SizedBox(width: 4),
                     Text(
                       'Done',

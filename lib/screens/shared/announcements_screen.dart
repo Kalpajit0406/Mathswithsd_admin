@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/exam_provider.dart';
-import '../../models/test_model.dart';import 'create_announcement_screen.dart';
+import '../../models/test_model.dart';
+import 'create_announcement_screen.dart';
+
 class AnnouncementsScreen extends StatefulWidget {
   final bool isAdmin;
   final String? studentClass; // for filtering
 
-  const AnnouncementsScreen({super.key, required this.isAdmin, this.studentClass});
+  const AnnouncementsScreen({
+    super.key,
+    required this.isAdmin,
+    this.studentClass,
+  });
 
   @override
   State<AnnouncementsScreen> createState() => _AnnouncementsScreenState();
@@ -20,8 +26,9 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ExamProvider>(context, listen: false)
-          .loadAnnouncements(targetClass: widget.isAdmin ? null : widget.studentClass);
+      Provider.of<ExamProvider>(context, listen: false).loadAnnouncements(
+        targetClass: widget.isAdmin ? null : widget.studentClass,
+      );
     });
   }
 
@@ -56,8 +63,13 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Bulk Delete', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Are you sure you want to permanently delete ${ids.length} announcement(s)? This action is irreversible.'),
+        title: const Text(
+          'Bulk Delete',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete ${ids.length} announcement(s)? This action is irreversible.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -67,7 +79,9 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red.shade700,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
@@ -91,7 +105,10 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     );
 
     final provider = Provider.of<ExamProvider>(context, listen: false);
-    final success = await provider.bulkDeleteAnnouncements(ids, targetClass: widget.studentClass);
+    final success = await provider.bulkDeleteAnnouncements(
+      ids,
+      targetClass: widget.studentClass,
+    );
 
     if (context.mounted) Navigator.pop(context);
 
@@ -131,7 +148,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -3),
           ),
@@ -150,18 +167,35 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
               padding: const EdgeInsets.only(bottom: 12, left: 4),
               child: Text(
                 '$count announcement(s) selected',
-                style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B), fontSize: 13),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B),
+                  fontSize: 13,
+                ),
               ),
             ),
             ElevatedButton.icon(
               onPressed: () => _handleBulkDelete(context),
-              icon: const Icon(Icons.delete_outline, color: Colors.white, size: 20),
-              label: const Text('Delete Selected', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+              icon: const Icon(
+                Icons.delete_outline,
+                color: Colors.white,
+                size: 20,
+              ),
+              label: const Text(
+                'Delete Selected',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade700,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -174,7 +208,9 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: _isSelectionMode ? const Color(0xFF0051D5) : Colors.transparent,
+        backgroundColor: _isSelectionMode
+            ? const Color(0xFF0051D5)
+            : Colors.transparent,
         leading: _isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
@@ -186,22 +222,47 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                 },
               )
             : IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Color(0xFF0F172A),
+                  size: 20,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
         title: _isSelectionMode
-            ? Text('${_selectedAnnouncementIds.length} Selected', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))
-            : const Text('Announcements', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5)),
+            ? Text(
+                '${_selectedAnnouncementIds.length} Selected',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              )
+            : const Text(
+                'Announcements',
+                style: TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                  letterSpacing: -0.5,
+                ),
+              ),
         actions: _isSelectionMode
             ? [
                 IconButton(
                   icon: const Icon(Icons.select_all, color: Colors.white),
                   tooltip: 'Select All',
                   onPressed: () {
-                    final provider = Provider.of<ExamProvider>(context, listen: false);
-                    final visibleIds = provider.announcements.map((a) => a.id).toList();
+                    final provider = Provider.of<ExamProvider>(
+                      context,
+                      listen: false,
+                    );
+                    final visibleIds = provider.announcements
+                        .map((a) => a.id)
+                        .toList();
                     setState(() {
-                      final allSelected = visibleIds.every((id) => _selectedAnnouncementIds.contains(id));
+                      final allSelected = visibleIds.every(
+                        (id) => _selectedAnnouncementIds.contains(id),
+                      );
                       if (allSelected) {
                         _selectedAnnouncementIds.removeAll(visibleIds);
                         if (_selectedAnnouncementIds.isEmpty) {
@@ -216,25 +277,31 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                 ),
               ]
             : (widget.isAdmin
-                ? [
-                    IconButton(
-                      icon: const Icon(Icons.playlist_add_check_rounded, color: Color(0xFF0F172A), size: 28),
-                      tooltip: 'Select Announcements',
-                      onPressed: () {
-                        setState(() {
-                          _isSelectionMode = true;
-                          _selectedAnnouncementIds.clear();
-                        });
-                      },
-                    ),
-                  ]
-                : null),
+                  ? [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.playlist_add_check_rounded,
+                          color: Color(0xFF0F172A),
+                          size: 28,
+                        ),
+                        tooltip: 'Select Announcements',
+                        onPressed: () {
+                          setState(() {
+                            _isSelectionMode = true;
+                            _selectedAnnouncementIds.clear();
+                          });
+                        },
+                      ),
+                    ]
+                  : null),
         elevation: 0,
       ),
       body: Consumer<ExamProvider>(
         builder: (context, provider, _) {
           if (provider.announcementsState == LoadState.loading) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF1565C0)));
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF1565C0)),
+            );
           }
           if (provider.announcementsState == LoadState.error) {
             return Center(
@@ -243,12 +310,22 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                 children: [
                   const Icon(Icons.cloud_off, size: 72, color: Colors.grey),
                   const SizedBox(height: 16),
-                  Text(provider.announcementsError ?? 'Failed to load', style: const TextStyle(color: Colors.grey)),
+                  Text(
+                    provider.announcementsError ?? 'Failed to load',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () => provider.loadAnnouncements(targetClass: widget.studentClass),
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1565C0)),
-                    child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                    onPressed: () => provider.loadAnnouncements(
+                      targetClass: widget.studentClass,
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1565C0),
+                    ),
+                    child: const Text(
+                      'Retry',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ],
               ),
@@ -259,16 +336,24 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.notifications_none, size: 80, color: Colors.grey.shade200),
+                  Icon(
+                    Icons.notifications_none,
+                    size: 80,
+                    color: Colors.grey.shade200,
+                  ),
                   const SizedBox(height: 16),
-                  const Text('No announcements yet.', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  const Text(
+                    'No announcements yet.',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
                 ],
               ),
             );
           }
           return RefreshIndicator(
             color: const Color(0xFF1565C0),
-            onRefresh: () => provider.loadAnnouncements(targetClass: widget.studentClass),
+            onRefresh: () =>
+                provider.loadAnnouncements(targetClass: widget.studentClass),
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: provider.announcements.length,
@@ -292,11 +377,16 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
               onPressed: () async {
                 final result = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const CreateAnnouncementScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const CreateAnnouncementScreen(),
+                  ),
                 );
                 if (result == true && mounted) {
                   // Reload announcements after creating new one
-                  Provider.of<ExamProvider>(context, listen: false).loadAnnouncements();
+                  Provider.of<ExamProvider>(
+                    context,
+                    listen: false,
+                  ).loadAnnouncements();
                 }
               },
               tooltip: 'Create Announcement',
@@ -339,7 +429,12 @@ class _AnnouncementCard extends StatelessWidget {
           children: [
             if (isSelectionMode) ...[
               Padding(
-                padding: const EdgeInsets.only(left: 16, top: 12, right: 16, bottom: 8),
+                padding: const EdgeInsets.only(
+                  left: 16,
+                  top: 12,
+                  right: 16,
+                  bottom: 8,
+                ),
                 child: Row(
                   children: [
                     Checkbox(
@@ -348,7 +443,13 @@ class _AnnouncementCard extends StatelessWidget {
                       onChanged: (_) => onTap?.call(),
                     ),
                     const SizedBox(width: 8),
-                    const Text('Select Announcement', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),
+                    const Text(
+                      'Select Announcement',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black54,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -365,7 +466,7 @@ class _AnnouncementCard extends StatelessWidget {
                   width: double.infinity,
                   height: 180,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
               ),
             Padding(
@@ -377,13 +478,18 @@ class _AnnouncementCard extends StatelessWidget {
                     children: [
                       // Class chip
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFE3F2FD),
                           borderRadius: BorderRadius.circular(50),
                         ),
                         child: Text(
-                          ann.targetClass == 'all' ? 'All Classes' : 'Class ${ann.targetClass}',
+                          ann.targetClass == 'all'
+                              ? 'All Classes'
+                              : 'Class ${ann.targetClass}',
                           style: const TextStyle(
                             color: Color(0xFF1565C0),
                             fontWeight: FontWeight.w600,
@@ -394,18 +500,32 @@ class _AnnouncementCard extends StatelessWidget {
                       const Spacer(),
                       const Icon(Icons.schedule, size: 14, color: Colors.grey),
                       const SizedBox(width: 4),
-                      Text(ann.formattedDate, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text(
+                        ann.formattedDate,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
                     ann.title,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Color(0xFF1A237E)),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                      color: Color(0xFF1A237E),
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     ann.message,
-                    style: const TextStyle(fontSize: 14, color: Color(0xFF424242), height: 1.5),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF424242),
+                      height: 1.5,
+                    ),
                     maxLines: 5,
                     overflow: TextOverflow.ellipsis,
                   ),

@@ -12,7 +12,8 @@ class ManageStudentsScreen extends StatefulWidget {
   State<ManageStudentsScreen> createState() => _ManageStudentsScreenState();
 }
 
-class _ManageStudentsScreenState extends State<ManageStudentsScreen> with SingleTickerProviderStateMixin {
+class _ManageStudentsScreenState extends State<ManageStudentsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isSelectionMode = false;
   final Set<String> _selectedStudentIds = {};
@@ -57,9 +58,11 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
     }
 
     final visibleIds = visibleStudents.map((s) => s.id).toList();
-    
+
     setState(() {
-      final allSelected = visibleIds.every((id) => _selectedStudentIds.contains(id));
+      final allSelected = visibleIds.every(
+        (id) => _selectedStudentIds.contains(id),
+      );
       if (allSelected) {
         _selectedStudentIds.removeAll(visibleIds);
         if (_selectedStudentIds.isEmpty) {
@@ -72,28 +75,34 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
     });
   }
 
-  Future<void> _handleBulkAction(BuildContext context, BulkActionType actionType) async {
+  Future<void> _handleBulkAction(
+    BuildContext context,
+    BulkActionType actionType,
+  ) async {
     final ids = _selectedStudentIds.toList();
     if (ids.isEmpty) return;
 
     String actionName = '';
     String confirmMessage = '';
     Color confirmColor = const Color(0xFF009688);
-    
+
     switch (actionType) {
       case BulkActionType.accept:
         actionName = 'Accept';
-        confirmMessage = 'Are you sure you want to accept and verify ${ids.length} student(s)?';
+        confirmMessage =
+            'Are you sure you want to accept and verify ${ids.length} student(s)?';
         confirmColor = const Color(0xFF43A047);
         break;
       case BulkActionType.reject:
         actionName = 'Decline';
-        confirmMessage = 'Are you sure you want to decline/reject ${ids.length} student(s)?';
+        confirmMessage =
+            'Are you sure you want to decline/reject ${ids.length} student(s)?';
         confirmColor = Colors.orange.shade800;
         break;
       case BulkActionType.delete:
         actionName = 'Delete';
-        confirmMessage = 'Are you sure you want to permanently delete ${ids.length} student(s) from the database? This action is irreversible.';
+        confirmMessage =
+            'Are you sure you want to permanently delete ${ids.length} student(s) from the database? This action is irreversible.';
         confirmColor = Colors.red.shade700;
         break;
     }
@@ -102,7 +111,10 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Bulk $actionName', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Bulk $actionName',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: Text(confirmMessage),
         actions: [
           TextButton(
@@ -113,9 +125,14 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: confirmColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-            child: Text(actionName, style: const TextStyle(color: Colors.white)),
+            child: Text(
+              actionName,
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -138,7 +155,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
 
     final provider = Provider.of<AdminProvider>(context, listen: false);
     bool success = false;
-    
+
     try {
       if (actionType == BulkActionType.accept) {
         success = await provider.bulkAcceptStudents(ids);
@@ -157,7 +174,9 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully processed $actionName for ${ids.length} student(s)'),
+            content: Text(
+              'Successfully processed $actionName for ${ids.length} student(s)',
+            ),
             backgroundColor: confirmColor,
           ),
         );
@@ -190,7 +209,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -3),
           ),
@@ -209,7 +228,11 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
               padding: const EdgeInsets.only(bottom: 12, left: 4),
               child: Text(
                 '$count student(s) selected',
-                style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B), fontSize: 13),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B),
+                  fontSize: 13,
+                ),
               ),
             ),
             Row(
@@ -217,14 +240,28 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
                 if (currentTab == 0 || currentTab == 2) ...[
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () => _handleBulkAction(context, BulkActionType.accept),
-                      icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
-                      label: const Text('Accept', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                      onPressed: () =>
+                          _handleBulkAction(context, BulkActionType.accept),
+                      icon: const Icon(
+                        Icons.check_circle_outline,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      label: const Text(
+                        'Accept',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF43A047),
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -233,14 +270,28 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
                 if (currentTab == 0 || currentTab == 1) ...[
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () => _handleBulkAction(context, BulkActionType.reject),
-                      icon: const Icon(Icons.block, color: Colors.white, size: 20),
-                      label: const Text('Decline', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                      onPressed: () =>
+                          _handleBulkAction(context, BulkActionType.reject),
+                      icon: const Icon(
+                        Icons.block,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      label: const Text(
+                        'Decline',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange.shade800,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -248,14 +299,28 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
                 ],
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () => _handleBulkAction(context, BulkActionType.delete),
-                    icon: const Icon(Icons.delete_outline, color: Colors.white, size: 20),
-                    label: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                    onPressed: () =>
+                        _handleBulkAction(context, BulkActionType.delete),
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    label: const Text(
+                      'Delete',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade700,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
@@ -301,7 +366,10 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
               decoration: InputDecoration(
                 hintText: 'Search by name or phone...',
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 0,
+                  horizontal: 16,
+                ),
                 filled: true,
                 fillColor: const Color(0xFFF1F5F9),
                 border: OutlineInputBorder(
@@ -331,17 +399,25 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String?>(
                 value: _classFilter,
-                hint: const Text('Class', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                hint: const Text(
+                  'Class',
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                ),
                 icon: const Icon(Icons.filter_list, color: Color(0xFF009688)),
                 items: [
                   const DropdownMenuItem<String?>(
                     value: null,
                     child: Text('All Classes', style: TextStyle(fontSize: 14)),
                   ),
-                  ...allClasses.map((cls) => DropdownMenuItem<String?>(
-                        value: cls,
-                        child: Text('Class $cls', style: const TextStyle(fontSize: 14)),
-                      )),
+                  ...allClasses.map(
+                    (cls) => DropdownMenuItem<String?>(
+                      value: cls,
+                      child: Text(
+                        'Class $cls',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ),
                 ],
                 onChanged: (val) {
                   setState(() {
@@ -360,7 +436,9 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: _isSelectionMode ? const Color(0xFF0051D5) : Colors.transparent,
+        backgroundColor: _isSelectionMode
+            ? const Color(0xFF0051D5)
+            : Colors.transparent,
         leading: _isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
@@ -372,12 +450,30 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
                 },
               )
             : IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: const Color(0xFF0F172A), size: 20),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Color(0xFF0F172A),
+                  size: 20,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
         title: _isSelectionMode
-            ? Text('${_selectedStudentIds.length} Selected', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))
-            : const Text('Manage Students', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5)),
+            ? Text(
+                '${_selectedStudentIds.length} Selected',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              )
+            : const Text(
+                'Manage Students',
+                style: TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                  letterSpacing: -0.5,
+                ),
+              ),
         actions: _isSelectionMode
             ? [
                 IconButton(
@@ -393,7 +489,10 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
           unselectedLabelColor: const Color(0xFF75859D),
           indicatorColor: const Color(0xFF0051D5),
           indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
           tabs: const [
             Tab(text: 'Pending'),
             Tab(text: 'Verified'),
@@ -405,7 +504,9 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
       body: Consumer<AdminProvider>(
         builder: (context, provider, _) {
           if (provider.studentsState == LoadState.loading) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF009688)));
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF009688)),
+            );
           }
           if (provider.studentsState == LoadState.error) {
             return _ErrorWidget(
@@ -419,26 +520,31 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
           final allStudents = [
             ...provider.pendingStudents,
             ...provider.verifiedStudents,
-            ...provider.rejectedStudents
+            ...provider.rejectedStudents,
           ];
-          final allClasses = allStudents
-              .map((s) => s.classNo?.toString())
-              .whereType<String>()
-              .toSet()
-              .toList()
-            ..sort((a, b) {
-              final aNum = int.tryParse(a) ?? 0;
-              final bNum = int.tryParse(b) ?? 0;
-              return aNum.compareTo(bNum);
-            });
+          final allClasses =
+              allStudents
+                  .map((s) => s.classNo?.toString())
+                  .whereType<String>()
+                  .toSet()
+                  .toList()
+                ..sort((a, b) {
+                  final aNum = int.tryParse(a) ?? 0;
+                  final bNum = int.tryParse(b) ?? 0;
+                  return aNum.compareTo(bNum);
+                });
 
           // Local filter logic
           List<StudentUser> filterStudents(List<StudentUser> list) {
             return list.where((s) {
-              final matchesSearch = _searchQuery.isEmpty ||
-                  s.fullName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              final matchesSearch =
+                  _searchQuery.isEmpty ||
+                  s.fullName.toLowerCase().contains(
+                    _searchQuery.toLowerCase(),
+                  ) ||
                   (s.phone != null && s.phone!.contains(_searchQuery));
-              final matchesClass = _classFilter == null || s.classNo?.toString() == _classFilter;
+              final matchesClass =
+                  _classFilter == null || s.classNo?.toString() == _classFilter;
               return matchesSearch && matchesClass;
             }).toList();
           }
@@ -446,7 +552,9 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
           final filteredPending = filterStudents(provider.pendingStudents);
           final filteredVerified = filterStudents(provider.verifiedStudents);
           final filteredRejected = filterStudents(provider.rejectedStudents);
-          final editStudents = allStudents.where((s) => s.pendingProfileEdit != null).toList();
+          final editStudents = allStudents
+              .where((s) => s.pendingProfileEdit != null)
+              .toList();
           final filteredProfileEdits = filterStudents(editStudents);
 
           return Column(
@@ -461,7 +569,8 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> with Single
                       profileEdits: filteredProfileEdits,
                       onAcceptRegistration: (id) => provider.acceptStudent(id),
                       onRejectRegistration: (id) => provider.rejectStudent(id),
-                      onResolveProfileEdit: (id, approve) => provider.resolveProfileEdit(id, approve),
+                      onResolveProfileEdit: (id, approve) =>
+                          provider.resolveProfileEdit(id, approve),
                       isSelectionMode: _isSelectionMode,
                       selectedStudentIds: _selectedStudentIds,
                       onLongPressCard: _enterSelectionMode,
@@ -580,7 +689,8 @@ class _StudentListState extends State<_StudentList> {
   }
 
   void _handleEdgeScrolling(Offset globalPosition) {
-    final listRenderBox = _listKey.currentContext?.findRenderObject() as RenderBox?;
+    final listRenderBox =
+        _listKey.currentContext?.findRenderObject() as RenderBox?;
     if (listRenderBox == null) return;
 
     final localPos = listRenderBox.globalToLocal(globalPosition);
@@ -611,7 +721,7 @@ class _StudentListState extends State<_StudentList> {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF009688).withOpacity(0.05),
+                  color: const Color(0xFF009688).withValues(alpha: 0.05),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -647,7 +757,8 @@ class _StudentListState extends State<_StudentList> {
     return RefreshIndicator(
       key: _listKey,
       color: const Color(0xFF009688),
-      onRefresh: () => Provider.of<AdminProvider>(context, listen: false).loadStudents(),
+      onRefresh: () =>
+          Provider.of<AdminProvider>(context, listen: false).loadStudents(),
       child: GestureDetector(
         onLongPressStart: (details) {
           final studentId = _getStudentIdAtPosition(details.globalPosition);
@@ -717,8 +828,16 @@ class _StudentCardState extends State<_StudentCard> {
     final isVerified = s.verified == true;
     final isRejected = s.isRejected == true;
 
-    Color statusColor = isVerified ? const Color(0xFF43A047) : isRejected ? Colors.red : const Color(0xFFFF9800);
-    String statusText = isVerified ? 'Verified' : isRejected ? 'Rejected' : 'Pending';
+    Color statusColor = isVerified
+        ? const Color(0xFF43A047)
+        : isRejected
+        ? Colors.red
+        : const Color(0xFFFF9800);
+    String statusText = isVerified
+        ? 'Verified'
+        : isRejected
+        ? 'Rejected'
+        : 'Pending';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -747,7 +866,9 @@ class _StudentCardState extends State<_StudentCard> {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: isVerified ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0),
+                      color: isVerified
+                          ? const Color(0xFFE8F5E9)
+                          : const Color(0xFFFFF3E0),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(Icons.person, color: statusColor, size: 28),
@@ -759,21 +880,46 @@ class _StudentCardState extends State<_StudentCard> {
                       children: [
                         Text(
                           s.fullName,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 17,
+                          ),
                         ),
                         const SizedBox(height: 2),
-                        Text('📱 ${s.phone ?? 'N/A'}', style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                        Text('Class ${s.classNo ?? 'N/A'}', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                        Text(
+                          '📱 ${s.phone ?? 'N/A'}',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          'Class ${s.classNo ?? 'N/A'}',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: statusColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(50),
                     ),
-                    child: Text(statusText, style: TextStyle(color: statusColor, fontWeight: FontWeight.w600, fontSize: 12)),
+                    child: Text(
+                      statusText,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -783,15 +929,19 @@ class _StudentCardState extends State<_StudentCard> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: _isActing ? null : () async {
-                          setState(() => _isActing = true);
-                          await widget.onReject(s.id);
-                          if (mounted) setState(() => _isActing = false);
-                        },
+                        onPressed: _isActing
+                            ? null
+                            : () async {
+                                setState(() => _isActing = true);
+                                await widget.onReject(s.id);
+                                if (mounted) setState(() => _isActing = false);
+                              },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red,
                           side: const BorderSide(color: Colors.red),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         child: const Text('Decline'),
                       ),
@@ -799,18 +949,32 @@ class _StudentCardState extends State<_StudentCard> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: _isActing ? null : () async {
-                          setState(() => _isActing = true);
-                          await widget.onAccept(s.id);
-                          if (mounted) setState(() => _isActing = false);
-                        },
+                        onPressed: _isActing
+                            ? null
+                            : () async {
+                                setState(() => _isActing = true);
+                                await widget.onAccept(s.id);
+                                if (mounted) setState(() => _isActing = false);
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF43A047),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         child: _isActing
-                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Text('Accept', style: TextStyle(color: Colors.white)),
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Accept',
+                                style: TextStyle(color: Colors.white),
+                              ),
                       ),
                     ),
                   ],
@@ -829,7 +993,11 @@ class _ErrorWidget extends StatelessWidget {
   final VoidCallback onRetry;
   final Color color;
 
-  const _ErrorWidget({required this.message, required this.onRetry, required this.color});
+  const _ErrorWidget({
+    required this.message,
+    required this.onRetry,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -839,7 +1007,11 @@ class _ErrorWidget extends StatelessWidget {
         children: [
           Icon(Icons.cloud_off, size: 72, color: Colors.grey.shade300),
           const SizedBox(height: 16),
-          Text(message, style: const TextStyle(color: Colors.grey), textAlign: TextAlign.center),
+          Text(
+            message,
+            style: const TextStyle(color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: onRetry,
@@ -902,10 +1074,18 @@ class _PendingTabContentState extends State<_PendingTabContent> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
-                      color: _activeSubTab == 0 ? Colors.white : Colors.transparent,
+                      color: _activeSubTab == 0
+                          ? Colors.white
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: _activeSubTab == 0
-                          ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
                           : null,
                     ),
                     alignment: Alignment.center,
@@ -914,7 +1094,9 @@ class _PendingTabContentState extends State<_PendingTabContent> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
-                        color: _activeSubTab == 0 ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                        color: _activeSubTab == 0
+                            ? const Color(0xFF0F172A)
+                            : const Color(0xFF64748B),
                       ),
                     ),
                   ),
@@ -926,10 +1108,18 @@ class _PendingTabContentState extends State<_PendingTabContent> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
-                      color: _activeSubTab == 1 ? Colors.white : Colors.transparent,
+                      color: _activeSubTab == 1
+                          ? Colors.white
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: _activeSubTab == 1
-                          ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
                           : null,
                     ),
                     alignment: Alignment.center,
@@ -938,7 +1128,9 @@ class _PendingTabContentState extends State<_PendingTabContent> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
-                        color: _activeSubTab == 1 ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                        color: _activeSubTab == 1
+                            ? const Color(0xFF0F172A)
+                            : const Color(0xFF64748B),
                       ),
                     ),
                   ),
@@ -947,7 +1139,7 @@ class _PendingTabContentState extends State<_PendingTabContent> {
             ],
           ),
         ),
-        
+
         // Active Sub-tab View
         Expanded(
           child: _activeSubTab == 0
@@ -976,10 +1168,7 @@ class _ProfileEditsList extends StatelessWidget {
   final List<StudentUser> students;
   final Function(String, bool) onResolve;
 
-  const _ProfileEditsList({
-    required this.students,
-    required this.onResolve,
-  });
+  const _ProfileEditsList({required this.students, required this.onResolve});
 
   @override
   Widget build(BuildContext context) {
@@ -993,7 +1182,7 @@ class _ProfileEditsList extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF009688).withOpacity(0.05),
+                  color: const Color(0xFF009688).withValues(alpha: 0.05),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -1029,15 +1218,13 @@ class _ProfileEditsList extends StatelessWidget {
 
     return RefreshIndicator(
       color: const Color(0xFF009688),
-      onRefresh: () => Provider.of<AdminProvider>(context, listen: false).loadStudents(),
+      onRefresh: () =>
+          Provider.of<AdminProvider>(context, listen: false).loadStudents(),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: students.length,
         itemBuilder: (context, i) {
-          return _ProfileEditCard(
-            student: students[i],
-            onResolve: onResolve,
-          );
+          return _ProfileEditCard(student: students[i], onResolve: onResolve);
         },
       ),
     );
@@ -1048,10 +1235,7 @@ class _ProfileEditCard extends StatefulWidget {
   final StudentUser student;
   final Function(String, bool) onResolve;
 
-  const _ProfileEditCard({
-    required this.student,
-    required this.onResolve,
-  });
+  const _ProfileEditCard({required this.student, required this.onResolve});
 
   @override
   State<_ProfileEditCard> createState() => _ProfileEditCardState();
@@ -1090,7 +1274,10 @@ class _ProfileEditCardState extends State<_ProfileEditCard> {
     final parsedReqJoint = _getBool(reqJoint);
 
     final oldClassStr = _getClassDisplay(s.classNo, s.isJoint);
-    final newClassStr = _getClassDisplay(parsedReqClass ?? s.classNo, parsedReqJoint ?? s.isJoint);
+    final newClassStr = _getClassDisplay(
+      parsedReqClass ?? s.classNo,
+      parsedReqJoint ?? s.isJoint,
+    );
 
     final classChanged = oldClassStr != newClassStr;
     final langChanged = reqLang != null && reqLang.toString() != s.language;
@@ -1114,7 +1301,11 @@ class _ProfileEditCardState extends State<_ProfileEditCard> {
                     color: const Color(0xFFE0F2FE),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(Icons.edit_note_rounded, color: Color(0xFF0284C7), size: 28),
+                  child: const Icon(
+                    Icons.edit_note_rounded,
+                    color: Color(0xFF0284C7),
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -1123,10 +1314,19 @@ class _ProfileEditCardState extends State<_ProfileEditCard> {
                     children: [
                       Text(
                         s.fullName,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 17,
+                        ),
                       ),
                       const SizedBox(height: 2),
-                      Text('📱 ${s.phone ?? 'N/A'}', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                      Text(
+                        '📱 ${s.phone ?? 'N/A'}',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 13,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1142,12 +1342,7 @@ class _ProfileEditCardState extends State<_ProfileEditCard> {
               ),
               child: Column(
                 children: [
-                  _changeRow(
-                    'Class',
-                    oldClassStr,
-                    newClassStr,
-                    classChanged,
-                  ),
+                  _changeRow('Class', oldClassStr, newClassStr, classChanged),
                   const SizedBox(height: 8),
                   _changeRow(
                     'Medium',
@@ -1163,15 +1358,19 @@ class _ProfileEditCardState extends State<_ProfileEditCard> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _isActing ? null : () async {
-                      setState(() => _isActing = true);
-                      await widget.onResolve(s.id, false);
-                      if (mounted) setState(() => _isActing = false);
-                    },
+                    onPressed: _isActing
+                        ? null
+                        : () async {
+                            setState(() => _isActing = true);
+                            await widget.onResolve(s.id, false);
+                            if (mounted) setState(() => _isActing = false);
+                          },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     child: const Text('Decline'),
                   ),
@@ -1179,18 +1378,32 @@ class _ProfileEditCardState extends State<_ProfileEditCard> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _isActing ? null : () async {
-                      setState(() => _isActing = true);
-                      await widget.onResolve(s.id, true);
-                      if (mounted) setState(() => _isActing = false);
-                    },
+                    onPressed: _isActing
+                        ? null
+                        : () async {
+                            setState(() => _isActing = true);
+                            await widget.onResolve(s.id, true);
+                            if (mounted) setState(() => _isActing = false);
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF009688),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     child: _isActing
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Text('Approve', style: TextStyle(color: Colors.white)),
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Approve',
+                            style: TextStyle(color: Colors.white),
+                          ),
                   ),
                 ),
               ],
@@ -1201,21 +1414,48 @@ class _ProfileEditCardState extends State<_ProfileEditCard> {
     );
   }
 
-  Widget _changeRow(String label, String oldValue, String newValue, bool hasChanged) {
+  Widget _changeRow(
+    String label,
+    String oldValue,
+    String newValue,
+    bool hasChanged,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B), fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF64748B),
+            fontSize: 13,
+          ),
+        ),
         Row(
           children: [
-            Text(oldValue, style: TextStyle(color: Colors.grey.shade600, fontSize: 13, decoration: hasChanged ? TextDecoration.lineThrough : null)),
+            Text(
+              oldValue,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 13,
+                decoration: hasChanged ? TextDecoration.lineThrough : null,
+              ),
+            ),
             if (hasChanged) ...[
               const SizedBox(width: 4),
-              const Icon(Icons.arrow_right_alt_rounded, color: Color(0xFF009688), size: 16),
+              const Icon(
+                Icons.arrow_right_alt_rounded,
+                color: Color(0xFF009688),
+                size: 16,
+              ),
               const SizedBox(width: 4),
               Text(
                 newValue,
-                style: const TextStyle(color: Color(0xFF009688), fontWeight: FontWeight.bold, fontSize: 13),
+                style: const TextStyle(
+                  color: Color(0xFF009688),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
               ),
             ],
           ],

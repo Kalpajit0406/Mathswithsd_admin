@@ -9,7 +9,8 @@ class TeacherAnalyticsDashboard extends StatefulWidget {
   const TeacherAnalyticsDashboard({super.key});
 
   @override
-  State<TeacherAnalyticsDashboard> createState() => _TeacherAnalyticsDashboardState();
+  State<TeacherAnalyticsDashboard> createState() =>
+      _TeacherAnalyticsDashboardState();
 }
 
 class _TeacherAnalyticsDashboardState extends State<TeacherAnalyticsDashboard> {
@@ -72,7 +73,11 @@ class _TeacherAnalyticsDashboardState extends State<TeacherAnalyticsDashboard> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF0F172A),
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -157,7 +162,7 @@ class _TeacherAnalyticsDashboardState extends State<TeacherAnalyticsDashboard> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -183,10 +188,12 @@ class _TeacherAnalyticsDashboardState extends State<TeacherAnalyticsDashboard> {
                   isExpanded: true,
                   underline: Container(),
                   items: [9, 10, 11, 12]
-                      .map((classNo) => DropdownMenuItem(
-                            value: classNo,
-                            child: Text('Class $classNo'),
-                          ))
+                      .map(
+                        (classNo) => DropdownMenuItem(
+                          value: classNo,
+                          child: Text('Class $classNo'),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     if (value != null && value != _selectedClass) {
@@ -203,10 +210,10 @@ class _TeacherAnalyticsDashboardState extends State<TeacherAnalyticsDashboard> {
                   isExpanded: true,
                   underline: Container(),
                   items: ['English', 'Hindi']
-                      .map((lang) => DropdownMenuItem(
-                            value: lang,
-                            child: Text(lang),
-                          ))
+                      .map(
+                        (lang) =>
+                            DropdownMenuItem(value: lang, child: Text(lang)),
+                      )
                       .toList(),
                   onChanged: (value) {
                     if (value != null && value != _selectedLanguage) {
@@ -256,7 +263,9 @@ class _TeacherAnalyticsDashboardState extends State<TeacherAnalyticsDashboard> {
           'Class Average Score',
           '${classAverage.toStringAsFixed(1)}%',
           Icons.trending_up,
-          classAverage >= 70 ? const Color(0xFF2E7D32) : const Color(0xFFF57C00),
+          classAverage >= 70
+              ? const Color(0xFF2E7D32)
+              : const Color(0xFFF57C00),
           fullWidth: true,
         ),
       ],
@@ -275,12 +284,9 @@ class _TeacherAnalyticsDashboardState extends State<TeacherAnalyticsDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2), width: 1.5),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-          ),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8),
         ],
       ),
       child: Column(
@@ -322,10 +328,7 @@ class _TeacherAnalyticsDashboardState extends State<TeacherAnalyticsDashboard> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-          ),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
         ],
       ),
       child: Column(
@@ -338,93 +341,95 @@ class _TeacherAnalyticsDashboardState extends State<TeacherAnalyticsDashboard> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: Colors.green.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.emoji_events, color: Colors.green, size: 24),
+                  child: const Icon(
+                    Icons.emoji_events,
+                    color: Colors.green,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Text(
                   'Top Performers',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                 ),
               ],
             ),
           ),
           const Divider(height: 1),
-          ...List.generate(
-            topPerformers.length,
-            (index) {
-              final performer = topPerformers[index] as Map<String, dynamic>;
-              final name = performer['name'] as String? ?? 'N/A';
-              final score = (performer['averageScore'] as num?)?.toDouble() ?? 0.0;
-              final attempts = performer['totalAttempts'] as int? ?? 0;
+          ...List.generate(topPerformers.length, (index) {
+            final performer = topPerformers[index] as Map<String, dynamic>;
+            final name = performer['name'] as String? ?? 'N/A';
+            final score =
+                (performer['averageScore'] as num?)?.toDouble() ?? 0.0;
+            final attempts = performer['totalAttempts'] as int? ?? 0;
 
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  border: index < topPerformers.length - 1
-                      ? Border(
-                          bottom: BorderSide(color: Colors.grey[200]!, width: 0.5),
-                        )
-                      : null,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '${index + 1}',
-                        style: const TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.w800,
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                border: index < topPerformers.length - 1
+                    ? Border(
+                        bottom: BorderSide(
+                          color: Colors.grey[200]!,
+                          width: 0.5,
                         ),
-                      ),
+                      )
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                            ),
-                          ),
-                          Text(
-                            '$attempts attempts',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      '${score.toStringAsFixed(1)}%',
+                    alignment: Alignment.center,
+                    child: Text(
+                      '${index + 1}',
                       style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
                         color: Colors.green,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          '$attempts attempts',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '${score.toStringAsFixed(1)}%',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -438,10 +443,7 @@ class _TeacherAnalyticsDashboardState extends State<TeacherAnalyticsDashboard> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-          ),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
         ],
       ),
       child: Column(
@@ -454,93 +456,94 @@ class _TeacherAnalyticsDashboardState extends State<TeacherAnalyticsDashboard> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
+                    color: Colors.orange.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.warning_outlined, color: Colors.orange, size: 24),
+                  child: const Icon(
+                    Icons.warning_outlined,
+                    color: Colors.orange,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Text(
                   'Needs Attention',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                 ),
               ],
             ),
           ),
           const Divider(height: 1),
-          ...List.generate(
-            needsAttention.length,
-            (index) {
-              final student = needsAttention[index] as Map<String, dynamic>;
-              final name = student['name'] as String? ?? 'N/A';
-              final score = (student['averageScore'] as num?)?.toDouble() ?? 0.0;
-              final attempts = student['totalAttempts'] as int? ?? 0;
+          ...List.generate(needsAttention.length, (index) {
+            final student = needsAttention[index] as Map<String, dynamic>;
+            final name = student['name'] as String? ?? 'N/A';
+            final score = (student['averageScore'] as num?)?.toDouble() ?? 0.0;
+            final attempts = student['totalAttempts'] as int? ?? 0;
 
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  border: index < needsAttention.length - 1
-                      ? Border(
-                          bottom: BorderSide(color: Colors.grey[200]!, width: 0.5),
-                        )
-                      : null,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '⚠',
-                        style: TextStyle(
-                          color: Colors.orange[700],
-                          fontWeight: FontWeight.w800,
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                border: index < needsAttention.length - 1
+                    ? Border(
+                        bottom: BorderSide(
+                          color: Colors.grey[200]!,
+                          width: 0.5,
                         ),
-                      ),
+                      )
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                            ),
-                          ),
-                          Text(
-                            '$attempts attempts',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      '${score.toStringAsFixed(1)}%',
+                    alignment: Alignment.center,
+                    child: Text(
+                      '⚠',
                       style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
                         color: Colors.orange[700],
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          '$attempts attempts',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '${score.toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: Colors.orange[700],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );

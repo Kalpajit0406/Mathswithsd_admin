@@ -6,7 +6,8 @@ class CreateAnnouncementScreen extends StatefulWidget {
   const CreateAnnouncementScreen({super.key});
 
   @override
-  State<CreateAnnouncementScreen> createState() => _CreateAnnouncementScreenState();
+  State<CreateAnnouncementScreen> createState() =>
+      _CreateAnnouncementScreenState();
 }
 
 class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
@@ -36,14 +37,19 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
     final success = await provider.createAnnouncement(
       title: _titleCtrl.text.trim(),
       message: _messageCtrl.text.trim(),
-      imageUrl: _imageUrlCtrl.text.trim().isEmpty ? null : _imageUrlCtrl.text.trim(),
+      imageUrl: _imageUrlCtrl.text.trim().isEmpty
+          ? null
+          : _imageUrlCtrl.text.trim(),
       targetClass: _targetClass,
     );
 
     if (!mounted) return;
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('Announcement sent!'), backgroundColor: Colors.green.shade700),
+        SnackBar(
+          content: const Text('Announcement sent!'),
+          backgroundColor: Colors.green.shade700,
+        ),
       );
       Navigator.pop(context, true); // Return true to signal success
     } else {
@@ -62,10 +68,22 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF0F172A),
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('New Announcement', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5)),
+        title: const Text(
+          'New Announcement',
+          style: TextStyle(
+            color: Color(0xFF0F172A),
+            fontWeight: FontWeight.w800,
+            fontSize: 22,
+            letterSpacing: -0.5,
+          ),
+        ),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -73,37 +91,64 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Create Announcement', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF1A237E))),
+            const Text(
+              'Create Announcement',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF1A237E),
+              ),
+            ),
             const SizedBox(height: 24),
 
             _field('Title', _titleCtrl, icon: Icons.title, maxLines: 1),
             const SizedBox(height: 16),
-            _field('Message', _messageCtrl, icon: Icons.message_outlined, maxLines: 6, minLines: 3),
+            _field(
+              'Message',
+              _messageCtrl,
+              icon: Icons.message_outlined,
+              maxLines: 6,
+              minLines: 3,
+            ),
             const SizedBox(height: 16),
-            _field('Image URL (optional)', _imageUrlCtrl, icon: Icons.image_outlined, maxLines: 1),
+            _field(
+              'Image URL (optional)',
+              _imageUrlCtrl,
+              icon: Icons.image_outlined,
+              maxLines: 1,
+            ),
             const SizedBox(height: 16),
 
             DropdownButtonFormField<String>(
-              value: _targetClass,
+              initialValue: _targetClass,
               onChanged: (val) => setState(() => _targetClass = val!),
               decoration: InputDecoration(
                 labelText: 'Target Class',
                 prefixIcon: const Icon(Icons.group, color: Color(0xFF1565C0)),
                 filled: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF1565C0), width: 1.5),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF1565C0),
+                    width: 1.5,
+                  ),
                 ),
               ),
-              items: _classes.map((c) => DropdownMenuItem(
-                value: c,
-                child: Text(c == 'all' ? 'All Classes' : 'Class $c'),
-              )).toList(),
+              items: _classes
+                  .map(
+                    (c) => DropdownMenuItem(
+                      value: c,
+                      child: Text(c == 'all' ? 'All Classes' : 'Class $c'),
+                    ),
+                  )
+                  .toList(),
             ),
             const SizedBox(height: 32),
 
@@ -112,14 +157,27 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
                 width: double.infinity,
                 height: 56,
                 child: provider.isCreatingAnnouncement
-                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF1565C0)))
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF1565C0),
+                        ),
+                      )
                     : ElevatedButton.icon(
                         onPressed: _send,
                         icon: const Icon(Icons.send, color: Colors.white),
-                        label: const Text('Send Announcement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                        label: const Text(
+                          'Send Announcement',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1565C0),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                           elevation: 4,
                         ),
                       ),
@@ -131,7 +189,13 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
     );
   }
 
-  Widget _field(String label, TextEditingController ctrl, {required IconData icon, int? maxLines, int? minLines}) {
+  Widget _field(
+    String label,
+    TextEditingController ctrl, {
+    required IconData icon,
+    int? maxLines,
+    int? minLines,
+  }) {
     return TextFormField(
       controller: ctrl,
       maxLines: maxLines,
@@ -149,7 +213,10 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFF1565C0), width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
     );
   }

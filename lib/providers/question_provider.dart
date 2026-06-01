@@ -195,7 +195,7 @@ class QuestionProvider with ChangeNotifier {
   // QUESTION LOADING
   // ═══════════════════════════════════════════════════════════════════════════
 
-  Future<void> loadQuestions({int? classNo, String? language, bool clearCache = true}) async {
+  Future<void> loadQuestions({int? classNo, String? language, String? chapter, String? search, bool clearCache = true}) async {
     if (clearCache) {
       _loadState = QuestionLoadState.loading;
       _error = null;
@@ -209,6 +209,8 @@ class QuestionProvider with ChangeNotifier {
       final newQuestions = await _apiService.getQuestions(
         classNo: classNo,
         language: language,
+        chapter: chapter,
+        search: search,
         page: _currentPage,
         pageSize: _pageSize,
       );
@@ -231,7 +233,7 @@ class QuestionProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadMoreQuestions({int? classNo, String? language}) async {
+  Future<void> loadMoreQuestions({int? classNo, String? language, String? chapter, String? search}) async {
     if (_isLoadingMore || !_hasMore) return;
     _isLoadingMore = true;
     notifyListeners();
@@ -241,6 +243,8 @@ class QuestionProvider with ChangeNotifier {
       final newQuestions = await _apiService.getQuestions(
         classNo: classNo,
         language: language,
+        chapter: chapter,
+        search: search,
         page: _currentPage,
         pageSize: _pageSize,
       );

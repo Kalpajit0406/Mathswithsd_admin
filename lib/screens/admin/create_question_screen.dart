@@ -29,7 +29,10 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
 
   // Form Controllers
   final _questionCtrl = TextEditingController();
-  final List<TextEditingController> _optCtrls = List.generate(4, (_) => TextEditingController());
+  final List<TextEditingController> _optCtrls = List.generate(
+    4,
+    (_) => TextEditingController(),
+  );
   final _correctCtrl = TextEditingController();
 
   // Selection state
@@ -81,11 +84,11 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
   void _onProviderChange() {
     if (!mounted) return;
     final provider = Provider.of<QuestionProvider>(context, listen: false);
-    
+
     // Detect when scanning just finished and queue has items
     final scanningJustFinished = _lastIsScanning && !provider.isScanning;
     final indexChanged = provider.currentQueueIndex != _lastQueueIndex;
-    
+
     _lastIsScanning = provider.isScanning;
     _lastQueueIndex = provider.currentQueueIndex;
 
@@ -103,7 +106,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
           content: Text(provider.creationError!),
           backgroundColor: const Color(0xFFBA1A1A),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
@@ -124,8 +129,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
         _questionCtrl.text = current.questionText;
 
         for (int i = 0; i < 4; i++) {
-          _optCtrls[i].text =
-              (current.options.length > i) ? current.options[i] : '';
+          _optCtrls[i].text = (current.options.length > i)
+              ? current.options[i]
+              : '';
         }
 
         // Re-compute correct-answer checkbox from stored correctAnswer field
@@ -144,11 +150,10 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
 
         _selectedCorrectOptionIndex = foundIndex;
         _isManualInput = false; // keep form section visible via hasQueue flag
-        _diagramFile = null;   // clear old diagram so it doesn't carry over
+        _diagramFile = null; // clear old diagram so it doesn't carry over
       });
     }
   }
-
 
   void _clearForm() {
     _questionCtrl.clear();
@@ -175,7 +180,10 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
     }
 
     try {
-      final file = await _imageService.pickAndCropImage(context, source: source);
+      final file = await _imageService.pickAndCropImage(
+        context,
+        source: source,
+      );
       if (!mounted || file == null) return;
       if (source == ImageSource.gallery) {
         setState(() {
@@ -196,10 +204,18 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('$type Permission Required'),
-        content: Text('Please enable $type access in settings to scan questions.'),
+        content: Text(
+          'Please enable $type access in settings to scan questions.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(onPressed: () => openAppSettings(), child: const Text('Open Settings')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => openAppSettings(),
+            child: const Text('Open Settings'),
+          ),
         ],
       ),
     );
@@ -220,7 +236,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
           content: Text(provider.creationError!),
           backgroundColor: const Color(0xFFBA1A1A),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     } else if (provider.questionQueue.isNotEmpty) {
@@ -228,7 +246,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
         _selectedGalleryFile = null;
       });
       _syncFromQueue();
-      
+
       // Show OCR confidence feedback
       final ocr = provider.questionQueue.first;
       if (ocr.confidence != null) {
@@ -257,9 +275,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
               ),
             ),
             const SizedBox(height: 24),
-            Center(
-              child: ConfidenceBadge(confidence: confidence),
-            ),
+            Center(child: ConfidenceBadge(confidence: confidence)),
             const SizedBox(height: 24),
             // Show recommendation based on confidence
             _buildConfidenceRecommendation(confidence),
@@ -270,7 +286,10 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(ctx),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF4A148C), width: 2),
+                      side: const BorderSide(
+                        color: Color(0xFF4A148C),
+                        width: 2,
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -330,27 +349,28 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
 
     if (confidence >= 90) {
       recommendation = '✓ Ready to use\nOCR results are excellent quality';
-      bgColor = const Color(0xFF4CAF50).withOpacity(0.1);
+      bgColor = const Color(0xFF4CAF50).withValues(alpha: 0.1);
       textColor = const Color(0xFF4CAF50);
       icon = Icons.check_circle;
     } else if (confidence >= 80) {
       recommendation = '→ Review recommended\nDouble-check complex sections';
-      bgColor = const Color(0xFF2196F3).withOpacity(0.1);
+      bgColor = const Color(0xFF2196F3).withValues(alpha: 0.1);
       textColor = const Color(0xFF2196F3);
       icon = Icons.info;
     } else if (confidence >= 70) {
       recommendation = '⚠ Please review carefully\nCheck mathematical notation';
-      bgColor = const Color(0xFFFFC107).withOpacity(0.1);
+      bgColor = const Color(0xFFFFC107).withValues(alpha: 0.1);
       textColor = const Color(0xFFFFC107);
       icon = Icons.warning;
     } else if (confidence >= 60) {
       recommendation = '⚠ Manual correction needed\nSome errors may be present';
-      bgColor = const Color(0xFFFF9800).withOpacity(0.1);
+      bgColor = const Color(0xFFFF9800).withValues(alpha: 0.1);
       textColor = const Color(0xFFFF9800);
       icon = Icons.warning_amber;
     } else {
-      recommendation = '✕ Re-crop or re-upload recommended\nQuality too low for reliable OCR';
-      bgColor = const Color(0xFFBA1A1A).withOpacity(0.1);
+      recommendation =
+          '✕ Re-crop or re-upload recommended\nQuality too low for reliable OCR';
+      bgColor = const Color(0xFFBA1A1A).withValues(alpha: 0.1);
       textColor = const Color(0xFFBA1A1A);
       icon = Icons.error;
     }
@@ -360,7 +380,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: textColor.withOpacity(0.3), width: 1),
+        border: Border.all(color: textColor.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         children: [
@@ -400,12 +420,18 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF0051D5)),
+              leading: const Icon(
+                Icons.camera_alt_outlined,
+                color: Color(0xFF0051D5),
+              ),
               title: const Text('Take a Photo (Camera)'),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF0051D5)),
+              leading: const Icon(
+                Icons.photo_library_outlined,
+                color: Color(0xFF0051D5),
+              ),
               title: const Text('Choose from Gallery'),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
@@ -429,7 +455,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
         SnackBar(
           content: const Text('Question text is required'),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
@@ -441,7 +469,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
           SnackBar(
             content: Text('Option ${String.fromCharCode(65 + i)} is required'),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
         return;
@@ -454,7 +484,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
         SnackBar(
           content: const Text('Correct answer is required'),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
@@ -464,9 +496,13 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
     if (!options.any((o) => o.toLowerCase() == correctAnswer.toLowerCase())) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Correct answer must match one of the 4 options exactly'),
+          content: const Text(
+            'Correct answer must match one of the 4 options exactly',
+          ),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
@@ -490,14 +526,16 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
 
     if (success) {
       _clearForm();
-      
+
       if (isQueueFlow && wasLastQuestion) {
         // Show completion dialog and redirect
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: Row(
               children: const [
                 Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 28),
@@ -541,7 +579,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
             content: const Text('✓ Question saved! Loading next...'),
             backgroundColor: const Color(0xFF4CAF50),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       } else {
@@ -554,7 +594,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
             content: const Text('✓ Question saved successfully!'),
             backgroundColor: const Color(0xFF4CAF50),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -565,14 +607,18 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
           content: Text(errorText),
           backgroundColor: const Color(0xFFBA1A1A),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
 
       if (errorText.toLowerCase().contains('session expired')) {
         await Future.delayed(const Duration(milliseconds: 250));
         if (!mounted) return;
-        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil('/login', (route) => false);
       }
     }
   }
@@ -631,7 +677,11 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                     });
                     _syncFromQueue();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Extracted ${questions.length} questions!')),
+                      SnackBar(
+                        content: Text(
+                          'Extracted ${questions.length} questions!',
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -670,7 +720,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                 const SizedBox(height: 20),
                 Card(
                   elevation: 4,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   clipBehavior: Clip.antiAlias,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -710,7 +762,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                                 child: Column(
                                   children: [
                                     CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0051D5)),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Color(0xFF0051D5),
+                                      ),
                                     ),
                                     SizedBox(height: 12),
                                     Text(
@@ -734,8 +788,14 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                                         });
                                       },
                                       style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
                                       ),
                                       child: const Text('Cancel'),
                                     ),
@@ -743,17 +803,29 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: ElevatedButton(
-                                      onPressed: () => _processScannedFile(_selectedGalleryFile!),
+                                      onPressed: () => _processScannedFile(
+                                        _selectedGalleryFile!,
+                                      ),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF0051D5),
+                                        backgroundColor: const Color(
+                                          0xFF0051D5,
+                                        ),
                                         foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
                                         elevation: 0,
                                       ),
                                       child: const Text(
                                         'Extract Questions',
-                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -782,8 +854,8 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                 child: _buildHeader(provider),
               ),
               const SizedBox(height: 24),
-              
-              if (!hasQueue && !provider.isScanning && !_isManualInput) 
+
+              if (!hasQueue && !provider.isScanning && !_isManualInput)
                 FadeInSlide(
                   duration: const Duration(milliseconds: 550),
                   delay: const Duration(milliseconds: 100),
@@ -795,7 +867,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                   child: _buildQuestionQueueStatus(provider),
                 ),
                 const SizedBox(height: 24),
-                
+
                 FadeInSlide(
                   duration: const Duration(milliseconds: 550),
                   delay: const Duration(milliseconds: 100),
@@ -820,30 +892,42 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                               ChoiceChip(
                                 label: const Text(
                                   'LaTeX Render',
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 selected: _useLaTeXPreview,
                                 selectedColor: const Color(0x200051D5),
                                 labelStyle: TextStyle(
-                                  color: _useLaTeXPreview ? const Color(0xAA0051D5) : Colors.black54,
+                                  color: _useLaTeXPreview
+                                      ? const Color(0xAA0051D5)
+                                      : Colors.black54,
                                 ),
                                 onSelected: (selected) {
-                                  if (selected) setState(() => _useLaTeXPreview = true);
+                                  if (selected)
+                                    setState(() => _useLaTeXPreview = true);
                                 },
                               ),
                               const SizedBox(width: 8),
                               ChoiceChip(
                                 label: const Text(
                                   'Readable Text',
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 selected: !_useLaTeXPreview,
                                 selectedColor: const Color(0x200051D5),
                                 labelStyle: TextStyle(
-                                  color: !_useLaTeXPreview ? const Color(0xAA0051D5) : Colors.black54,
+                                  color: !_useLaTeXPreview
+                                      ? const Color(0xAA0051D5)
+                                      : Colors.black54,
                                 ),
                                 onSelected: (selected) {
-                                  if (selected) setState(() => _useLaTeXPreview = false);
+                                  if (selected)
+                                    setState(() => _useLaTeXPreview = false);
                                 },
                               ),
                             ],
@@ -856,14 +940,21 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                             ? LaTeXWidget(text: _questionCtrl.text)
                             : Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFF8F9FA),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  border: Border.all(
+                                    color: const Color(0xFFE2E8F0),
+                                  ),
                                 ),
                                 child: Text(
-                                  LatexToReadableConverter.convert(_questionCtrl.text),
+                                  LatexToReadableConverter.convert(
+                                    _questionCtrl.text,
+                                  ),
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
@@ -876,14 +967,12 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                     ],
                   ]),
                 ),
-                
+
                 const SizedBox(height: 20),
                 FadeInSlide(
                   duration: const Duration(milliseconds: 550),
                   delay: const Duration(milliseconds: 150),
-                  child: _buildFormSection('Diagram', [
-                    _buildDiagramPicker(),
-                  ]),
+                  child: _buildFormSection('Diagram', [_buildDiagramPicker()]),
                 ),
 
                 const SizedBox(height: 20),
@@ -905,20 +994,27 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Padding(
-                            padding: const EdgeInsets.only(top: 24.0, right: 8.0),
+                            padding: const EdgeInsets.only(
+                              top: 24.0,
+                              right: 8.0,
+                            ),
                             child: Tooltip(
-                              message: 'Mark Option ${String.fromCharCode(65 + i)} as correct',
+                              message:
+                                  'Mark Option ${String.fromCharCode(65 + i)} as correct',
                               child: Transform.scale(
                                 scale: 1.1,
                                 child: Checkbox(
                                   value: _selectedCorrectOptionIndex == i,
                                   activeColor: const Color(0xFF0051D5),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
                                   onChanged: (bool? val) {
                                     setState(() {
                                       if (val == true) {
                                         _selectedCorrectOptionIndex = i;
-                                        _correctCtrl.text = _optCtrls[i].text.trim();
+                                        _correctCtrl.text = _optCtrls[i].text
+                                            .trim();
                                       } else {
                                         if (_selectedCorrectOptionIndex == i) {
                                           _selectedCorrectOptionIndex = null;
@@ -939,7 +1035,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                                 const SizedBox(height: 8),
                                 TextFormField(
                                   controller: _optCtrls[i],
-                                  decoration: _inputDec('Enter option ${i + 1}...'),
+                                  decoration: _inputDec(
+                                    'Enter option ${i + 1}...',
+                                  ),
                                   onChanged: (val) {
                                     setState(() {
                                       if (_selectedCorrectOptionIndex == i) {
@@ -969,17 +1067,28 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                   duration: const Duration(milliseconds: 550),
                   delay: const Duration(milliseconds: 250),
                   child: _buildFormSection('Metadata', [
-                     Row(
+                    Row(
                       children: [
                         Expanded(
                           child: _buildDropdown<int>(
                             label: 'Class',
                             value: _selectedClass,
-                            items: [9, 10, 11, 12, 13].map((c) => DropdownMenuItem(value: c, child: Text(c == 13 ? 'Joint Entrance' : 'Class $c'))).toList(),
+                            items: [9, 10, 11, 12, 13]
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c,
+                                    child: Text(
+                                      c == 13 ? 'Joint Entrance' : 'Class $c',
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                             onChanged: (val) {
                               setState(() {
                                 _selectedClass = val!;
-                                _selectedChapter = AppConstants.classChapters[_selectedClass]?.first;
+                                _selectedChapter = AppConstants
+                                    .classChapters[_selectedClass]
+                                    ?.first;
                               });
                             },
                           ),
@@ -989,8 +1098,16 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                           child: _buildDropdown<String>(
                             label: 'Language',
                             value: _selectedLanguage,
-                            items: ['Bengali', 'English', 'Both'].map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
-                            onChanged: (val) => setState(() => _selectedLanguage = val!),
+                            items: ['Bengali', 'English', 'Both']
+                                .map(
+                                  (l) => DropdownMenuItem(
+                                    value: l,
+                                    child: Text(l),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) =>
+                                setState(() => _selectedLanguage = val!),
                           ),
                         ),
                       ],
@@ -1000,8 +1117,16 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                       label: 'Chapter',
                       value: _selectedChapter,
                       isExpanded: true,
-                      items: chapters.map((ch) => DropdownMenuItem(value: ch, child: Text(ch, overflow: TextOverflow.ellipsis))).toList(),
-                      onChanged: (val) => setState(() => _selectedChapter = val),
+                      items: chapters
+                          .map(
+                            (ch) => DropdownMenuItem(
+                              value: ch,
+                              child: Text(ch, overflow: TextOverflow.ellipsis),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) =>
+                          setState(() => _selectedChapter = val),
                     ),
                   ]),
                 ),
@@ -1013,7 +1138,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                   child: _buildActionButtons(provider),
                 ),
                 const SizedBox(height: 40),
-              ]
+              ],
             ],
           ),
         );
@@ -1041,7 +1166,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
               ),
               const SizedBox(height: 6),
               Text(
-                provider.isScanning ? 'Processing scanned image with AI OCR...' : 'Scan physical papers or input equations manually',
+                provider.isScanning
+                    ? 'Processing scanned image with AI OCR...'
+                    : 'Scan physical papers or input equations manually',
                 style: const TextStyle(
                   color: Color(0xFF75859D),
                   fontSize: 14,
@@ -1058,7 +1185,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                 context: context,
                 builder: (ctx) => AlertDialog(
                   title: const Text('Discard Scan Session'),
-                  content: const Text('Are you sure you want to discard all remaining scanned questions?'),
+                  content: const Text(
+                    'Are you sure you want to discard all remaining scanned questions?',
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx),
@@ -1073,16 +1202,25 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                           _isManualInput = false;
                         });
                       },
-                      child: const Text('Discard', style: TextStyle(color: Color(0xFFBA1A1A))),
+                      child: const Text(
+                        'Discard',
+                        style: TextStyle(color: Color(0xFFBA1A1A)),
+                      ),
                     ),
                   ],
                 ),
               );
             },
-            icon: const Icon(Icons.delete_sweep_rounded, color: Color(0xFFBA1A1A)),
+            icon: const Icon(
+              Icons.delete_sweep_rounded,
+              color: Color(0xFFBA1A1A),
+            ),
             label: const Text(
               'Discard Scan',
-              style: TextStyle(color: Color(0xFFBA1A1A), fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Color(0xFFBA1A1A),
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
       ],
@@ -1102,13 +1240,17 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
               border: Border.all(color: const Color(0xFFECEEF0), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
-                )
+                ),
               ],
             ),
-            child: const Icon(Icons.document_scanner_outlined, size: 76, color: Color(0xFF0051D5)),
+            child: const Icon(
+              Icons.document_scanner_outlined,
+              size: 76,
+              color: Color(0xFF0051D5),
+            ),
           ),
           const SizedBox(height: 28),
           const Text(
@@ -1137,14 +1279,22 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
               Expanded(
                 child: BounceOnTap(
                   onTap: () => _pickImage(ImageSource.camera),
-                  child: _scanActionCard('Camera Capture', Icons.camera_alt_rounded, const Color(0xFF0051D5)),
+                  child: _scanActionCard(
+                    'Camera Capture',
+                    Icons.camera_alt_rounded,
+                    const Color(0xFF0051D5),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: BounceOnTap(
                   onTap: () => _pickImage(ImageSource.gallery),
-                  child: _scanActionCard('Choose Gallery', Icons.photo_library_rounded, const Color(0xFF316BF3)),
+                  child: _scanActionCard(
+                    'Choose Gallery',
+                    Icons.photo_library_rounded,
+                    const Color(0xFF316BF3),
+                  ),
                 ),
               ),
             ],
@@ -1165,16 +1315,20 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                 border: Border.all(color: const Color(0xFFECEEF0), width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: Colors.black.withValues(alpha: 0.02),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
-                  )
+                  ),
                 ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
-                  Icon(Icons.edit_note_rounded, color: Color(0xFF4A148C), size: 28),
+                  Icon(
+                    Icons.edit_note_rounded,
+                    color: Color(0xFF4A148C),
+                    size: 28,
+                  ),
                   SizedBox(width: 12),
                   Text(
                     'Input Manually',
@@ -1204,16 +1358,20 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                 border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: Colors.black.withValues(alpha: 0.02),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
-                  )
+                  ),
                 ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
-                  Icon(Icons.description_outlined, color: Color(0xFF2563EB), size: 28),
+                  Icon(
+                    Icons.description_outlined,
+                    color: Color(0xFF2563EB),
+                    size: 28,
+                  ),
                   SizedBox(width: 12),
                   Text(
                     'Upload PDF/Document',
@@ -1241,10 +1399,10 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
         border: Border.all(color: const Color(0xFFECEEF0), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -1252,7 +1410,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.08),
+              color: color.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 28),
@@ -1273,7 +1431,7 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
 
   Widget _buildQuestionQueueStatus(QuestionProvider provider) {
     if (provider.questionQueue.isEmpty) return const SizedBox.shrink();
-    
+
     return Column(
       children: [
         // Use the new comprehensive queue status widget
@@ -1336,7 +1494,10 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                         });
                       }
                     },
-                    child: const Text('Delete', style: TextStyle(color: Color(0xFFBA1A1A))),
+                    child: const Text(
+                      'Delete',
+                      style: TextStyle(color: Color(0xFFBA1A1A)),
+                    ),
                   ),
                 ],
               ),
@@ -1384,19 +1545,38 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
         if (_diagramFile != null) ...[
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.file(_diagramFile!, height: 160, width: double.infinity, fit: BoxFit.contain),
+            child: Image.file(
+              _diagramFile!,
+              height: 160,
+              width: double.infinity,
+              fit: BoxFit.contain,
+            ),
           ),
           const SizedBox(height: 12),
         ],
         OutlinedButton.icon(
           onPressed: _pickDiagram,
-          icon: Icon(_diagramFile == null ? Icons.add_photo_alternate_rounded : Icons.edit_rounded, size: 20),
-          label: Text(_diagramFile == null ? 'Add Optional Diagram' : 'Replace Question Diagram'),
+          icon: Icon(
+            _diagramFile == null
+                ? Icons.add_photo_alternate_rounded
+                : Icons.edit_rounded,
+            size: 20,
+          ),
+          label: Text(
+            _diagramFile == null
+                ? 'Add Optional Diagram'
+                : 'Replace Question Diagram',
+          ),
           style: OutlinedButton.styleFrom(
             minimumSize: const Size(double.infinity, 50),
             side: const BorderSide(color: Color(0xFFECEEF0), width: 1),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            textStyle: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
           ),
         ),
       ],
@@ -1421,11 +1601,16 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 side: const BorderSide(color: Color(0xFFBA1A1A)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
               child: const Text(
                 'Skip',
-                style: TextStyle(color: Color(0xFFBA1A1A), fontWeight: FontWeight.w800),
+                style: TextStyle(
+                  color: Color(0xFFBA1A1A),
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),
@@ -1441,15 +1626,21 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 side: const BorderSide(color: Color(0xFF75859D)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
               child: const Text(
                 'Cancel',
-                style: TextStyle(color: Color(0xFF75859D), fontWeight: FontWeight.w800),
+                style: TextStyle(
+                  color: Color(0xFF75859D),
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),
-        if (provider.questionQueue.isNotEmpty || _isManualInput) const SizedBox(width: 12),
+        if (provider.questionQueue.isNotEmpty || _isManualInput)
+          const SizedBox(width: 12),
         Expanded(
           flex: 2,
           child: ElevatedButton(
@@ -1457,16 +1648,31 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0051D5),
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               elevation: 0,
             ),
             child: provider.isSaving
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
                 : Text(
                     provider.questionQueue.isNotEmpty
-                        ? (provider.hasNextQuestion ? 'Save & Next Question' : 'Save & Finish')
+                        ? (provider.hasNextQuestion
+                              ? 'Save & Next Question'
+                              : 'Save & Finish')
                         : 'Save Question',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
                   ),
           ),
         ),
@@ -1488,7 +1694,12 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
         children: [
           const Text(
             'LIVE LATEX RENDERED PREVIEW:',
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF75859D), letterSpacing: 0.5),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF75859D),
+              letterSpacing: 0.5,
+            ),
           ),
           const SizedBox(height: 8),
           child,
@@ -1526,21 +1737,36 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
       hintText: hint,
       filled: true,
       fillColor: const Color(0xFFF7F9FB),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFECEEF0))),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFECEEF0))),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0051D5), width: 1.5)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFECEEF0)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFECEEF0)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF0051D5), width: 1.5),
+      ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
   }
 
-  Widget _buildDropdown<T>({required String label, required T? value, required List<DropdownMenuItem<T>> items, required ValueChanged<T?> onChanged, bool isExpanded = false}) {
+  Widget _buildDropdown<T>({
+    required String label,
+    required T? value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+    bool isExpanded = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _label(label),
         const SizedBox(height: 8),
         DropdownButtonFormField<T>(
-          value: value,
+          initialValue: value,
           onChanged: onChanged,
           isExpanded: isExpanded,
           decoration: _inputDec(label),

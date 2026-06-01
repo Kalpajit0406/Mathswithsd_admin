@@ -3,7 +3,7 @@ import '../../services/storage_service.dart';
 import '../../utils/constants.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -31,9 +31,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       });
     } catch (e) {
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading settings: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading settings: $e')));
     }
   }
 
@@ -55,9 +55,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving base URL: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error saving base URL: $e')));
     }
   }
 
@@ -74,9 +74,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error clearing override: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error clearing override: $e')));
     }
   }
 
@@ -179,7 +179,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         : 'Custom override active',
                     style: TextStyle(
                       fontSize: 12,
-                      color: _currentOverride == null ? Colors.blue : Colors.orange,
+                      color: _currentOverride == null
+                          ? Colors.blue
+                          : Colors.orange,
                     ),
                   ),
                 ],

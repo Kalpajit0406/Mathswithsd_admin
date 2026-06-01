@@ -96,7 +96,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (response.statusCode == 200 || response.statusCode == 201) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Registration successful! Please wait for admin approval.'),
+              content: const Text(
+                'Registration successful! Please wait for admin approval.',
+              ),
               backgroundColor: Colors.green.shade700,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 4),
@@ -132,7 +134,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: widget.onBackToLogin,
         ),
         title: const Text(
@@ -150,167 +156,242 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
         child: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sectionTitle('Personal Information'),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(child: _darkField('First Name', _firstNameCtrl, icon: Icons.person_outline)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _darkField('Last Name', _lastNameCtrl, icon: Icons.person_outline)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                GestureDetector(
-                  onTap: _pickDate,
-                  child: AbsorbPointer(
-                    child: _darkField('Date of Birth', _dobCtrl,
-                      icon: Icons.calendar_today,
-                      hint: 'dd/mm/yyyy',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _darkField('Father\'s Name', _fatherNameCtrl, icon: Icons.family_restroom),
-                const SizedBox(height: 16),
-                _dropdownField('Gender', _gender, _genders, (val) => setState(() => _gender = val!),
-                    icon: Icons.wc),
-                const SizedBox(height: 24),
-
-                _sectionTitle('Academic Details'),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _dropdownField('Class', _classNo, _classes,
-                        (val) => setState(() {
-                          _classNo = val!;
-                          if (_classNo != '11' && _classNo != '12') {
-                            _isJoint = false;
-                          }
-                        }), icon: Icons.class_),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _dropdownField('Medium', _language, _languages,
-                        (val) => setState(() => _language = val!), icon: Icons.translate),
-                    ),
-                  ],
-                ),
-                if (_classNo == '11' || _classNo == '12') ...[
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _sectionTitle('Personal Information'),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Checkbox(
-                        value: _isJoint,
-                        onChanged: (val) {
-                          setState(() {
-                            _isJoint = val ?? false;
-                          });
-                        },
-                        activeColor: const Color(0xFF00BCD4),
-                      ),
-                      const SizedBox(width: 8),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Enroll in Joint Entrance preparation',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Optional curriculum for engineering entrance prep',
-                              style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11),
-                            ),
-                          ],
+                        child: _darkField(
+                          'First Name',
+                          _firstNameCtrl,
+                          icon: Icons.person_outline,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _darkField(
+                          'Last Name',
+                          _lastNameCtrl,
+                          icon: Icons.person_outline,
                         ),
                       ),
                     ],
                   ),
-                ],
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: _pickDate,
+                    child: AbsorbPointer(
+                      child: _darkField(
+                        'Date of Birth',
+                        _dobCtrl,
+                        icon: Icons.calendar_today,
+                        hint: 'dd/mm/yyyy',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _darkField(
+                    'Father\'s Name',
+                    _fatherNameCtrl,
+                    icon: Icons.family_restroom,
+                  ),
+                  const SizedBox(height: 16),
+                  _dropdownField(
+                    'Gender',
+                    _gender,
+                    _genders,
+                    (val) => setState(() => _gender = val!),
+                    icon: Icons.wc,
+                  ),
+                  const SizedBox(height: 24),
 
-                _sectionTitle('Contact Information'),
-                const SizedBox(height: 16),
-                _darkField('Student\'s Phone', _studentPhoneCtrl,
-                  icon: Icons.phone, keyboardType: TextInputType.phone,
-                  validator: (val) {
-                    if (val == null || val.isEmpty) return 'Required';
-                    if (val.length != 10) return 'Must be 10 digits';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                _darkField('Guardian\'s Phone', _guardianPhoneCtrl,
-                  icon: Icons.phone_in_talk_outlined, keyboardType: TextInputType.phone,
-                  validator: (val) {
-                    if (val == null || val.isEmpty) return 'Required';
-                    if (val.length != 10) return 'Must be 10 digits';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                _sectionTitle('Security'),
-                const SizedBox(height: 16),
-                _passwordField('Password', _passwordCtrl, _passwordVisible,
-                  () => setState(() => _passwordVisible = !_passwordVisible)),
-                const SizedBox(height: 16),
-                _passwordField('Confirm Password', _confirmPasswordCtrl, _confirmPasswordVisible,
-                  () => setState(() => _confirmPasswordVisible = !_confirmPasswordVisible)),
-                const SizedBox(height: 36),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: Color(0xFF00BCD4)))
-                      : DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF00BCD4), Color(0xFF006064)],
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: ElevatedButton(
-                            onPressed: _register,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            child: const Text(
-                              'Register Account',
-                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white),
-                            ),
+                  _sectionTitle('Academic Details'),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _dropdownField(
+                          'Class',
+                          _classNo,
+                          _classes,
+                          (val) => setState(() {
+                            _classNo = val!;
+                            if (_classNo != '11' && _classNo != '12') {
+                              _isJoint = false;
+                            }
+                          }),
+                          icon: Icons.class_,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _dropdownField(
+                          'Medium',
+                          _language,
+                          _languages,
+                          (val) => setState(() => _language = val!),
+                          icon: Icons.translate,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_classNo == '11' || _classNo == '12') ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _isJoint,
+                          onChanged: (val) {
+                            setState(() {
+                              _isJoint = val ?? false;
+                            });
+                          },
+                          activeColor: const Color(0xFF00BCD4),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Enroll in Joint Entrance preparation',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Optional curriculum for engineering entrance prep',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.6),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Already have an account? ', style: TextStyle(color: Color(0xFF8897AE))),
-                    TextButton(
-                      onPressed: widget.onBackToLogin,
-                      style: TextButton.styleFrom(foregroundColor: const Color(0xFF00BCD4), padding: EdgeInsets.zero),
-                      child: const Text('Login', style: TextStyle(fontWeight: FontWeight.w700)),
+                      ],
                     ),
                   ],
-                ),
-                const SizedBox(height: 40),
-              ],
+
+                  _sectionTitle('Contact Information'),
+                  const SizedBox(height: 16),
+                  _darkField(
+                    'Student\'s Phone',
+                    _studentPhoneCtrl,
+                    icon: Icons.phone,
+                    keyboardType: TextInputType.phone,
+                    validator: (val) {
+                      if (val == null || val.isEmpty) return 'Required';
+                      if (val.length != 10) return 'Must be 10 digits';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _darkField(
+                    'Guardian\'s Phone',
+                    _guardianPhoneCtrl,
+                    icon: Icons.phone_in_talk_outlined,
+                    keyboardType: TextInputType.phone,
+                    validator: (val) {
+                      if (val == null || val.isEmpty) return 'Required';
+                      if (val.length != 10) return 'Must be 10 digits';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  _sectionTitle('Security'),
+                  const SizedBox(height: 16),
+                  _passwordField(
+                    'Password',
+                    _passwordCtrl,
+                    _passwordVisible,
+                    () => setState(() => _passwordVisible = !_passwordVisible),
+                  ),
+                  const SizedBox(height: 16),
+                  _passwordField(
+                    'Confirm Password',
+                    _confirmPasswordCtrl,
+                    _confirmPasswordVisible,
+                    () => setState(
+                      () => _confirmPasswordVisible = !_confirmPasswordVisible,
+                    ),
+                  ),
+                  const SizedBox(height: 36),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: _isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF00BCD4),
+                            ),
+                          )
+                        : DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF00BCD4), Color(0xFF006064)],
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: ElevatedButton(
+                              onPressed: _register,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: const Text(
+                                'Register Account',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Already have an account? ',
+                        style: TextStyle(color: Color(0xFF8897AE)),
+                      ),
+                      TextButton(
+                        onPressed: widget.onBackToLogin,
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF00BCD4),
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: const Text(
+                          'Login',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -354,19 +435,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
         prefixIcon: Icon(icon, color: const Color(0xFF00BCD4), size: 20),
         filled: true,
         fillColor: const Color(0xFF1A2744),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2D3748))),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2D3748))),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF00BCD4), width: 1.5)),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red)),
-        focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF2D3748)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF2D3748)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF00BCD4), width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
         errorStyle: const TextStyle(color: Colors.redAccent),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
       ),
-      validator: validator ?? (val) => (val == null || val.isEmpty) ? 'Required' : null,
+      validator:
+          validator ??
+          (val) => (val == null || val.isEmpty) ? 'Required' : null,
     );
   }
 
-  Widget _passwordField(String label, TextEditingController ctrl, bool visible, VoidCallback toggle) {
+  Widget _passwordField(
+    String label,
+    TextEditingController ctrl,
+    bool visible,
+    VoidCallback toggle,
+  ) {
     return TextFormField(
       controller: ctrl,
       obscureText: !visible,
@@ -374,17 +480,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: Color(0xFF8897AE)),
-        prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF00BCD4), size: 20),
+        prefixIcon: const Icon(
+          Icons.lock_outline,
+          color: Color(0xFF00BCD4),
+          size: 20,
+        ),
         suffixIcon: IconButton(
-          icon: Icon(visible ? Icons.visibility : Icons.visibility_off, color: const Color(0xFF8897AE)),
+          icon: Icon(
+            visible ? Icons.visibility : Icons.visibility_off,
+            color: const Color(0xFF8897AE),
+          ),
           onPressed: toggle,
         ),
         filled: true,
         fillColor: const Color(0xFF1A2744),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2D3748))),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2D3748))),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF00BCD4), width: 1.5)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF2D3748)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF2D3748)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF00BCD4), width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
       ),
       validator: (val) {
         if (val == null || val.isEmpty) return 'Required';
@@ -394,9 +519,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _dropdownField(String label, String value, List<String> options, ValueChanged<String?> onChanged, {required IconData icon}) {
+  Widget _dropdownField(
+    String label,
+    String value,
+    List<String> options,
+    ValueChanged<String?> onChanged, {
+    required IconData icon,
+  }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       onChanged: onChanged,
       dropdownColor: const Color(0xFF1A2744),
       style: const TextStyle(color: Colors.white),
@@ -406,12 +537,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
         prefixIcon: Icon(icon, color: const Color(0xFF00BCD4), size: 20),
         filled: true,
         fillColor: const Color(0xFF1A2744),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2D3748))),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2D3748))),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF00BCD4), width: 1.5)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF2D3748)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF2D3748)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF00BCD4), width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
       ),
-      items: options.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
+      items: options
+          .map((o) => DropdownMenuItem(value: o, child: Text(o)))
+          .toList(),
     );
   }
 }

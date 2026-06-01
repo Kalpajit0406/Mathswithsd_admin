@@ -307,10 +307,12 @@ class ApiService {
 
   // ─── Questions ────────────────────────────────────────────────────────────────
 
-  Future<List<Question>> getQuestions({int? classNo, String? language, int? page, int? pageSize}) async {
+  Future<List<Question>> getQuestions({int? classNo, String? language, String? chapter, String? search, int? page, int? pageSize}) async {
     final params = <String, String>{};
     if (classNo != null) params['classNo'] = classNo.toString();
     if (language != null) params['language'] = language;
+    if (chapter != null) params['chapter'] = chapter;
+    if (search != null && search.isNotEmpty) params['search'] = search;
     if (page != null) params['page'] = page.toString();
     if (pageSize != null) params['pageSize'] = pageSize.toString();
 
@@ -930,14 +932,14 @@ class ApiService {
   }
 
   /// Get questions with retry
-  Future<List<Question>> getQuestionsWithRetry({int? classNo, String? language, int? page, int? pageSize}) async {
+  Future<List<Question>> getQuestionsWithRetry({int? classNo, String? language, String? chapter, String? search, int? page, int? pageSize}) async {
     int attempt = 0;
     const maxAttempts = 3;
     Duration delay = const Duration(seconds: 1);
 
     while (attempt < maxAttempts) {
       try {
-        return await getQuestions(classNo: classNo, language: language, page: page, pageSize: pageSize);
+        return await getQuestions(classNo: classNo, language: language, chapter: chapter, search: search, page: page, pageSize: pageSize);
       } on ApiException catch (e) {
         attempt++;
         if (attempt >= maxAttempts) rethrow;

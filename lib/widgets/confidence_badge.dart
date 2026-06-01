@@ -6,10 +6,10 @@ class ConfidenceBadge extends StatelessWidget {
   final bool compact;
 
   const ConfidenceBadge({
-    Key? key,
+    super.key,
     required this.confidence,
     this.compact = false,
-  }) : super(key: key);
+  });
 
   Color _getConfidenceColor() {
     if (confidence >= 90) return Colors.green;
@@ -41,12 +41,9 @@ class ConfidenceBadge extends StatelessWidget {
       return Container(
         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: _getConfidenceColor().withOpacity(0.2),
+          color: _getConfidenceColor().withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: _getConfidenceColor(),
-            width: 1,
-          ),
+          border: Border.all(color: _getConfidenceColor(), width: 1),
         ),
         child: Text(
           '${confidence.toStringAsFixed(1)}% ${_getConfidenceLabel()}',
@@ -62,10 +59,10 @@ class ConfidenceBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _getConfidenceColor().withOpacity(0.1),
+        color: _getConfidenceColor().withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _getConfidenceColor().withOpacity(0.5),
+          color: _getConfidenceColor().withValues(alpha: 0.5),
           width: 1,
         ),
       ),
@@ -133,11 +130,7 @@ class ConfidenceBadge extends StatelessWidget {
           SizedBox(height: 8),
           Row(
             children: [
-              Icon(
-                _getRecommendationIcon(),
-                size: 16,
-                color: Colors.grey[700],
-              ),
+              Icon(_getRecommendationIcon(), size: 16, color: Colors.grey[700]),
               SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -170,10 +163,10 @@ class ConfidenceIndicator extends StatelessWidget {
   final EdgeInsets padding;
 
   const ConfidenceIndicator({
-    Key? key,
+    super.key,
     required this.confidence,
     this.padding = const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-  }) : super(key: key);
+  });
 
   Color _getColor() {
     if (confidence >= 90) return Colors.green;
@@ -188,7 +181,7 @@ class ConfidenceIndicator extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: _getColor().withOpacity(0.2),
+        color: _getColor().withValues(alpha: 0.2),
         shape: BoxShape.circle,
       ),
       child: Text(

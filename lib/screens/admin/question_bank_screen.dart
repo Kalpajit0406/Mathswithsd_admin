@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/question_provider.dart';
@@ -23,6 +24,13 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   final Set<String> _selectedQuestionIds = {};
 
   final ScrollController _scrollController = ScrollController();
+  
+  // Search state variables
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  String _searchQuery = '';
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -36,13 +44,21 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
   void _onScroll() {
     if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
       final provider = Provider.of<QuestionProvider>(context, listen: false);
-      provider.loadMoreQuestions(classNo: _filterClass, language: _filterLanguage);
+      provider.loadMoreQuestions(
+        classNo: _filterClass,
+        language: _filterLanguage,
+        chapter: _filterChapter,
+        search: _searchQuery,
+      );
     }
   }
 
@@ -50,7 +66,19 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     Provider.of<QuestionProvider>(context, listen: false).loadQuestions(
       classNo: _filterClass,
       language: _filterLanguage,
+      chapter: _filterChapter,
+      search: _searchQuery,
     );
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      setState(() {
+        _searchQuery = query;
+      });
+      _loadQuestions();
+    });
   }
 
   Future<void> _bulkDelete(BuildContext context) async {
@@ -131,7 +159,11 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: _isSelectionMode ? const Color(0xFF0051D5) : Colors.transparent,
+        backgroundColor: _isSelectionMode
+            ? const Color(0xFF0051D5)
+            : (_isSearching ? Colors.white : Colors.transparent),
+        elevation: 0,
+        scrolledUnderElevation: 0,
         leading: _isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
@@ -142,15 +174,39 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   });
                 },
               )
-            : (Navigator.canPop(context)
+            : (_isSearching
                 ? IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
-                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+                    onPressed: () {
+                      setState(() {
+                        _isSearching = false;
+                        _searchQuery = '';
+                        _searchController.clear();
+                      });
+                      _loadQuestions();
+                    },
                   )
-                : null),
+                : (Navigator.canPop(context)
+                    ? IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
+                        onPressed: () => Navigator.pop(context),
+                      )
+                    : null)),
         title: _isSelectionMode
             ? Text('${_selectedQuestionIds.length} Selected', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))
-            : const Text('Question Bank', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5)),
+            : (_isSearching
+                ? TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    decoration: const InputDecoration(
+                      hintText: 'Search question content...',
+                      border: InputBorder.none,
+                      hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                    style: const TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.w600),
+                    onChanged: _onSearchChanged,
+                  )
+                : const Text('Question Bank', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5))),
         actions: _isSelectionMode
             ? [
                 IconButton(
@@ -177,10 +233,39 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 ),
               ]
             : [
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _loadQuestions,
-                ),
+                if (_isSearching)
+                  IconButton(
+                    icon: const Icon(Icons.clear_rounded, color: Color(0xFF0F172A)),
+                    onPressed: () {
+                      if (_searchController.text.isNotEmpty) {
+                        _searchController.clear();
+                        _onSearchChanged('');
+                      } else {
+                        setState(() {
+                          _isSearching = false;
+                          _searchQuery = '';
+                        });
+                        _loadQuestions();
+                      }
+                    },
+                  )
+                else ...[
+                  IconButton(
+                    icon: const Icon(Icons.search_rounded, color: Color(0xFF0F172A)),
+                    onPressed: () {
+                      setState(() {
+                        _isSearching = true;
+                      });
+                      Future.delayed(const Duration(milliseconds: 50), () {
+                        _searchFocusNode.requestFocus();
+                      });
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, color: Color(0xFF0F172A)),
+                    onPressed: _loadQuestions,
+                  ),
+                ],
               ],
       ),
       body: Column(
@@ -336,53 +421,123 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   Widget _buildFilterBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade100, width: 1),
+        ),
+      ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
             _filterChip<int>(
-              label: _filterClass == null ? 'All Classes' : 'Class $_filterClass',
+              label: _filterClass == null
+                  ? 'All Classes'
+                  : (_filterClass == 13 ? 'Joint Entrance' : 'Class $_filterClass'),
+              icon: Icons.school_outlined,
+              isActive: _filterClass != null,
               onTap: _showClassPicker,
             ),
             const SizedBox(width: 8),
             _filterChip<String>(
               label: _filterLanguage ?? 'All Languages',
+              icon: Icons.translate_rounded,
+              isActive: _filterLanguage != null,
               onTap: _showLanguagePicker,
             ),
             const SizedBox(width: 8),
-            if (_filterClass != null)
-              _filterChip<String>(
-                label: _filterChapter ?? 'All Chapters',
-                onTap: _showChapterPicker,
-              ),
+            _filterChip<String>(
+              label: _filterChapter ?? 'All Chapters',
+              icon: Icons.menu_book_outlined,
+              isActive: _filterChapter != null,
+              onTap: _showChapterPicker,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _filterChip<T>({required String label, required VoidCallback onTap}) {
-    return ActionChip(
-      label: Text(label),
-      onPressed: onTap,
-      backgroundColor: const Color(0xFFE0F7FA),
-      labelStyle: const TextStyle(color: Color(0xFF006064), fontWeight: FontWeight.bold),
+  Widget _filterChip<T>({
+    required String label,
+    required IconData icon,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF0051D5).withOpacity(0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isActive ? const Color(0xFF0051D5) : Colors.grey.shade300,
+            width: isActive ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isActive ? const Color(0xFF0051D5) : Colors.grey.shade600,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isActive ? const Color(0xFF0051D5) : Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: isActive ? const Color(0xFF0051D5) : Colors.grey.shade500,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   void _showClassPicker() {
     showModalBottomSheet(
       context: context,
-      builder: (context) => ListView(
-        shrinkWrap: true,
-        children: [
-          ListTile(title: const Text('All Classes'), onTap: () => _updateFilter(null, null, null)),
-          ...[9, 10, 11, 12].map((c) => ListTile(
-            title: Text('Class $c'),
-            onTap: () => _updateFilter(c, null, null),
-          )),
-        ],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: ListView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Text(
+                'Select Class',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              ),
+            ),
+            const Divider(),
+            ListTile(
+              title: const Text('All Classes'),
+              onTap: () => _updateFilter(null, _filterLanguage, null),
+            ),
+            ...[9, 10, 11, 12, 13].map((c) => ListTile(
+              title: Text(c == 13 ? 'Joint Entrance' : 'Class $c'),
+              trailing: _filterClass == c ? const Icon(Icons.check, color: Color(0xFF0051D5)) : null,
+              onTap: () => _updateFilter(c, _filterLanguage, null),
+            )),
+          ],
+        ),
       ),
     );
   }
@@ -390,32 +545,49 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   void _showLanguagePicker() {
     showModalBottomSheet(
       context: context,
-      builder: (context) => ListView(
-        shrinkWrap: true,
-        children: [
-          ListTile(title: const Text('All Languages'), onTap: () => _updateFilter(_filterClass, null, _filterChapter)),
-          ...['English', 'Bengali', 'Both'].map((l) => ListTile(
-            title: Text(l),
-            onTap: () => _updateFilter(_filterClass, l, _filterChapter),
-          )),
-        ],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: ListView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Text(
+                'Select Language',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              ),
+            ),
+            const Divider(),
+            ListTile(
+              title: const Text('All Languages'),
+              onTap: () => _updateFilter(_filterClass, null, _filterChapter),
+            ),
+            ...['English', 'Bengali', 'Both'].map((l) => ListTile(
+              title: Text(l),
+              trailing: _filterLanguage == l ? const Icon(Icons.check, color: Color(0xFF0051D5)) : null,
+              onTap: () => _updateFilter(_filterClass, l, _filterChapter),
+            )),
+          ],
+        ),
       ),
     );
   }
 
   void _showChapterPicker() {
-    final chapters = AppConstants.classChapters[_filterClass] ?? [];
     showModalBottomSheet(
       context: context,
-      builder: (context) => ListView(
-        shrinkWrap: true,
-        children: [
-          ListTile(title: const Text('All Chapters'), onTap: () => _updateFilter(_filterClass, _filterLanguage, null)),
-          ...chapters.map((ch) => ListTile(
-            title: Text(ch),
-            onTap: () => _updateFilter(_filterClass, _filterLanguage, ch),
-          )),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ChapterPickerModal(
+        selectedClass: _filterClass,
+        initialChapter: _filterChapter,
+        onChapterSelected: (ch) {
+          _updateFilter(_filterClass, _filterLanguage, ch);
+        },
       ),
     );
   }
@@ -470,7 +642,11 @@ class _QuestionCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                 ],
-                _badge('Class ${question.classNo}', const Color(0xFFE0F7FA), const Color(0xFF006064)),
+                _badge(
+                  question.classNo == 13 ? 'Joint Entrance' : 'Class ${question.classNo}',
+                  question.classNo == 13 ? const Color(0xFFE8F5E9) : const Color(0xFFE0F7FA),
+                  question.classNo == 13 ? const Color(0xFF2E7D32) : const Color(0xFF006064),
+                ),
                 const SizedBox(width: 8),
                 _badge(question.language, const Color(0xFFF3E5F5), const Color(0xFF4A148C)),
                 const Spacer(),
@@ -716,7 +892,7 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                                 _selectedClass = v!;
                                 _selectedChapter = AppConstants.classChapters[v]?.first;
                               }),
-                              items: [9,10,11,12].map((c) => DropdownMenuItem(value: c, child: Text('Class $c'))).toList(),
+                              items: [9, 10, 11, 12, 13].map((c) => DropdownMenuItem(value: c, child: Text(c == 13 ? 'Joint Entrance' : 'Class $c'))).toList(),
                               decoration: const InputDecoration(labelText: 'Class'),
                             ),
                           ),
@@ -917,6 +1093,146 @@ class _SkeletonQuestionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(borderRadius),
+      ),
+    );
+  }
+}
+
+class _ChapterPickerModal extends StatefulWidget {
+  final int? selectedClass;
+  final String? initialChapter;
+  final ValueChanged<String?> onChapterSelected;
+
+  const _ChapterPickerModal({
+    required this.selectedClass,
+    required this.initialChapter,
+    required this.onChapterSelected,
+  });
+
+  @override
+  State<_ChapterPickerModal> createState() => _ChapterPickerModalState();
+}
+
+class _ChapterPickerModalState extends State<_ChapterPickerModal> {
+  String _searchQuery = '';
+  late List<String> _allChapters;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.selectedClass != null) {
+      _allChapters = AppConstants.classChapters[widget.selectedClass] ?? [];
+    } else {
+      final Set<String> uniqueChapters = {};
+      AppConstants.classChapters.forEach((classNo, chaptersList) {
+        for (var ch in chaptersList) {
+          if (classNo == 13) {
+            uniqueChapters.add('$ch (Joint)');
+          } else {
+            uniqueChapters.add(ch);
+          }
+        }
+      });
+      _allChapters = uniqueChapters.toList();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredChapters = _allChapters
+        .where((ch) => ch.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.65,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Select Chapter',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    widget.onChapterSelected(null);
+                  },
+                  child: const Text('Clear Filter', style: TextStyle(color: Color(0xFFBA1A1A), fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search chapters...',
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF64748B)),
+                filled: true,
+                fillColor: const Color(0xFFF1F5F9),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+              ),
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val;
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: filteredChapters.isEmpty
+                ? const Center(
+                    child: Text('No chapters match your search', style: TextStyle(color: Colors.grey)),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    itemCount: filteredChapters.length,
+                    itemBuilder: (context, index) {
+                      final ch = filteredChapters[index];
+                      final isSelected = widget.initialChapter == ch || 
+                          (ch.endsWith(' (Joint)') && widget.initialChapter == ch.replaceAll(' (Joint)', ''));
+                      
+                      return ListTile(
+                        title: Text(
+                          ch,
+                          style: TextStyle(
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? const Color(0xFF0051D5) : const Color(0xFF0F172A),
+                          ),
+                        ),
+                        trailing: isSelected ? const Icon(Icons.check_circle, color: Color(0xFF0051D5)) : null,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        onTap: () {
+                          final cleanCh = ch.endsWith(' (Joint)') ? ch.replaceAll(' (Joint)', '') : ch;
+                          widget.onChapterSelected(cleanCh);
+                        },
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }

@@ -327,7 +327,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             duration: const Duration(milliseconds: 550),
             slideOffset: 24,
             child: const Text(
-              'Welcome Back,\nEducator SD 🎓',
+              'Welcome Back,\nSoumen Sir 🎓',
               style: TextStyle(
                 fontSize: 34,
                 fontWeight: FontWeight.w900,
@@ -513,13 +513,13 @@ class _AdminDrawer extends StatelessWidget {
                   const CircleAvatar(
                     backgroundColor: Color(0xFF0051D5),
                     radius: 24,
-                    child: Text('T', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                    child: Text('S', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
                   ),
                   const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
-                      Text('Teacher SD', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF0F172A), fontSize: 18)),
+                      Text('Soumen Sir', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF0F172A), fontSize: 18)),
                       Text('Lead Educator', style: TextStyle(color: Color(0xFF75859D), fontWeight: FontWeight.w500, fontSize: 14)),
                     ],
                   )

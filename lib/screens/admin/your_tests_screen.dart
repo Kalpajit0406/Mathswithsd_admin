@@ -28,17 +28,31 @@ class _YourTestsScreenState extends State<YourTestsScreen> {
         backgroundColor: Colors.transparent,
         leading: Navigator.canPop(context)
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Color(0xFF0F172A),
+                  size: 20,
+                ),
                 onPressed: () => Navigator.pop(context),
               )
             : null,
-        title: const Text('Assessments', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5)),
+        title: const Text(
+          'Assessments',
+          style: TextStyle(
+            color: Color(0xFF0F172A),
+            fontWeight: FontWeight.w800,
+            fontSize: 22,
+            letterSpacing: -0.5,
+          ),
+        ),
         elevation: 0,
       ),
       body: Consumer<AdminProvider>(
         builder: (context, provider, _) {
           if (provider.testsState == LoadState.loading) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF0051D5)));
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF0051D5)),
+            );
           }
           if (provider.testsState == LoadState.error) {
             return Center(
@@ -47,12 +61,20 @@ class _YourTestsScreenState extends State<YourTestsScreen> {
                 children: [
                   const Icon(Icons.cloud_off, size: 72, color: Colors.grey),
                   const SizedBox(height: 16),
-                  Text(provider.testsError ?? 'Failed to load tests', style: const TextStyle(color: Colors.grey)),
+                  Text(
+                    provider.testsError ?? 'Failed to load tests',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () => provider.loadTests(),
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0051D5)),
-                    child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0051D5),
+                    ),
+                    child: const Text(
+                      'Retry',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ],
               ),
@@ -68,7 +90,7 @@ class _YourTestsScreenState extends State<YourTestsScreen> {
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0051D5).withOpacity(0.05),
+                        color: const Color(0xFF0051D5).withValues(alpha: 0.05),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -128,7 +150,13 @@ class _TestCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE0E3E5)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -143,7 +171,11 @@ class _TestCard extends StatelessWidget {
                     color: const Color(0xFFF0F4FF),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Icon(Icons.fact_check_rounded, color: Color(0xFF0051D5), size: 28),
+                  child: const Icon(
+                    Icons.fact_check_rounded,
+                    color: Color(0xFF0051D5),
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -152,12 +184,19 @@ class _TestCard extends StatelessWidget {
                     children: [
                       Text(
                         '${test.classNo == 13 ? 'Joint Entrance' : 'Class ${test.classNo}'} • ${test.language}',
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 17,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${test.date} at ${test.time}',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
                   ),
@@ -172,22 +211,35 @@ class _TestCard extends StatelessWidget {
               children: [
                 _infoChip(Icons.timer_outlined, '${test.totalTime}m'),
                 const SizedBox(width: 12),
-                _infoChip(Icons.add_chart_outlined, '${test.marksPerQuestion} pts'),
+                _infoChip(
+                  Icons.add_chart_outlined,
+                  '${test.marksPerQuestion} pts',
+                ),
                 const Spacer(),
                 TextButton.icon(
                   onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(
-                      builder: (_) => LeaderboardScreen(
-                        examId: test.id,
-                        testTitle: '${test.classNo == 13 ? 'Joint Entrance' : 'Class ${test.classNo}'} - ${test.date}',
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LeaderboardScreen(
+                          examId: test.id,
+                          testTitle:
+                              '${test.classNo == 13 ? 'Joint Entrance' : 'Class ${test.classNo}'} - ${test.date}',
+                        ),
                       ),
-                    ));
+                    );
                   },
                   icon: const Icon(Icons.leaderboard_outlined, size: 18),
-                  label: const Text('Leaderboard', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'Leaderboard',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFF0051D5),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
                 ),
               ],
@@ -201,8 +253,18 @@ class _TestCard extends StatelessWidget {
   Widget _badge(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: const Color(0xFFE0F7FA), borderRadius: BorderRadius.circular(8)),
-      child: Text(text, style: const TextStyle(color: Color(0xFF006064), fontSize: 12, fontWeight: FontWeight.bold)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE0F7FA),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF006064),
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
@@ -211,7 +273,14 @@ class _TestCard extends StatelessWidget {
       children: [
         Icon(icon, size: 14, color: Colors.grey.shade400),
         const SizedBox(width: 4),
-        Text(text, style: TextStyle(color: Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.w600)),
+        Text(
+          text,
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }

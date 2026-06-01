@@ -24,67 +24,76 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     final resolvedColor = color;
-    
-    final resolvedGradient = color != null ? null : (isDark 
+
+    final resolvedGradient = color != null
+        ? null
+        : (isDark
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(
+                      alpha: 0.07,
+                    ), // Specular light highlight
+                    Colors.black.withValues(
+                      alpha: 0.60,
+                    ), // Frosted smoked glass body
+                    Colors.black.withValues(
+                      alpha: 0.85,
+                    ), // Fading to deep black background
+                  ],
+                  stops: const [0.0, 0.45, 1.0],
+                )
+              : LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.92),
+                    Colors.white.withValues(alpha: 0.78),
+                  ],
+                ));
+
+    final borderGradient = isDark
         ? LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.white.withOpacity(0.07), // Specular light highlight
-              Colors.black.withOpacity(0.60), // Frosted smoked glass body
-              Colors.black.withOpacity(0.85), // Fading to deep black background
-            ],
-            stops: const [0.0, 0.45, 1.0],
-          )
-        : LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withOpacity(0.92),
-              Colors.white.withOpacity(0.78),
-            ],
-          ));
-        
-    final borderGradient = isDark 
-        ? LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withOpacity(0.15),
-              Colors.white.withOpacity(0.02),
+              Colors.white.withValues(alpha: 0.15),
+              Colors.white.withValues(alpha: 0.02),
             ],
           )
         : const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0x40FFFFFF),
-              Color(0x0A000000),
-            ],
+            colors: [Color(0x40FFFFFF), Color(0x0A000000)],
           );
 
-    final resolvedBoxShadow = boxShadow ?? (isDark 
-        ? [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.5),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-            BoxShadow(
-              color: const Color(0xFF0051D5).withOpacity(0.04), // Subtle ambient glow
-              blurRadius: 32,
-              offset: const Offset(0, 12),
-            )
-          ]
-        : [
-            BoxShadow(
-              color: const Color(0xFF0F172A).withOpacity(0.03),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            )
-          ]);
+    final resolvedBoxShadow =
+        boxShadow ??
+        (isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+                BoxShadow(
+                  color: const Color(
+                    0xFF0051D5,
+                  ).withValues(alpha: 0.04), // Subtle ambient glow
+                  blurRadius: 32,
+                  offset: const Offset(0, 12),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ]);
 
     return Container(
       decoration: BoxDecoration(
@@ -133,9 +142,17 @@ class GradientBorderPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Rect.fromLTWH(width / 2, width / 2, size.width - width, size.height - width);
-    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(borderRadius - width / 2));
-    
+    final rect = Rect.fromLTWH(
+      width / 2,
+      width / 2,
+      size.width - width,
+      size.height - width,
+    );
+    final rrect = RRect.fromRectAndRadius(
+      rect,
+      Radius.circular(borderRadius - width / 2),
+    );
+
     final paint = Paint()
       ..shader = gradient.createShader(Offset.zero & size)
       ..strokeWidth = width

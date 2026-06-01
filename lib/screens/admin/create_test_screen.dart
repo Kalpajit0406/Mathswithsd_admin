@@ -18,7 +18,7 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
   String _selectedMedium = 'English';
   String _selectedQuestions = '20';
   String _totalTime = '30';
-  
+
   // Advanced Config
   double _negativeMarking = 0.0;
   double _marksPerQuestion = 1.0;
@@ -73,8 +73,9 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
   Future<void> _checkAndLoadDraft() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final hasDraft = prefs.containsKey('test_draft_date') || 
-                       prefs.containsKey('test_draft_chapters');
+      final hasDraft =
+          prefs.containsKey('test_draft_date') ||
+          prefs.containsKey('test_draft_chapters');
       if (!hasDraft) return;
 
       final date = prefs.getString('test_draft_date') ?? '';
@@ -83,8 +84,10 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
       final medium = prefs.getString('test_draft_medium') ?? 'English';
       final questions = prefs.getString('test_draft_questions') ?? '20';
       final duration = prefs.getString('test_draft_duration') ?? '30';
-      final negativeMarking = prefs.getDouble('test_draft_negative_marking') ?? 0.0;
-      final marksPerQuestion = prefs.getDouble('test_draft_marks_per_question') ?? 1.0;
+      final negativeMarking =
+          prefs.getDouble('test_draft_negative_marking') ?? 0.0;
+      final marksPerQuestion =
+          prefs.getDouble('test_draft_marks_per_question') ?? 1.0;
       final chapters = prefs.getStringList('test_draft_chapters') ?? [];
 
       if (!mounted) return;
@@ -92,9 +95,16 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Resume Draft?', style: TextStyle(fontWeight: FontWeight.bold)),
-          content: const Text('You have an unsaved draft from a previous session. Would you like to resume editing?'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Resume Draft?',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            'You have an unsaved draft from a previous session. Would you like to resume editing?',
+          ),
           actions: [
             TextButton(
               onPressed: () async {
@@ -120,9 +130,14 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0051D5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              child: const Text('Resume', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Resume',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -148,7 +163,8 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
     );
     if (picked != null) {
       setState(() {
-        _selectedDate = '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+        _selectedDate =
+            '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
       });
       _saveDraft();
     }
@@ -231,7 +247,10 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
       await _clearDraft();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Test published successfully!'), backgroundColor: Colors.green),
+        const SnackBar(
+          content: Text('Test published successfully!'),
+          backgroundColor: Colors.green,
+        ),
       );
       Navigator.pop(context);
     } else {
@@ -241,23 +260,40 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
 
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700, behavior: SnackBarBehavior.floating),
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final chapters = AppConstants.classChapters[int.parse(_selectedClass)] ?? [];
+    final chapters =
+        AppConstants.classChapters[int.parse(_selectedClass)] ?? [];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FB),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF0F172A),
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('New Assessment', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5)),
+        title: const Text(
+          'New Assessment',
+          style: TextStyle(
+            color: Color(0xFF0F172A),
+            fontWeight: FontWeight.w800,
+            fontSize: 22,
+            letterSpacing: -0.5,
+          ),
+        ),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -271,7 +307,9 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
                   Expanded(
                     child: _dateTimeCard(
                       label: 'Date',
-                      value: _selectedDate.isEmpty ? 'Select Date' : _selectedDate,
+                      value: _selectedDate.isEmpty
+                          ? 'Select Date'
+                          : _selectedDate,
                       icon: Icons.calendar_today,
                       onTap: _pickDate,
                     ),
@@ -280,7 +318,9 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
                   Expanded(
                     child: _dateTimeCard(
                       label: 'Time',
-                      value: _selectedTime.isEmpty ? 'Select Time' : _selectedTime,
+                      value: _selectedTime.isEmpty
+                          ? 'Select Time'
+                          : _selectedTime,
                       icon: Icons.schedule,
                       onTap: _pickTime,
                     ),
@@ -301,53 +341,84 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
             const SizedBox(height: 20),
 
             _sectionCard('Target & Language', [
-              _buildDropdown('Target Class', _selectedClass, _classes.map((c) => c == '13' ? 'Joint Entrance' : 'Class $c').toList(),
-                _classes, (val) => setState(() {
+              _buildDropdown(
+                'Target Class',
+                _selectedClass,
+                _classes
+                    .map((c) => c == '13' ? 'Joint Entrance' : 'Class $c')
+                    .toList(),
+                _classes,
+                (val) => setState(() {
                   _selectedClass = val!;
                   _selectedChapters.clear();
                   _saveDraft();
-                }), Icons.class_),
+                }),
+                Icons.class_,
+              ),
               const SizedBox(height: 16),
-              _buildDropdown('Language', _selectedMedium, _mediums, _mediums,
+              _buildDropdown(
+                'Language',
+                _selectedMedium,
+                _mediums,
+                _mediums,
                 (val) => setState(() {
                   _selectedMedium = val!;
                   _saveDraft();
-                }), Icons.translate),
+                }),
+                Icons.translate,
+              ),
             ]),
             const SizedBox(height: 20),
 
             _sectionCard('Grading & Scope', [
-               _buildDropdown('Questions Count', _selectedQuestions, _questionOptions, _questionOptions,
+              _buildDropdown(
+                'Questions Count',
+                _selectedQuestions,
+                _questionOptions,
+                _questionOptions,
                 (val) => setState(() {
                   _selectedQuestions = val!;
                   _saveDraft();
-                }), Icons.help_outline),
+                }),
+                Icons.help_outline,
+              ),
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Expanded(child: _buildTextField(
-                    label: 'Marks/Q', 
-                    initialValue: _marksPerQuestion.toString(),
-                    onChanged: (v) {
-                      _marksPerQuestion = double.tryParse(v) ?? 1.0;
-                      _saveDraft();
-                    },
-                    icon: Icons.add_circle_outline,
-                  )),
+                  Expanded(
+                    child: _buildTextField(
+                      label: 'Marks/Q',
+                      initialValue: _marksPerQuestion.toString(),
+                      onChanged: (v) {
+                        _marksPerQuestion = double.tryParse(v) ?? 1.0;
+                        _saveDraft();
+                      },
+                      icon: Icons.add_circle_outline,
+                    ),
+                  ),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildTextField(
-                    label: 'Negative/Q', 
-                    initialValue: _negativeMarking.toString(),
-                    onChanged: (v) {
-                      _negativeMarking = double.tryParse(v) ?? 0.0;
-                      _saveDraft();
-                    },
-                    icon: Icons.remove_circle_outline,
-                  )),
+                  Expanded(
+                    child: _buildTextField(
+                      label: 'Negative/Q',
+                      initialValue: _negativeMarking.toString(),
+                      onChanged: (v) {
+                        _negativeMarking = double.tryParse(v) ?? 0.0;
+                        _saveDraft();
+                      },
+                      icon: Icons.remove_circle_outline,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
-              const Text('Select Chapters', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+              const Text(
+                'Select Chapters',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: Colors.grey,
+                ),
+              ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -355,7 +426,13 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
                 children: chapters.map((ch) {
                   final isSelected = _selectedChapters.contains(ch);
                   return FilterChip(
-                    label: Text(ch, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.black87)),
+                    label: Text(
+                      ch,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isSelected ? Colors.white : Colors.black87,
+                      ),
+                    ),
                     selected: isSelected,
                     onSelected: (_) => _toggleChapter(ch),
                     selectedColor: const Color(0xFF0051D5),
@@ -376,12 +453,18 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
                         onPressed: _publishTest,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF0051D5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                           elevation: 0,
                         ),
                         child: const Text(
                           'Publish Assessment',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
               ),
@@ -397,7 +480,14 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0051D5))),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF0051D5),
+          ),
+        ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(16),
@@ -412,7 +502,12 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
     );
   }
 
-  Widget _dateTimeCard({required String label, required String value, required IconData icon, required VoidCallback onTap}) {
+  Widget _dateTimeCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -425,16 +520,37 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [Icon(icon, color: const Color(0xFF0051D5), size: 16), const SizedBox(width: 8), Text(label, style: const TextStyle(color: Color(0xFF0051D5), fontSize: 11, fontWeight: FontWeight.bold))]),
+            Row(
+              children: [
+                Icon(icon, color: const Color(0xFF0051D5), size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xFF0051D5),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTextField({required String label, required String initialValue, required ValueChanged<String> onChanged, required IconData icon}) {
+  Widget _buildTextField({
+    required String label,
+    required String initialValue,
+    required ValueChanged<String> onChanged,
+    required IconData icon,
+  }) {
     return TextFormField(
       initialValue: initialValue,
       keyboardType: TextInputType.number,
@@ -444,25 +560,48 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
         prefixIcon: Icon(icon, size: 20),
         filled: true,
         fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
       ),
     );
   }
 
-  Widget _buildDropdown(String label, String value, List<String> displayOptions, List<String> values, ValueChanged<String?> onChanged, IconData icon) {
+  Widget _buildDropdown(
+    String label,
+    String value,
+    List<String> displayOptions,
+    List<String> values,
+    ValueChanged<String?> onChanged,
+    IconData icon,
+  ) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, size: 20),
         filled: true,
         fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
       ),
-      items: List.generate(values.length, (i) => DropdownMenuItem(value: values[i], child: Text(displayOptions[i]))),
+      items: List.generate(
+        values.length,
+        (i) =>
+            DropdownMenuItem(value: values[i], child: Text(displayOptions[i])),
+      ),
     );
   }
 }

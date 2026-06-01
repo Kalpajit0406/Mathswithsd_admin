@@ -14,19 +14,20 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-
   Future<void> _loginAsAdmin() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     // Hardcoded teacher/admin credentials
     final success = await authProvider.login('6289855545', 'admin123');
-    
+
     if (!success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Login failed'),
           backgroundColor: const Color(0xFFBA1A1A),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
@@ -51,7 +52,10 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Center(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32.0,
+                  vertical: 24.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -72,17 +76,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(26),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF0051D5).withOpacity(0.35),
+                              color: const Color(
+                                0xFF0051D5,
+                              ).withValues(alpha: 0.35),
                               blurRadius: 20,
                               offset: const Offset(0, 8),
-                            )
+                            ),
                           ],
                         ),
-                        child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 52),
+                        child: const Icon(
+                          Icons.admin_panel_settings_rounded,
+                          color: Colors.white,
+                          size: 52,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 28),
-                    
+
                     FadeInSlide(
                       duration: const Duration(milliseconds: 700),
                       delay: const Duration(milliseconds: 100),
@@ -98,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    
+
                     FadeInSlide(
                       duration: const Duration(milliseconds: 700),
                       delay: const Duration(milliseconds: 150),
@@ -112,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 80),
 
                     // Secure login information box with GlassCard
@@ -122,11 +132,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       slideOffset: 24,
                       child: GlassCard(
                         borderRadius: 20,
-                        color: const Color(0xFF1E293B).withOpacity(0.5),
+                        color: const Color(0xFF1E293B).withValues(alpha: 0.5),
                         padding: const EdgeInsets.all(20),
                         child: Column(
                           children: [
-                            const Icon(Icons.lock_person_rounded, color: Color(0xFF0051D5), size: 36),
+                            const Icon(
+                              Icons.lock_person_rounded,
+                              color: Color(0xFF0051D5),
+                              size: 36,
+                            ),
                             const SizedBox(height: 12),
                             const Text(
                               'Passwordless Secure Bypass Active',
@@ -174,12 +188,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
-                                      colors: [Color(0xFF0051D5), Color(0xFF316BF3)],
+                                      colors: [
+                                        Color(0xFF0051D5),
+                                        Color(0xFF316BF3),
+                                      ],
                                     ),
                                     borderRadius: BorderRadius.circular(18),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF0051D5).withOpacity(0.3),
+                                        color: const Color(
+                                          0xFF0051D5,
+                                        ).withValues(alpha: 0.3),
                                         blurRadius: 18,
                                         offset: const Offset(0, 6),
                                       ),
@@ -188,7 +207,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: const [
-                                      Icon(Icons.login_rounded, color: Colors.white),
+                                      Icon(
+                                        Icons.login_rounded,
+                                        color: Colors.white,
+                                      ),
                                       SizedBox(width: 10),
                                       Text(
                                         'Login as Teacher',
