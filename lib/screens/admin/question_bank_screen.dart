@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 import '../../providers/question_provider.dart';
 import '../../models/question_model.dart';
 import '../../utils/constants.dart';
@@ -824,6 +826,8 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
   late String _selectedLanguage;
   String? _selectedChapter;
   File? _newDiagramFile;
+  bool _deleteDiagram = false;
+  bool _isDownloadingDiagram = false;
 
   @override
   void initState() {
@@ -931,6 +935,8 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                         controller: _correctCtrl,
                         decoration: const InputDecoration(labelText: 'Correct Answer (Exact Text)'),
                       ),
+                      const SizedBox(height: 24),
+                      _buildDiagramSection(provider),
                     ],
                   ),
                 ),
@@ -939,6 +945,282 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _cropOrTrimDiagram() async {
+    final imageService = ImageService();
+    
+    // Case 1: We already picked a new local file, crop it again
+    if (_newDiagramFile != null) {
+      final cropped = await imageService.cropExistingImage(context, _newDiagramFile!);
+      if (cropped != null) {
+        setState(() {
+          _newDiagramFile = cropped;
+        });
+      }
+      return;
+    }
+    
+    // Case 2: No new local file is picked, but there is an existing remote/relative diagram
+    final diagramPath = widget.question.diagram;
+    if (diagramPath != null && diagramPath.isNotEmpty) {
+      setState(() {
+        _isDownloadingDiagram = true;
+      });
+      try {
+        final baseUrl = Provider.of<QuestionProvider>(context, listen: false).baseUrl;
+        final fullUrl = diagramPath.startsWith('http') ? diagramPath : '$baseUrl$diagramPath';
+        
+        final response = await http.get(Uri.parse(fullUrl)).timeout(const Duration(seconds: 15));
+        if (response.statusCode == 200) {
+          final tempDir = await getTemporaryDirectory();
+          final tempFile = File('${tempDir.path}/temp_crop_diagram_${DateTime.now().millisecondsSinceEpoch}.jpg');
+          await tempFile.writeAsBytes(response.bodyBytes);
+          
+          if (mounted) {
+            final cropped = await imageService.cropExistingImage(context, tempFile);
+            if (cropped != null) {
+              setState(() {
+                _newDiagramFile = cropped;
+                _deleteDiagram = false;
+              });
+            }
+          }
+        } else {
+          _showError('Failed to download image for cropping.');
+        }
+      } catch (e) {
+        _showError('Error downloading diagram: $e');
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isDownloadingDiagram = false;
+          });
+        }
+      }
+    }
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  Future<void> _pickAndCropNewDiagram(ImageSource source) async {
+    final imageService = ImageService();
+    final file = await imageService.pickAndCropImage(context, source: source);
+    if (file != null) {
+      setState(() {
+        _newDiagramFile = file;
+        _deleteDiagram = false;
+      });
+    }
+  }
+
+  void _removeDiagram() {
+    setState(() {
+      _newDiagramFile = null;
+      _deleteDiagram = true;
+    });
+  }
+
+  Widget _buildDiagramSection(QuestionProvider provider) {
+    final hasExistingDiagram = widget.question.diagram != null && widget.question.diagram!.isNotEmpty;
+    final showExisting = hasExistingDiagram && !_deleteDiagram && _newDiagramFile == null;
+    final showNew = _newDiagramFile != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Question Diagram',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Column(
+            children: [
+              if (showExisting) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    widget.question.diagram!.startsWith('http')
+                        ? widget.question.diagram!
+                        : '${provider.baseUrl}${widget.question.diagram}',
+                    height: 150,
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      height: 150,
+                      color: Colors.grey.shade100,
+                      child: const Center(
+                        child: Icon(Icons.broken_image_outlined, color: Colors.grey, size: 40),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ] else if (showNew) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(
+                    _newDiagramFile!,
+                    height: 150,
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ] else if (_deleteDiagram) ...[
+                Container(
+                  height: 60,
+                  width: double.infinity,
+                  color: Colors.red.shade50,
+                  child: const Center(
+                    child: Text(
+                      'Diagram marked for removal.',
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ] else ...[
+                Container(
+                  height: 100,
+                  width: double.infinity,
+                  color: Colors.grey.shade100,
+                  child: const Center(
+                    child: Text('No diagram attached to this question.'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (_isDownloadingDiagram) ...[
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 8),
+                      Text('Downloading diagram...'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  if (showExisting || showNew) ...[
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: ElevatedButton.icon(
+                          onPressed: _isDownloadingDiagram ? null : _cropOrTrimDiagram,
+                          icon: const Icon(Icons.crop, size: 16),
+                          label: const Text('Trim/Crop'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: OutlinedButton.icon(
+                        onPressed: _isDownloadingDiagram ? null : () => _showPickerOptions(context),
+                        icon: Icon(
+                          (showExisting || showNew) ? Icons.sync : Icons.add_a_photo,
+                          size: 16,
+                        ),
+                        label: Text((showExisting || showNew) ? 'Replace' : 'Add Image'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (showExisting || showNew) ...[
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: OutlinedButton.icon(
+                          onPressed: _isDownloadingDiagram ? null : _removeDiagram,
+                          icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                          label: const Text('Remove', style: TextStyle(color: Colors.red)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.red),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ] else if (_deleteDiagram) ...[
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setState(() {
+                              _deleteDiagram = false;
+                            });
+                          },
+                          child: const Text('Undo Delete'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showPickerOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickAndCropNewDiagram(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a Photo'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickAndCropNewDiagram(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -953,7 +1235,15 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
       'correctAnswer': _correctCtrl.text.trim(),
     };
 
-    final success = await provider.updateQuestion(widget.question.id!, data);
+    if (_deleteDiagram) {
+      data['diagram'] = 'null';
+    }
+
+    final success = await provider.updateQuestion(
+      widget.question.id!,
+      data,
+      diagramFile: _newDiagramFile,
+    );
     if (success && mounted) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Question updated!')));

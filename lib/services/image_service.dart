@@ -94,6 +94,49 @@ class ImageService {
     }
   }
 
+  Future<File?> cropExistingImage(BuildContext context, File imageFile) async {
+    final primaryColor = Theme.of(context).primaryColor;
+    try {
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: imageFile.path,
+        compressFormat: ImageCompressFormat.jpg,
+        compressQuality: 90,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Question',
+            toolbarColor: primaryColor,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.original,
+            lockAspectRatio: false,
+            aspectRatioPresets: [
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.ratio3x2,
+              CropAspectRatioPreset.ratio4x3,
+              CropAspectRatioPreset.ratio16x9,
+            ],
+          ),
+          IOSUiSettings(
+            title: 'Crop Question',
+            aspectRatioPresets: [
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.ratio3x2,
+              CropAspectRatioPreset.ratio4x3,
+              CropAspectRatioPreset.ratio16x9,
+            ],
+          ),
+        ],
+      );
+
+      if (croppedFile == null) return null;
+      return File(croppedFile.path);
+    } catch (e) {
+      debugPrint("cropExistingImage Error: $e");
+      return null;
+    }
+  }
+
   /// Handles Android specific process death when camera is launched
   Future<XFile?> getLostData() async {
     if (Platform.isAndroid) {
