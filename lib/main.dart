@@ -41,7 +41,7 @@ class MathsWithSDApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MathsWithSD',
+      title: 'MathswithSD Admin',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
       home: const _AuthGate(),

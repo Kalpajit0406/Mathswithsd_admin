@@ -1,6 +1,6 @@
 {
-    "name": "mathswithsd_admin",
-    "short_name": "mathswithsd_admin",
+    "name": "MathswithSD Admin",
+    "short_name": "MathswithSD Admin",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
