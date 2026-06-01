@@ -24,7 +24,8 @@ class AdminDashboard extends StatefulWidget {
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
-class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProviderStateMixin {
+class _AdminDashboardState extends State<AdminDashboard>
+    with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
   final ImageService _imageService = ImageService();
   late AnimationController _bgAnimationController;
@@ -71,12 +72,20 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             backgroundColor: Colors.transparent,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Color(0xFF0F172A),
+                size: 20,
+              ),
               onPressed: () => Navigator.pop(context),
             ),
             title: const Text(
               'Create Question',
-              style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 20),
+              style: TextStyle(
+                color: Color(0xFF0F172A),
+                fontWeight: FontWeight.w800,
+                fontSize: 20,
+              ),
             ),
           ),
           body: Stack(
@@ -88,15 +97,17 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                   final progress = _bgAnimationController.value;
                   final x1 = 0.2 + 0.5 * math.sin(progress * 2 * math.pi);
                   final y1 = 0.3 + 0.4 * math.cos(progress * 2 * math.pi);
-                  final x2 = 0.8 + 0.4 * math.cos(progress * 2 * math.pi + math.pi / 2);
-                  final y2 = 0.7 + 0.3 * math.sin(progress * 2 * math.pi + math.pi / 2);
+                  final x2 =
+                      0.8 +
+                      0.4 * math.cos(progress * 2 * math.pi + math.pi / 2);
+                  final y2 =
+                      0.7 +
+                      0.3 * math.sin(progress * 2 * math.pi + math.pi / 2);
 
                   return Stack(
                     children: [
                       Positioned.fill(
-                        child: Container(
-                          color: const Color(0xFFF8FAFC),
-                        ),
+                        child: Container(color: const Color(0xFFF8FAFC)),
                       ),
                       Positioned(
                         left: MediaQuery.of(context).size.width * x1 - 180,
@@ -106,7 +117,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                           height: 360,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xFF009688).withOpacity(0.08),
+                            color: const Color(
+                              0xFF009688,
+                            ).withValues(alpha: 0.08),
                           ),
                         ),
                       ),
@@ -118,7 +131,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                           height: 360,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xFF0051D5).withOpacity(0.08),
+                            color: const Color(
+                              0xFF0051D5,
+                            ).withValues(alpha: 0.08),
                           ),
                         ),
                       ),
@@ -162,7 +177,11 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
                 title: Row(
                   children: [
-                    const Icon(Icons.school_rounded, color: Color(0xFF0051D5), size: 26),
+                    const Icon(
+                      Icons.school_rounded,
+                      color: Color(0xFF0051D5),
+                      size: 26,
+                    ),
                     const SizedBox(width: 8),
                     const Text(
                       'MathsAdmin',
@@ -183,7 +202,11 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       radius: 16,
                       child: Text(
                         'T',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ),
@@ -200,15 +223,15 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 final progress = _bgAnimationController.value;
                 final x1 = 0.2 + 0.5 * math.sin(progress * 2 * math.pi);
                 final y1 = 0.3 + 0.4 * math.cos(progress * 2 * math.pi);
-                final x2 = 0.8 + 0.4 * math.cos(progress * 2 * math.pi + math.pi / 2);
-                final y2 = 0.7 + 0.3 * math.sin(progress * 2 * math.pi + math.pi / 2);
+                final x2 =
+                    0.8 + 0.4 * math.cos(progress * 2 * math.pi + math.pi / 2);
+                final y2 =
+                    0.7 + 0.3 * math.sin(progress * 2 * math.pi + math.pi / 2);
 
                 return Stack(
                   children: [
                     Positioned.fill(
-                      child: Container(
-                        color: const Color(0xFFF8FAFC),
-                      ),
+                      child: Container(color: const Color(0xFFF8FAFC)),
                     ),
                     Positioned(
                       left: MediaQuery.of(context).size.width * x1 - 180,
@@ -218,7 +241,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                         height: 360,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF009688).withOpacity(0.08),
+                          color: const Color(
+                            0xFF009688,
+                          ).withValues(alpha: 0.08),
                         ),
                       ),
                     ),
@@ -230,7 +255,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                         height: 360,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF0051D5).withOpacity(0.08),
+                          color: const Color(
+                            0xFF0051D5,
+                          ).withValues(alpha: 0.08),
                         ),
                       ),
                     ),
@@ -244,13 +271,10 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 );
               },
             ),
-            
+
             // Content
             Positioned.fill(
-              child: IndexedStack(
-                index: _currentIndex,
-                children: _pages,
-              ),
+              child: IndexedStack(index: _currentIndex, children: _pages),
             ),
           ],
         ),
@@ -270,7 +294,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           shape: const CircularNotchedRectangle(),
           notchMargin: 8.0,
           elevation: 15,
-          shadowColor: Colors.black.withOpacity(0.08),
+          shadowColor: Colors.black.withValues(alpha: 0.08),
           child: SizedBox(
             height: 60,
             child: Row(
@@ -327,7 +351,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             duration: const Duration(milliseconds: 550),
             slideOffset: 24,
             child: const Text(
-              'Welcome Back,\nSoumen Sir 🎓',
+              'Welcome Back,\nEducator SD 🎓',
               style: TextStyle(
                 fontSize: 34,
                 fontWeight: FontWeight.w900,
@@ -345,7 +369,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF316BF3).withOpacity(0.08),
+                color: const Color(0xFF316BF3).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
@@ -372,13 +396,19 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 delay: const Duration(milliseconds: 200),
                 slideOffset: 24,
                 child: BounceOnTap(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ManageStudentsScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ManageStudentsScreen(),
+                    ),
+                  ),
                   child: const _ActionCard(
                     icon: Icons.people_rounded,
                     iconBgColor: Color(0xFFDAE2FD),
                     iconColor: Color(0xFF0051D5),
                     title: 'Manage\nStudents',
-                    subtitle: 'Review cohorts, verify signups, monitor student progress.',
+                    subtitle:
+                        'Review cohorts, verify signups, monitor student progress.',
                   ),
                 ),
               ),
@@ -387,13 +417,17 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 delay: const Duration(milliseconds: 250),
                 slideOffset: 24,
                 child: BounceOnTap(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTestScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CreateTestScreen()),
+                  ),
                   child: const _ActionCard(
                     icon: Icons.add_box_rounded,
                     iconBgColor: Color(0xFFDBE1FF),
                     iconColor: Color(0xFF316BF3),
                     title: 'Create\nTests',
-                    subtitle: 'Assemble dynamic structured quizzes from OCR bank.',
+                    subtitle:
+                        'Assemble dynamic structured quizzes from OCR bank.',
                   ),
                 ),
               ),
@@ -402,7 +436,10 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 delay: const Duration(milliseconds: 300),
                 slideOffset: 24,
                 child: BounceOnTap(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const YourTestsScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const YourTestsScreen()),
+                  ),
                   child: const _ActionCard(
                     icon: Icons.bar_chart_rounded,
                     iconBgColor: Color(0xFFD3E4FE),
@@ -417,7 +454,12 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 delay: const Duration(milliseconds: 350),
                 slideOffset: 24,
                 child: BounceOnTap(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsScreen(isAdmin: true))),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AnnouncementsScreen(isAdmin: true),
+                    ),
+                  ),
                   child: const _ActionCard(
                     icon: Icons.campaign_rounded,
                     iconBgColor: Color(0xFFDAE2FD),
@@ -462,7 +504,7 @@ class _ActionCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: iconBgColor.withOpacity(0.15),
+              color: iconBgColor.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: iconColor, size: 22),
@@ -513,26 +555,37 @@ class _AdminDrawer extends StatelessWidget {
                   const CircleAvatar(
                     backgroundColor: Color(0xFF0051D5),
                     radius: 24,
-                    child: Text('S', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                    child: Text(
+                      'T',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Soumen Sir',
-                          style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF0F172A), fontSize: 18),
-                          overflow: TextOverflow.ellipsis,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Teacher SD',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                          fontSize: 18,
                         ),
-                        Text(
-                          'Lead Educator',
-                          style: TextStyle(color: Color(0xFF75859D), fontWeight: FontWeight.w500, fontSize: 14),
-                          overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Lead Educator',
+                        style: TextStyle(
+                          color: Color(0xFF75859D),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
                         ),
-                      ],
-                    ),
-                  )
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -540,11 +593,24 @@ class _AdminDrawer extends StatelessWidget {
             const Spacer(),
             const Divider(color: Color(0xFFECEEF0)),
             ListTile(
-              leading: const Icon(Icons.logout_rounded, color: Color(0xFFBA1A1A)),
-              title: const Text('Logout', style: TextStyle(color: Color(0xFFBA1A1A), fontWeight: FontWeight.bold)),
+              leading: const Icon(
+                Icons.logout_rounded,
+                color: Color(0xFFBA1A1A),
+              ),
+              title: const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Color(0xFFBA1A1A),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               onTap: () async {
-                await Provider.of<AuthProvider>(context, listen: false).logout();
-                if (context.mounted) Navigator.pushReplacementNamed(context, '/login');
+                await Provider.of<AuthProvider>(
+                  context,
+                  listen: false,
+                ).logout();
+                if (context.mounted)
+                  Navigator.pushReplacementNamed(context, '/login');
               },
             ),
             const SizedBox(height: 16),

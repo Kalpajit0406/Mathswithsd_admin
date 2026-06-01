@@ -25,10 +25,9 @@ class ApiService {
   final String _staticBaseUrl = AppConstants.baseUrl;
   String? _resolvedBaseUrl;
 
-  String get baseUrl => _resolvedBaseUrl ?? _staticBaseUrl;
-
   Future<String> _getBaseUrl() async {
-    if (_resolvedBaseUrl != null && _resolvedBaseUrl!.isNotEmpty) return _resolvedBaseUrl!;
+    if (_resolvedBaseUrl != null && _resolvedBaseUrl!.isNotEmpty)
+      return _resolvedBaseUrl!;
     // Check for a manual override stored in secure storage
     try {
       final override = await AuthStorageService.getBaseUrlOverride();
@@ -39,7 +38,9 @@ class ApiService {
           debugPrint('[ApiService] Using stored base URL override: $override');
           return override;
         }
-        debugPrint('[ApiService] Stored base URL override is unreachable, rediscovering: $override');
+        debugPrint(
+          '[ApiService] Stored base URL override is unreachable, rediscovering: $override',
+        );
       }
     } catch (e) {
       debugPrint('[ApiService] Error reading base URL override: $e');
@@ -69,7 +70,9 @@ class ApiService {
       if (discovered != null && discovered.isNotEmpty) {
         _resolvedBaseUrl = discovered;
         await AuthStorageService.saveBaseUrlOverride(discovered);
-        debugPrint('[ApiService] Resolved base URL via LAN discovery to $discovered');
+        debugPrint(
+          '[ApiService] Resolved base URL via LAN discovery to $discovered',
+        );
         return discovered;
       }
     } catch (e) {
@@ -86,7 +89,9 @@ class ApiService {
       final probeUri = Uri.parse('$baseUrl/health');
       final isRemote = baseUrl.startsWith('https://');
       final timeoutMs = isRemote ? 8000 : 1500;
-      final resp = await http.get(probeUri).timeout(Duration(milliseconds: timeoutMs));
+      final resp = await http
+          .get(probeUri)
+          .timeout(Duration(milliseconds: timeoutMs));
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         return true;
       }
@@ -108,7 +113,26 @@ class ApiService {
 
         final prefix = '${octets[0]}.${octets[1]}.${octets[2]}';
         final lastOctet = int.tryParse(octets[3]);
-        final commonHosts = <int>{1, 2, 3, 4, 5, 10, 11, 20, 50, 100, 101, 110, 111, 120, 125, 150, 200, 254};
+        final commonHosts = <int>{
+          1,
+          2,
+          3,
+          4,
+          5,
+          10,
+          11,
+          20,
+          50,
+          100,
+          101,
+          110,
+          111,
+          120,
+          125,
+          150,
+          200,
+          254,
+        };
         if (lastOctet != null) commonHosts.remove(lastOctet);
 
         for (final host in commonHosts) {
@@ -130,16 +154,20 @@ class ApiService {
 
     const batchSize = 40;
     for (var i = 0; i < candidateList.length; i += batchSize) {
-      final end = (i + batchSize < candidateList.length) ? i + batchSize : candidateList.length;
+      final end = (i + batchSize < candidateList.length)
+          ? i + batchSize
+          : candidateList.length;
       final batch = candidateList.sublist(i, end);
 
-      await Future.wait(batch.map((url) async {
-        if (foundUrl != null) return;
-        final ok = await _probeBaseUrl(url);
-        if (ok) {
-          foundUrl = url;
-        }
-      }));
+      await Future.wait(
+        batch.map((url) async {
+          if (foundUrl != null) return;
+          final ok = await _probeBaseUrl(url);
+          if (ok) {
+            foundUrl = url;
+          }
+        }),
+      );
 
       if (foundUrl != null) {
         return foundUrl;
@@ -193,8 +221,11 @@ class ApiService {
         Uri.parse('$base/api/v1/health'),
       ];
       for (final uri in candidates) {
-        final response = await http.get(uri).timeout(const Duration(seconds: 5));
-        if (response.statusCode >= 200 && response.statusCode < 300) return true;
+        final response = await http
+            .get(uri)
+            .timeout(const Duration(seconds: 5));
+        if (response.statusCode >= 200 && response.statusCode < 300)
+          return true;
       }
       return false;
     } catch (e) {
@@ -213,8 +244,11 @@ class ApiService {
         Uri.parse('$base/api/health'),
       ];
       for (final uri in candidates) {
-        final response = await http.get(uri, headers: await _headers()).timeout(const Duration(seconds: 5));
-        if (response.statusCode >= 200 && response.statusCode < 300) return true;
+        final response = await http
+            .get(uri, headers: await _headers())
+            .timeout(const Duration(seconds: 5));
+        if (response.statusCode >= 200 && response.statusCode < 300)
+          return true;
       }
       return false;
     } catch (e) {
@@ -227,13 +261,15 @@ class ApiService {
   Future<String> getConfiguredBaseUrl() async => _getBaseUrl();
 
   dynamic _processResponse(http.Response response) {
-    debugPrint('[ApiService] Response: ${response.statusCode} (${response.request?.url})');
-    
+    debugPrint(
+      '[ApiService] Response: ${response.statusCode} (${response.request?.url})',
+    );
+
     // Handle 401 unauthorized
     if (response.statusCode == 401) {
       _handleUnauthorized();
     }
-    
+
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) {
         debugPrint('[ApiService] Empty response body');
@@ -241,7 +277,9 @@ class ApiService {
       }
       try {
         final decoded = jsonDecode(response.body);
-        debugPrint('[ApiService] Response body (truncated): ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
+        debugPrint(
+          '[ApiService] Response body (truncated): ${response.body.length > 200 ? '${response.body.substring(0, 200)}...' : response.body}',
+        );
         return decoded;
       } catch (e) {
         debugPrint('[ApiService] JSON decode error: $e');
@@ -259,12 +297,19 @@ class ApiService {
     throw ApiException(message, response.statusCode);
   }
 
-  Future<void> _logRequest(String method, Uri uri, Map<String, String>? headers) async {
+  Future<void> _logRequest(
+    String method,
+    Uri uri,
+    Map<String, String>? headers,
+  ) async {
     debugPrint('[ApiService] Request: $method ${uri.path}');
     if (headers != null) {
       final sanitized = Map<String, String>.from(headers);
       if (sanitized.containsKey('Authorization')) {
-        sanitized['Authorization'] = sanitized['Authorization']!.replaceAll(RegExp(r'.{20}'), 'X');
+        sanitized['Authorization'] = sanitized['Authorization']!.replaceAll(
+          RegExp(r'.{20}'),
+          'X',
+        );
       }
       debugPrint('[ApiService] Headers: $sanitized');
     }
@@ -276,30 +321,34 @@ class ApiService {
     final uri = await _uri(AppConstants.loginEndpoint);
     final headers = await _headers(includeAuth: false);
     await _logRequest('POST', uri, headers);
-    final response = await http.post(
-      uri,
-      headers: headers,
-      body: jsonEncode({'studentPhone': phone, 'password': password}),
-    ).timeout(const Duration(seconds: 20));
+    final response = await http
+        .post(
+          uri,
+          headers: headers,
+          body: jsonEncode({'studentPhone': phone, 'password': password}),
+        )
+        .timeout(const Duration(seconds: 20));
     return _processResponse(response);
   }
 
   Future<http.Response> register(Map<String, dynamic> data) async {
-    return await http.post(
-      await _uri(AppConstants.registerEndpoint),
-      headers: await _headers(includeAuth: false),
-      body: jsonEncode(data),
-    ).timeout(const Duration(seconds: 20));
+    return await http
+        .post(
+          await _uri(AppConstants.registerEndpoint),
+          headers: await _headers(includeAuth: false),
+          body: jsonEncode(data),
+        )
+        .timeout(const Duration(seconds: 20));
   }
 
   Future<bool> validateSession() async {
     try {
-      final response = await http.get(
-        await _uri('/api/v1/student/me'),
-        headers: await _headers(),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(await _uri('/api/v1/student/me'), headers: await _headers())
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode >= 200 && response.statusCode < 300) return true;
-      if (response.statusCode == 401 || response.statusCode == 403) return false;
+      if (response.statusCode == 401 || response.statusCode == 403)
+        return false;
       return true;
     } catch (_) {
       // Network/server issue: keep existing session state, don't force logout.
@@ -309,17 +358,23 @@ class ApiService {
 
   // ─── Questions ────────────────────────────────────────────────────────────────
 
-  Future<List<Question>> getQuestions({int? classNo, String? language, String? chapter, String? search, int? page, int? pageSize}) async {
+  Future<List<Question>> getQuestions({
+    int? classNo,
+    String? language,
+    int? page,
+    int? pageSize,
+  }) async {
     final params = <String, String>{};
     if (classNo != null) params['classNo'] = classNo.toString();
     if (language != null) params['language'] = language;
-    if (chapter != null) params['chapter'] = chapter;
-    if (search != null && search.isNotEmpty) params['search'] = search;
     if (page != null) params['page'] = page.toString();
     if (pageSize != null) params['pageSize'] = pageSize.toString();
 
-    final uri = (await _uri(AppConstants.questionsEndpoint)).replace(queryParameters: params);
-    final response = await http.get(uri, headers: await _headers())
+    final uri = (await _uri(
+      AppConstants.questionsEndpoint,
+    )).replace(queryParameters: params);
+    final response = await http
+        .get(uri, headers: await _headers())
         .timeout(const Duration(seconds: 15));
     final data = _processResponse(response);
     final list = data['data'] as List? ?? [];
@@ -327,11 +382,13 @@ class ApiService {
   }
 
   Future<Question> createQuestion(Question question) async {
-    final response = await http.post(
-      await _uri(AppConstants.createQuestionEndpoint),
-      headers: await _headers(),
-      body: jsonEncode(question.toJson()),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .post(
+          await _uri(AppConstants.createQuestionEndpoint),
+          headers: await _headers(),
+          body: jsonEncode(question.toJson()),
+        )
+        .timeout(const Duration(seconds: 15));
     final data = _processResponse(response);
     return Question.fromJson(data['data']);
   }
@@ -346,14 +403,18 @@ class ApiService {
     request.headers['Authorization'] = 'Bearer $token';
     request.headers['ngrok-skip-browser-warning'] = 'true';
     final bytes = await imageFile.readAsBytes();
-    request.files.add(http.MultipartFile.fromBytes(
-      'file', 
-      bytes,
-      filename: imageFile.path.split('/').last,
-    ));
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: imageFile.path.split('/').last,
+      ),
+    );
 
     try {
-      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 30));
+      final streamedResponse = await client
+          .send(request)
+          .timeout(const Duration(seconds: 30));
       final response = await http.Response.fromStream(streamedResponse);
       final data = _processResponse(response);
       return data['data']['url'];
@@ -368,15 +429,21 @@ class ApiService {
       debugPrint("[ApiService] processOcrImage file path: ${file.path}");
       final bool exists = await file.exists();
       if (!exists) {
-        throw ApiException('Image file does not exist at path: ${file.path}', 400);
+        throw ApiException(
+          'Image file does not exist at path: ${file.path}',
+          400,
+        );
       }
-      
+
       final int length = await file.length();
       debugPrint("[ApiService] File length: $length bytes");
       if (length == 0) {
-        throw ApiException('Captured image is empty (0 bytes). Please try taking the photo again.', 400);
+        throw ApiException(
+          'Captured image is empty (0 bytes). Please try taking the photo again.',
+          400,
+        );
       }
-      
+
       final token = await AuthStorageService.getToken();
       if (token == null || token.trim().isEmpty) {
         throw ApiException('Session expired. Please login again.', 401);
@@ -389,21 +456,28 @@ class ApiService {
       request.headers['Authorization'] = 'Bearer ${token.trim()}';
       request.headers['ngrok-skip-browser-warning'] = 'true';
       debugPrint('[ApiService] Multipart OCR request headers set with auth');
-      
-      final bytes = await file.readAsBytes();
-      request.files.add(http.MultipartFile.fromBytes(
-        'image', 
-        bytes,
-        filename: file.path.split('/').last,
-      ));
 
-      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 60));
+      final bytes = await file.readAsBytes();
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          bytes,
+          filename: file.path.split('/').last,
+        ),
+      );
+
+      final streamedResponse = await client
+          .send(request)
+          .timeout(const Duration(seconds: 60));
       final response = await http.Response.fromStream(streamedResponse);
 
       final data = _processResponse(response);
       return Map<String, dynamic>.from(data['data'] ?? {});
     } on SocketException {
-      throw ApiException('Network unreachable. Ensure your server is running.', 503);
+      throw ApiException(
+        'Network unreachable. Ensure your server is running.',
+        503,
+      );
     } on TimeoutException {
       throw ApiException('OCR request timed out. Try a smaller crop.', 408);
     } catch (e) {
@@ -414,45 +488,46 @@ class ApiService {
     }
   }
 
-
   // ─── Tests ────────────────────────────────────────────────────────────────────
 
   Future<TestConfig> createTest(Map<String, dynamic> testData) async {
-    final response = await http.post(
-      await _uri(AppConstants.createTestEndpoint),
-      headers: await _headers(),
-      body: jsonEncode(testData),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .post(
+          await _uri(AppConstants.createTestEndpoint),
+          headers: await _headers(),
+          body: jsonEncode(testData),
+        )
+        .timeout(const Duration(seconds: 15));
     final data = _processResponse(response);
     return TestConfig.fromJson(data['data'] ?? data);
   }
 
   Future<List<TestConfig>> getAllTests() async {
-    final response = await http.get(
-      await _uri(AppConstants.testsEndpoint),
-      headers: await _headers(),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .get(await _uri(AppConstants.testsEndpoint), headers: await _headers())
+        .timeout(const Duration(seconds: 15));
     final data = _processResponse(response);
     final list = data is List ? data : (data['data'] as List? ?? []);
     return list.map((t) => TestConfig.fromJson(t)).toList();
   }
 
   Future<List<exam.Exam>> fetchExams(String token) async {
-    final response = await http.get(
-      await _uri(AppConstants.testsEndpoint),
-      headers: await _headers(),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .get(await _uri(AppConstants.testsEndpoint), headers: await _headers())
+        .timeout(const Duration(seconds: 15));
     final data = _processResponse(response);
     final list = data is List ? data : (data['data'] as List? ?? []);
     return list.map((item) => exam.Exam.fromJson(item)).toList();
   }
 
   Future<String> startAttempt(String examId, String token) async {
-    final response = await http.post(
-      await _uri(AppConstants.startAttemptEndpoint),
-      headers: await _headers(),
-      body: jsonEncode({'examId': examId}),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .post(
+          await _uri(AppConstants.startAttemptEndpoint),
+          headers: await _headers(),
+          body: jsonEncode({'examId': examId}),
+        )
+        .timeout(const Duration(seconds: 15));
     final data = _processResponse(response);
     return data['data']?['id'] ?? data['data']?['_id'] ?? '';
   }
@@ -466,74 +541,86 @@ class ApiService {
       'attemptId': attemptId,
       'responses': answers
           .where((a) => a['questionId'] != null)
-          .map((a) => {
-                'questionId': a['questionId'],
-                'userAnswer': a['answer'] ?? a['selectedOption'],
-              })
+          .map(
+            (a) => {
+              'questionId': a['questionId'],
+              'userAnswer': a['answer'] ?? a['selectedOption'],
+            },
+          )
           .toList(),
     };
 
-    final response = await http.post(
-      await _uri(AppConstants.submitAttemptEndpoint),
-      headers: await _headers(),
-      body: jsonEncode(bodyData),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .post(
+          await _uri(AppConstants.submitAttemptEndpoint),
+          headers: await _headers(),
+          body: jsonEncode(bodyData),
+        )
+        .timeout(const Duration(seconds: 15));
     return _processResponse(response);
   }
 
   Future<List<Map<String, dynamic>>> getLeaderboard(String examId) async {
-    final response = await http.get(
-      await _uri('/api/v1/testResponse/leaderboard/$examId'),
-      headers: await _headers(),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .get(
+          await _uri('/api/v1/testResponse/leaderboard/$examId'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 15));
     final data = _processResponse(response);
     return List<Map<String, dynamic>>.from(data['data'] ?? []);
   }
-
 
   // ─── Announcements ────────────────────────────────────────────────────────────
 
   Future<List<Announcement>> getAnnouncements({String? targetClass}) async {
     final params = <String, String>{};
     if (targetClass != null) params['targetClass'] = targetClass;
-    
-    final uri = (await _uri(AppConstants.announcementsEndpoint)).replace(queryParameters: params);
-    final response = await http.get(
-      uri,
-      headers: await _headers(),
-    ).timeout(const Duration(seconds: 15));
-    
+
+    final uri = (await _uri(
+      AppConstants.announcementsEndpoint,
+    )).replace(queryParameters: params);
+    final response = await http
+        .get(uri, headers: await _headers())
+        .timeout(const Duration(seconds: 15));
+
     final data = _processResponse(response);
     final list = data['data'] as List? ?? [];
     return list.map((a) => Announcement.fromJson(a)).toList();
   }
 
   Future<Announcement> createAnnouncement(Map<String, dynamic> data) async {
-    final response = await http.post(
-      await _uri('${AppConstants.announcementsEndpoint}/admin'),
-      headers: await _headers(),
-      body: jsonEncode(data),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .post(
+          await _uri('${AppConstants.announcementsEndpoint}/admin'),
+          headers: await _headers(),
+          body: jsonEncode(data),
+        )
+        .timeout(const Duration(seconds: 15));
     final responseData = _processResponse(response);
     return Announcement.fromJson(responseData['data'] ?? responseData);
   }
 
   Future<void> bulkDeleteAnnouncements(List<String> ids) async {
-    final response = await http.post(
-      await _uri(AppConstants.bulkDeleteAnnouncementsEndpoint),
-      headers: await _headers(),
-      body: jsonEncode({'ids': ids}),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .post(
+          await _uri(AppConstants.bulkDeleteAnnouncementsEndpoint),
+          headers: await _headers(),
+          body: jsonEncode({'ids': ids}),
+        )
+        .timeout(const Duration(seconds: 15));
     _processResponse(response);
   }
 
   // ─── Students ─────────────────────────────────────────────────────────────────
 
   Future<Map<String, List<StudentUser>>> getAllStudents() async {
-    final response = await http.get(
-      await _uri(AppConstants.studentsEndpoint),
-      headers: await _headers(),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .get(
+          await _uri(AppConstants.studentsEndpoint),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 15));
     final data = _processResponse(response);
     final payload = data['data'] ?? {};
 
@@ -550,60 +637,75 @@ class ApiService {
   }
 
   Future<void> acceptStudent(String id) async {
-    final response = await http.post(
-      await _uri(AppConstants.acceptStudentEndpoint),
-      headers: await _headers(),
-      body: jsonEncode({'id': id}),
-    ).timeout(const Duration(seconds: 10));
+    final response = await http
+        .post(
+          await _uri(AppConstants.acceptStudentEndpoint),
+          headers: await _headers(),
+          body: jsonEncode({'id': id}),
+        )
+        .timeout(const Duration(seconds: 10));
     _processResponse(response);
   }
 
   Future<void> rejectStudent(String id) async {
-    final response = await http.post(
-      await _uri(AppConstants.rejectStudentEndpoint),
-      headers: await _headers(),
-      body: jsonEncode({'id': id}),
-    ).timeout(const Duration(seconds: 10));
+    final response = await http
+        .post(
+          await _uri(AppConstants.rejectStudentEndpoint),
+          headers: await _headers(),
+          body: jsonEncode({'id': id}),
+        )
+        .timeout(const Duration(seconds: 10));
     _processResponse(response);
   }
 
   Future<void> bulkAcceptStudents(List<String> ids) async {
-    final response = await http.post(
-      await _uri(AppConstants.bulkAcceptStudentsEndpoint),
-      headers: await _headers(),
-      body: jsonEncode({'ids': ids}),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .post(
+          await _uri(AppConstants.bulkAcceptStudentsEndpoint),
+          headers: await _headers(),
+          body: jsonEncode({'ids': ids}),
+        )
+        .timeout(const Duration(seconds: 15));
     _processResponse(response);
   }
 
   Future<void> bulkRejectStudents(List<String> ids) async {
-    final response = await http.post(
-      await _uri(AppConstants.bulkRejectStudentsEndpoint),
-      headers: await _headers(),
-      body: jsonEncode({'ids': ids}),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .post(
+          await _uri(AppConstants.bulkRejectStudentsEndpoint),
+          headers: await _headers(),
+          body: jsonEncode({'ids': ids}),
+        )
+        .timeout(const Duration(seconds: 15));
     _processResponse(response);
   }
 
   Future<void> bulkDeleteStudents(List<String> ids) async {
-    final response = await http.post(
-      await _uri(AppConstants.bulkDeleteStudentsEndpoint),
-      headers: await _headers(),
-      body: jsonEncode({'ids': ids}),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .post(
+          await _uri(AppConstants.bulkDeleteStudentsEndpoint),
+          headers: await _headers(),
+          body: jsonEncode({'ids': ids}),
+        )
+        .timeout(const Duration(seconds: 15));
     _processResponse(response);
   }
 
   Future<void> approveProfileEdit(String studentId, bool approve) async {
-    final response = await http.post(
-      await _uri(AppConstants.approveProfileEditEndpoint),
-      headers: await _headers(),
-      body: jsonEncode({'id': studentId, 'approve': approve}),
-    ).timeout(const Duration(seconds: 10));
+    final response = await http
+        .post(
+          await _uri(AppConstants.approveProfileEditEndpoint),
+          headers: await _headers(),
+          body: jsonEncode({'id': studentId, 'approve': approve}),
+        )
+        .timeout(const Duration(seconds: 10));
     _processResponse(response);
   }
 
-  Future<Question> createQuestionResilient(Question question, {File? diagramFile}) async {
+  Future<Question> createQuestionResilient(
+    Question question, {
+    File? diagramFile,
+  }) async {
     final token = await _requireAuthToken();
     final client = http.Client();
     final request = http.MultipartRequest(
@@ -624,11 +726,15 @@ class ApiService {
 
     // Add diagram if present
     if (diagramFile != null) {
-      request.files.add(await http.MultipartFile.fromPath('diagram', diagramFile.path));
+      request.files.add(
+        await http.MultipartFile.fromPath('diagram', diagramFile.path),
+      );
     }
 
     try {
-      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 30));
+      final streamedResponse = await client
+          .send(request)
+          .timeout(const Duration(seconds: 30));
       final response = await http.Response.fromStream(streamedResponse);
       final data = _processResponse(response);
       return Question.fromJson(data['data']);
@@ -637,7 +743,11 @@ class ApiService {
     }
   }
 
-  Future<Question> updateQuestion(String id, Map<String, dynamic> updateData, {File? diagramFile}) async {
+  Future<Question> updateQuestion(
+    String id,
+    Map<String, dynamic> updateData, {
+    File? diagramFile,
+  }) async {
     final token = await _requireAuthToken();
     final client = http.Client();
     final request = http.MultipartRequest(
@@ -658,11 +768,15 @@ class ApiService {
     });
 
     if (diagramFile != null) {
-      request.files.add(await http.MultipartFile.fromPath('diagram', diagramFile.path));
+      request.files.add(
+        await http.MultipartFile.fromPath('diagram', diagramFile.path),
+      );
     }
 
     try {
-      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 30));
+      final streamedResponse = await client
+          .send(request)
+          .timeout(const Duration(seconds: 30));
       final response = await http.Response.fromStream(streamedResponse);
       final data = _processResponse(response);
       return Question.fromJson(data['data']);
@@ -672,10 +786,12 @@ class ApiService {
   }
 
   Future<void> deleteQuestion(String id) async {
-    final response = await http.delete(
-      await _uri('/api/v1/question/delete/$id'),
-      headers: await _headers(),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .delete(
+          await _uri('/api/v1/question/delete/$id'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 15));
     _processResponse(response);
   }
 
@@ -687,13 +803,19 @@ class ApiService {
       debugPrint("[ApiService] startOcrSession file path: ${imageFile.path}");
       final bool exists = await imageFile.exists();
       if (!exists) {
-        throw ApiException('Image file does not exist at path: ${imageFile.path}', 400);
+        throw ApiException(
+          'Image file does not exist at path: ${imageFile.path}',
+          400,
+        );
       }
-      
+
       final int length = await imageFile.length();
       debugPrint("[ApiService] startOcrSession File length: $length bytes");
       if (length == 0) {
-        throw ApiException('Captured image is empty (0 bytes). Please try taking the photo again.', 400);
+        throw ApiException(
+          'Captured image is empty (0 bytes). Please try taking the photo again.',
+          400,
+        );
       }
 
       final token = await _requireAuthToken();
@@ -703,22 +825,32 @@ class ApiService {
       );
       request.headers['Authorization'] = 'Bearer $token';
       request.headers['ngrok-skip-browser-warning'] = 'true';
-      
-      final bytes = await imageFile.readAsBytes();
-      request.files.add(http.MultipartFile.fromBytes(
-        'image', 
-        bytes,
-        filename: imageFile.path.split('/').last,
-      ));
 
-      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 60));
+      final bytes = await imageFile.readAsBytes();
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          bytes,
+          filename: imageFile.path.split('/').last,
+        ),
+      );
+
+      final streamedResponse = await client
+          .send(request)
+          .timeout(const Duration(seconds: 60));
       final response = await http.Response.fromStream(streamedResponse);
       return _processResponse(response);
     } on TimeoutException {
-      throw ApiException('OCR request timed out. The image may be too large or the server is slow.', 408);
+      throw ApiException(
+        'OCR request timed out. The image may be too large or the server is slow.',
+        408,
+      );
     } on SocketException catch (e) {
       final baseUrl = await getConfiguredBaseUrl();
-      throw ApiException('Cannot reach OCR server at $baseUrl. Is the backend running?\nError: ${e.message}', 503);
+      throw ApiException(
+        'Cannot reach OCR server at $baseUrl. Is the backend running?\nError: ${e.message}',
+        503,
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('OCR session start failed: $e', 500);
@@ -728,7 +860,10 @@ class ApiService {
   }
 
   /// Start OCR session with automatic retries and health checks
-  Future<Map<String, dynamic>> startOcrSessionWithRetry(File imageFile, {int maxAttempts = 3}) async {
+  Future<Map<String, dynamic>> startOcrSessionWithRetry(
+    File imageFile, {
+    int maxAttempts = 3,
+  }) async {
     // First check if backend is healthy
     final isHealthy = await isBackendHealthy();
     if (!isHealthy) {
@@ -738,14 +873,17 @@ class ApiService {
         '1. Backend server is running\n'
         '2. Device is on the same WiFi network\n'
         '3. IP address is correct',
-        503
+        503,
       );
     }
 
     // Check OCR service specifically
     final ocrHealthy = await isOcrHealthy();
     if (!ocrHealthy) {
-      throw ApiException('OCR service is not responding. Please try again.', 503);
+      throw ApiException(
+        'OCR service is not responding. Please try again.',
+        503,
+      );
     }
 
     int attempt = 0;
@@ -759,9 +897,14 @@ class ApiService {
       } catch (e) {
         attempt++;
         if (attempt >= maxAttempts) {
-          throw ApiException('OCR session failed after $maxAttempts attempts: $e', 500);
+          throw ApiException(
+            'OCR session failed after $maxAttempts attempts: $e',
+            500,
+          );
         }
-        debugPrint('[ApiService] OCR attempt $attempt failed, retrying in ${delay.inSeconds}s...');
+        debugPrint(
+          '[ApiService] OCR attempt $attempt failed, retrying in ${delay.inSeconds}s...',
+        );
         await Future.delayed(delay);
         delay = Duration(seconds: delay.inSeconds * 2); // exponential backoff
       }
@@ -770,10 +913,12 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getOcrSession(String sessionId) async {
-    final response = await http.get(
-      await _uri('/api/v1/admin/ocr/session/$sessionId'),
-      headers: await _headers(),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .get(
+          await _uri('/api/v1/admin/ocr/session/$sessionId'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 15));
     return _processResponse(response);
   }
 
@@ -791,19 +936,26 @@ class ApiService {
     if (questionNumber != null) body['questionNumber'] = questionNumber;
     if (verified != null) body['verified'] = verified;
 
-    final response = await http.put(
-      await _uri('/api/v1/admin/ocr/session/$sessionId/item/$index'),
-      headers: await _headers(),
-      body: jsonEncode(body),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .put(
+          await _uri('/api/v1/admin/ocr/session/$sessionId/item/$index'),
+          headers: await _headers(),
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 15));
     return _processResponse(response);
   }
 
-  Future<Map<String, dynamic>> deleteOcrSessionItem(String sessionId, int index) async {
-    final response = await http.delete(
-      await _uri('/api/v1/admin/ocr/session/$sessionId/item/$index'),
-      headers: await _headers(),
-    ).timeout(const Duration(seconds: 15));
+  Future<Map<String, dynamic>> deleteOcrSessionItem(
+    String sessionId,
+    int index,
+  ) async {
+    final response = await http
+        .delete(
+          await _uri('/api/v1/admin/ocr/session/$sessionId/item/$index'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 15));
     return _processResponse(response);
   }
 
@@ -836,11 +988,15 @@ class ApiService {
     if (options != null) request.fields['options'] = jsonEncode(options);
 
     if (diagramFile != null) {
-      request.files.add(await http.MultipartFile.fromPath('diagram', diagramFile.path));
+      request.files.add(
+        await http.MultipartFile.fromPath('diagram', diagramFile.path),
+      );
     }
 
     try {
-      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 30));
+      final streamedResponse = await client
+          .send(request)
+          .timeout(const Duration(seconds: 30));
       final response = await http.Response.fromStream(streamedResponse);
       return _processResponse(response);
     } finally {
@@ -848,28 +1004,37 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> setCurrentOcrSessionIndex(String sessionId, int index) async {
-    final response = await http.post(
-      await _uri('/api/v1/admin/ocr/session/$sessionId/index'),
-      headers: await _headers(),
-      body: jsonEncode({'index': index}),
-    ).timeout(const Duration(seconds: 15));
+  Future<Map<String, dynamic>> setCurrentOcrSessionIndex(
+    String sessionId,
+    int index,
+  ) async {
+    final response = await http
+        .post(
+          await _uri('/api/v1/admin/ocr/session/$sessionId/index'),
+          headers: await _headers(),
+          body: jsonEncode({'index': index}),
+        )
+        .timeout(const Duration(seconds: 15));
     return _processResponse(response);
   }
 
   Future<Map<String, dynamic>> nextOcrSessionItem(String sessionId) async {
-    final response = await http.post(
-      await _uri('/api/v1/admin/ocr/session/$sessionId/next'),
-      headers: await _headers(),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .post(
+          await _uri('/api/v1/admin/ocr/session/$sessionId/next'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 15));
     return _processResponse(response);
   }
 
   Future<Map<String, dynamic>> prevOcrSessionItem(String sessionId) async {
-    final response = await http.post(
-      await _uri('/api/v1/admin/ocr/session/$sessionId/prev'),
-      headers: await _headers(),
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .post(
+          await _uri('/api/v1/admin/ocr/session/$sessionId/prev'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 15));
     return _processResponse(response);
   }
 
@@ -885,14 +1050,17 @@ class ApiService {
     while (attempt < maxAttempts) {
       try {
         return await processOcrImage(file);
-      } on ApiException catch (e) {
+      } on ApiException {
         attempt++;
         if (attempt >= maxAttempts) rethrow;
         await Future.delayed(delay);
         delay = Duration(seconds: delay.inSeconds * 2);
       }
     }
-    throw ApiException('OCR processing failed after $maxAttempts attempts', 500);
+    throw ApiException(
+      'OCR processing failed after $maxAttempts attempts',
+      500,
+    );
   }
 
   /// Create question with retry logic
@@ -904,18 +1072,24 @@ class ApiService {
     while (attempt < maxAttempts) {
       try {
         return await createQuestion(question);
-      } on ApiException catch (e) {
+      } on ApiException {
         attempt++;
         if (attempt >= maxAttempts) rethrow;
         await Future.delayed(delay);
         delay = Duration(seconds: delay.inSeconds * 2);
       }
     }
-    throw ApiException('Create question failed after $maxAttempts attempts', 500);
+    throw ApiException(
+      'Create question failed after $maxAttempts attempts',
+      500,
+    );
   }
 
   /// Login with retry
-  Future<Map<String, dynamic>> loginWithRetry(String phone, String password) async {
+  Future<Map<String, dynamic>> loginWithRetry(
+    String phone,
+    String password,
+  ) async {
     int attempt = 0;
     const maxAttempts = 3;
     Duration delay = const Duration(seconds: 1);
@@ -923,7 +1097,7 @@ class ApiService {
     while (attempt < maxAttempts) {
       try {
         return await login(phone, password);
-      } on ApiException catch (e) {
+      } on ApiException {
         attempt++;
         if (attempt >= maxAttempts) rethrow;
         await Future.delayed(delay);
@@ -934,15 +1108,25 @@ class ApiService {
   }
 
   /// Get questions with retry
-  Future<List<Question>> getQuestionsWithRetry({int? classNo, String? language, String? chapter, String? search, int? page, int? pageSize}) async {
+  Future<List<Question>> getQuestionsWithRetry({
+    int? classNo,
+    String? language,
+    int? page,
+    int? pageSize,
+  }) async {
     int attempt = 0;
     const maxAttempts = 3;
     Duration delay = const Duration(seconds: 1);
 
     while (attempt < maxAttempts) {
       try {
-        return await getQuestions(classNo: classNo, language: language, chapter: chapter, search: search, page: page, pageSize: pageSize);
-      } on ApiException catch (e) {
+        return await getQuestions(
+          classNo: classNo,
+          language: language,
+          page: page,
+          pageSize: pageSize,
+        );
+      } on ApiException {
         attempt++;
         if (attempt >= maxAttempts) rethrow;
         await Future.delayed(delay);
@@ -961,7 +1145,7 @@ class ApiService {
     while (attempt < maxAttempts) {
       try {
         return await getAllTests();
-      } on ApiException catch (e) {
+      } on ApiException {
         attempt++;
         if (attempt >= maxAttempts) rethrow;
         await Future.delayed(delay);
@@ -980,7 +1164,7 @@ class ApiService {
     while (attempt < maxAttempts) {
       try {
         return await getAllStudents();
-      } on ApiException catch (e) {
+      } on ApiException {
         attempt++;
         if (attempt >= maxAttempts) rethrow;
         await Future.delayed(delay);
@@ -1000,7 +1184,9 @@ class ApiService {
   }) async {
     final client = http.Client();
     try {
-      final uri = Uri.parse('${await _getBaseUrl()}/api/v1/pdf/extract-questions');
+      final uri = Uri.parse(
+        '${await _getBaseUrl()}/api/v1/pdf/extract-questions',
+      );
       final request = MultipartRequestWithProgress(
         'POST',
         uri,
@@ -1025,7 +1211,9 @@ class ApiService {
         ),
       );
 
-      final streamedResponse = await client.send(request).timeout(const Duration(seconds: 120));
+      final streamedResponse = await client
+          .send(request)
+          .timeout(const Duration(seconds: 120));
       final response = await http.Response.fromStream(streamedResponse);
 
       final data = _processResponse(response);
@@ -1041,19 +1229,18 @@ class ApiService {
   /// Initiates async processing on backend
   Future<Map<String, dynamic>?> submitPdfByUrl(String url) async {
     try {
-      final response = await http.post(
-        Uri.parse('${await _getBaseUrl()}/api/v1/pdf/scan-url'),
-        headers: await _headers(),
-        body: jsonEncode({
-          'url': url,
-          'options': {
-            'conversionFormats': {
-              'docx': true,
-              'latex': true,
-            }
-          }
-        }),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .post(
+            Uri.parse('${await _getBaseUrl()}/api/v1/pdf/scan-url'),
+            headers: await _headers(),
+            body: jsonEncode({
+              'url': url,
+              'options': {
+                'conversionFormats': {'docx': true, 'latex': true},
+              },
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
 
       return _processResponse(response);
     } catch (e) {
@@ -1065,10 +1252,12 @@ class ApiService {
   /// Returns status, progress, and estimated time
   Future<Map<String, dynamic>> getPdfStatus(String pdfId) async {
     try {
-      final response = await http.get(
-        Uri.parse('${await _getBaseUrl()}/api/v1/pdf/status/$pdfId'),
-        headers: await _headers(),
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .get(
+            Uri.parse('${await _getBaseUrl()}/api/v1/pdf/status/$pdfId'),
+            headers: await _headers(),
+          )
+          .timeout(const Duration(seconds: 15));
 
       return _processResponse(response);
     } catch (e) {
@@ -1080,10 +1269,14 @@ class ApiService {
   /// Formats: mmd, docx, html, latex, lines_json
   Future<List<int>?> downloadPdfResult(String pdfId, String format) async {
     try {
-      final response = await http.get(
-        Uri.parse('${await _getBaseUrl()}/api/v1/pdf/download/$pdfId/$format'),
-        headers: await _headers(),
-      ).timeout(const Duration(seconds: 60));
+      final response = await http
+          .get(
+            Uri.parse(
+              '${await _getBaseUrl()}/api/v1/pdf/download/$pdfId/$format',
+            ),
+            headers: await _headers(),
+          )
+          .timeout(const Duration(seconds: 60));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return response.bodyBytes;
@@ -1099,13 +1292,13 @@ class ApiService {
   /// Pass the PDF ID that was returned from submitPdfByUrl
   Future<Map<String, dynamic>?> extractQuestionsFromPdfId(String pdfId) async {
     try {
-      final response = await http.post(
-        Uri.parse('${await _getBaseUrl()}/api/v1/pdf/extract-questions'),
-        headers: await _headers(),
-        body: jsonEncode({
-          'pdfId': pdfId,
-        }),
-      ).timeout(const Duration(seconds: 60));
+      final response = await http
+          .post(
+            Uri.parse('${await _getBaseUrl()}/api/v1/pdf/extract-questions'),
+            headers: await _headers(),
+            body: jsonEncode({'pdfId': pdfId}),
+          )
+          .timeout(const Duration(seconds: 60));
 
       return _processResponse(response);
     } catch (e) {
@@ -1117,10 +1310,12 @@ class ApiService {
   /// WARNING: This is permanent
   Future<Map<String, dynamic>?> deletePdf(String pdfId) async {
     try {
-      final response = await http.delete(
-        Uri.parse('${await _getBaseUrl()}/api/v1/pdf/$pdfId'),
-        headers: await _headers(),
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .delete(
+            Uri.parse('${await _getBaseUrl()}/api/v1/pdf/$pdfId'),
+            headers: await _headers(),
+          )
+          .timeout(const Duration(seconds: 15));
 
       return _processResponse(response);
     } catch (e) {
@@ -1141,12 +1336,16 @@ class ApiService {
       final response = await request.send();
 
       if (response.statusCode != 200) {
-        throw ApiException('Stream failed with status ${response.statusCode}', response.statusCode);
+        throw ApiException(
+          'Stream failed with status ${response.statusCode}',
+          response.statusCode,
+        );
       }
 
-      await for (final line in response.stream
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())) {
+      await for (final line
+          in response.stream
+              .transform(utf8.decoder)
+              .transform(const LineSplitter())) {
         if (line.startsWith('data: ')) {
           try {
             final jsonStr = line.substring(6);
@@ -1166,11 +1365,7 @@ class ApiService {
 class MultipartRequestWithProgress extends http.MultipartRequest {
   final void Function(int bytes, int totalBytes)? onProgress;
 
-  MultipartRequestWithProgress(
-    String method,
-    Uri url, {
-    this.onProgress,
-  }) : super(method, url);
+  MultipartRequestWithProgress(super.method, super.url, {this.onProgress});
 
   @override
   http.ByteStream finalize() {
@@ -1191,4 +1386,3 @@ class MultipartRequestWithProgress extends http.MultipartRequest {
     return http.ByteStream(byteStream.transform(transformer));
   }
 }
-
