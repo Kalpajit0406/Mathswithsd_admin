@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/question_provider.dart';
@@ -23,6 +24,13 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   final Set<String> _selectedQuestionIds = {};
 
   final ScrollController _scrollController = ScrollController();
+  
+  // Search state variables
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  String _searchQuery = '';
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -36,25 +44,41 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
       final provider = Provider.of<QuestionProvider>(context, listen: false);
       provider.loadMoreQuestions(
         classNo: _filterClass,
         language: _filterLanguage,
+        chapter: _filterChapter,
+        search: _searchQuery,
       );
     }
   }
 
   void _loadQuestions() {
-    Provider.of<QuestionProvider>(
-      context,
-      listen: false,
-    ).loadQuestions(classNo: _filterClass, language: _filterLanguage);
+    Provider.of<QuestionProvider>(context, listen: false).loadQuestions(
+      classNo: _filterClass,
+      language: _filterLanguage,
+      chapter: _filterChapter,
+      search: _searchQuery,
+    );
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      setState(() {
+        _searchQuery = query;
+      });
+      _loadQuestions();
+    });
   }
 
   Future<void> _bulkDelete(BuildContext context) async {
@@ -65,13 +89,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Bulk Delete',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          'Are you sure you want to permanently delete these ${ids.length} question(s) from the database? This is irreversible.',
-        ),
+        title: const Text('Bulk Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to permanently delete these ${ids.length} question(s) from the database? This is irreversible.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -81,9 +100,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
@@ -129,9 +146,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              'Some questions could not be deleted. Please try again.',
-            ),
+            content: Text('Some questions could not be deleted. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -146,7 +161,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       appBar: AppBar(
         backgroundColor: _isSelectionMode
             ? const Color(0xFF0051D5)
-            : Colors.transparent,
+            : (_isSearching ? Colors.white : Colors.transparent),
+        elevation: 0,
+        scrolledUnderElevation: 0,
         leading: _isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
@@ -157,50 +174,49 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   });
                 },
               )
-            : (Navigator.canPop(context)
-                  ? IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: Color(0xFF0F172A),
-                        size: 20,
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                    )
-                  : null),
+            : (_isSearching
+                ? IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+                    onPressed: () {
+                      setState(() {
+                        _isSearching = false;
+                        _searchQuery = '';
+                        _searchController.clear();
+                      });
+                      _loadQuestions();
+                    },
+                  )
+                : (Navigator.canPop(context)
+                    ? IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
+                        onPressed: () => Navigator.pop(context),
+                      )
+                    : null)),
         title: _isSelectionMode
-            ? Text(
-                '${_selectedQuestionIds.length} Selected',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              )
-            : const Text(
-                'Question Bank',
-                style: TextStyle(
-                  color: Color(0xFF0F172A),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 22,
-                  letterSpacing: -0.5,
-                ),
-              ),
+            ? Text('${_selectedQuestionIds.length} Selected', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))
+            : (_isSearching
+                ? TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    decoration: const InputDecoration(
+                      hintText: 'Search question content...',
+                      border: InputBorder.none,
+                      hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                    style: const TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.w600),
+                    onChanged: _onSearchChanged,
+                  )
+                : const Text('Question Bank', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5))),
         actions: _isSelectionMode
             ? [
                 IconButton(
                   icon: const Icon(Icons.select_all, color: Colors.white),
                   tooltip: 'Select All',
                   onPressed: () {
-                    final provider = Provider.of<QuestionProvider>(
-                      context,
-                      listen: false,
-                    );
-                    final visibleIds = provider.questions
-                        .map((q) => q.id!)
-                        .toList();
+                    final provider = Provider.of<QuestionProvider>(context, listen: false);
+                    final visibleIds = provider.questions.map((q) => q.id!).toList();
                     setState(() {
-                      final allSelected = visibleIds.every(
-                        (id) => _selectedQuestionIds.contains(id),
-                      );
+                      final allSelected = visibleIds.every((id) => _selectedQuestionIds.contains(id));
                       if (allSelected) {
                         _selectedQuestionIds.removeAll(visibleIds);
                         _isSelectionMode = false;
@@ -217,10 +233,39 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 ),
               ]
             : [
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _loadQuestions,
-                ),
+                if (_isSearching)
+                  IconButton(
+                    icon: const Icon(Icons.clear_rounded, color: Color(0xFF0F172A)),
+                    onPressed: () {
+                      if (_searchController.text.isNotEmpty) {
+                        _searchController.clear();
+                        _onSearchChanged('');
+                      } else {
+                        setState(() {
+                          _isSearching = false;
+                          _searchQuery = '';
+                        });
+                        _loadQuestions();
+                      }
+                    },
+                  )
+                else ...[
+                  IconButton(
+                    icon: const Icon(Icons.search_rounded, color: Color(0xFF0F172A)),
+                    onPressed: () {
+                      setState(() {
+                        _isSearching = true;
+                      });
+                      Future.delayed(const Duration(milliseconds: 50), () {
+                        _searchFocusNode.requestFocus();
+                      });
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, color: Color(0xFF0F172A)),
+                    onPressed: _loadQuestions,
+                  ),
+                ],
               ],
       ),
       body: Column(
@@ -239,10 +284,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                       child: Text(
                         provider.error ?? 'Error loading questions',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                       ),
                     ),
                   );
@@ -259,8 +301,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
-                    itemCount:
-                        provider.questions.length + (provider.hasMore ? 1 : 0),
+                    itemCount: provider.questions.length + (provider.hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == provider.questions.length) {
                         return const Padding(
@@ -324,7 +365,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFF0051D5).withValues(alpha: 0.05),
+                color: const Color(0xFF0051D5).withOpacity(0.05),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -367,13 +408,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0051D5),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
             ),
           ],
@@ -385,7 +421,12 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   Widget _buildFilterBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade100, width: 1),
+        ),
+      ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
@@ -393,34 +434,75 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             _filterChip<int>(
               label: _filterClass == null
                   ? 'All Classes'
-                  : 'Class $_filterClass',
+                  : (_filterClass == 13 ? 'Joint Entrance' : 'Class $_filterClass'),
+              icon: Icons.school_outlined,
+              isActive: _filterClass != null,
               onTap: _showClassPicker,
             ),
             const SizedBox(width: 8),
             _filterChip<String>(
               label: _filterLanguage ?? 'All Languages',
+              icon: Icons.translate_rounded,
+              isActive: _filterLanguage != null,
               onTap: _showLanguagePicker,
             ),
             const SizedBox(width: 8),
-            if (_filterClass != null)
-              _filterChip<String>(
-                label: _filterChapter ?? 'All Chapters',
-                onTap: _showChapterPicker,
-              ),
+            _filterChip<String>(
+              label: _filterChapter ?? 'All Chapters',
+              icon: Icons.menu_book_outlined,
+              isActive: _filterChapter != null,
+              onTap: _showChapterPicker,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _filterChip<T>({required String label, required VoidCallback onTap}) {
-    return ActionChip(
-      label: Text(label),
-      onPressed: onTap,
-      backgroundColor: const Color(0xFFE0F7FA),
-      labelStyle: const TextStyle(
-        color: Color(0xFF006064),
-        fontWeight: FontWeight.bold,
+  Widget _filterChip<T>({
+    required String label,
+    required IconData icon,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF0051D5).withOpacity(0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isActive ? const Color(0xFF0051D5) : Colors.grey.shade300,
+            width: isActive ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isActive ? const Color(0xFF0051D5) : Colors.grey.shade600,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isActive ? const Color(0xFF0051D5) : Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: isActive ? const Color(0xFF0051D5) : Colors.grey.shade500,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -428,20 +510,34 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   void _showClassPicker() {
     showModalBottomSheet(
       context: context,
-      builder: (context) => ListView(
-        shrinkWrap: true,
-        children: [
-          ListTile(
-            title: const Text('All Classes'),
-            onTap: () => _updateFilter(null, null, null),
-          ),
-          ...[9, 10, 11, 12].map(
-            (c) => ListTile(
-              title: Text('Class $c'),
-              onTap: () => _updateFilter(c, null, null),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: ListView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Text(
+                'Select Class',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              ),
             ),
-          ),
-        ],
+            const Divider(),
+            ListTile(
+              title: const Text('All Classes'),
+              onTap: () => _updateFilter(null, _filterLanguage, null),
+            ),
+            ...[9, 10, 11, 12, 13].map((c) => ListTile(
+              title: Text(c == 13 ? 'Joint Entrance' : 'Class $c'),
+              trailing: _filterClass == c ? const Icon(Icons.check, color: Color(0xFF0051D5)) : null,
+              onTap: () => _updateFilter(c, _filterLanguage, null),
+            )),
+          ],
+        ),
       ),
     );
   }
@@ -449,42 +545,49 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   void _showLanguagePicker() {
     showModalBottomSheet(
       context: context,
-      builder: (context) => ListView(
-        shrinkWrap: true,
-        children: [
-          ListTile(
-            title: const Text('All Languages'),
-            onTap: () => _updateFilter(_filterClass, null, _filterChapter),
-          ),
-          ...['English', 'Bengali', 'Both'].map(
-            (l) => ListTile(
-              title: Text(l),
-              onTap: () => _updateFilter(_filterClass, l, _filterChapter),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: ListView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Text(
+                'Select Language',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              ),
             ),
-          ),
-        ],
+            const Divider(),
+            ListTile(
+              title: const Text('All Languages'),
+              onTap: () => _updateFilter(_filterClass, null, _filterChapter),
+            ),
+            ...['English', 'Bengali', 'Both'].map((l) => ListTile(
+              title: Text(l),
+              trailing: _filterLanguage == l ? const Icon(Icons.check, color: Color(0xFF0051D5)) : null,
+              onTap: () => _updateFilter(_filterClass, l, _filterChapter),
+            )),
+          ],
+        ),
       ),
     );
   }
 
   void _showChapterPicker() {
-    final chapters = AppConstants.classChapters[_filterClass] ?? [];
     showModalBottomSheet(
       context: context,
-      builder: (context) => ListView(
-        shrinkWrap: true,
-        children: [
-          ListTile(
-            title: const Text('All Chapters'),
-            onTap: () => _updateFilter(_filterClass, _filterLanguage, null),
-          ),
-          ...chapters.map(
-            (ch) => ListTile(
-              title: Text(ch),
-              onTap: () => _updateFilter(_filterClass, _filterLanguage, ch),
-            ),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ChapterPickerModal(
+        selectedClass: _filterClass,
+        initialChapter: _filterChapter,
+        onChapterSelected: (ch) {
+          _updateFilter(_filterClass, _filterLanguage, ch);
+        },
       ),
     );
   }
@@ -535,38 +638,25 @@ class _QuestionCard extends StatelessWidget {
                   Checkbox(
                     value: isSelected,
                     activeColor: const Color(0xFF0051D5),
-                    onChanged:
-                        (_) {}, // Handled by GestureDetector at parent level
+                    onChanged: (_) {}, // Handled by GestureDetector at parent level
                   ),
                   const SizedBox(width: 8),
                 ],
                 _badge(
-                  'Class ${question.classNo}',
-                  const Color(0xFFE0F7FA),
-                  const Color(0xFF006064),
+                  question.classNo == 13 ? 'Joint Entrance' : 'Class ${question.classNo}',
+                  question.classNo == 13 ? const Color(0xFFE8F5E9) : const Color(0xFFE0F7FA),
+                  question.classNo == 13 ? const Color(0xFF2E7D32) : const Color(0xFF006064),
                 ),
                 const SizedBox(width: 8),
-                _badge(
-                  question.language,
-                  const Color(0xFFF3E5F5),
-                  const Color(0xFF4A148C),
-                ),
+                _badge(question.language, const Color(0xFFF3E5F5), const Color(0xFF4A148C)),
                 const Spacer(),
                 if (!isSelectionMode) ...[
                   IconButton(
-                    icon: const Icon(
-                      Icons.edit_outlined,
-                      size: 20,
-                      color: Colors.blue,
-                    ),
+                    icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blue),
                     onPressed: () => _editQuestion(context),
                   ),
                   IconButton(
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      size: 20,
-                      color: Colors.red,
-                    ),
+                    icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
                     onPressed: () => _confirmDelete(context),
                   ),
                 ],
@@ -582,42 +672,33 @@ class _QuestionCard extends StatelessWidget {
               children: [
                 Text(
                   'Chapter: ${question.chapter}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
                 ),
                 const SizedBox(height: 12),
                 LaTeXWidget(text: question.questionText),
-                if (question.diagram != null) ...[
+                if (question.diagram != null && question.diagram!.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
-                      question.diagram!,
+                      question.diagram!.startsWith('http')
+                          ? question.diagram!
+                          : '${Provider.of<QuestionProvider>(context, listen: false).baseUrl}${question.diagram}',
                       height: 120,
                       width: double.infinity,
                       fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                     ),
                   ),
                 ],
                 const SizedBox(height: 16),
-                const Text(
-                  'Options:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
+                const Text('Options:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 const SizedBox(height: 8),
                 ...List.generate(question.options.length, (i) {
-                  final isCorrect =
-                      question.options[i] == question.correctAnswer;
+                  final isCorrect = question.options[i] == question.correctAnswer;
                   return Container(
                     margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: isCorrect
                           ? const Color(0xFFE8F5E9)
@@ -646,16 +727,13 @@ class _QuestionCard extends StatelessWidget {
                         if (isCorrect)
                           const Padding(
                             padding: EdgeInsets.only(left: 6, top: 2),
-                            child: Icon(
-                              Icons.check_circle,
-                              color: Color(0xFF43A047),
-                              size: 16,
-                            ),
+                            child: Icon(Icons.check_circle, color: Color(0xFF43A047), size: 16),
                           ),
                       ],
                     ),
                   );
                 }),
+
               ],
             ),
           ),
@@ -667,18 +745,8 @@ class _QuestionCard extends StatelessWidget {
   Widget _badge(String label, Color bg, Color text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: text,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+      child: Text(label, style: TextStyle(color: text, fontSize: 10, fontWeight: FontWeight.bold)),
     );
   }
 
@@ -698,14 +766,11 @@ class _QuestionCard extends StatelessWidget {
         title: const Text('Delete Question?'),
         content: const Text('This action cannot be undone.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
               Navigator.pop(dialogContext); // close confirmation dialog
-
+              
               // show loading dialog
               BuildContext? loadingContext;
               showDialog(
@@ -717,11 +782,8 @@ class _QuestionCard extends StatelessWidget {
                 },
               );
 
-              final success = await Provider.of<QuestionProvider>(
-                context,
-                listen: false,
-              ).deleteQuestion(question.id!);
-
+              final success = await Provider.of<QuestionProvider>(context, listen: false).deleteQuestion(question.id!);
+              
               if (loadingContext != null && loadingContext!.mounted) {
                 Navigator.pop(loadingContext!); // close loading dialog
               }
@@ -729,9 +791,7 @@ class _QuestionCard extends StatelessWidget {
               if (context.mounted) {
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Question deleted successfully.'),
-                    ),
+                    const SnackBar(content: Text('Question deleted successfully.')),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -769,9 +829,7 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
   void initState() {
     super.initState();
     _questionCtrl = TextEditingController(text: widget.question.questionText);
-    _optCtrls = widget.question.options
-        .map((o) => TextEditingController(text: o))
-        .toList();
+    _optCtrls = widget.question.options.map((o) => TextEditingController(text: o)).toList();
     // Pad to 4 options if needed
     while (_optCtrls.length < 4) {
       _optCtrls.add(TextEditingController());
@@ -785,7 +843,7 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
   @override
   Widget build(BuildContext context) {
     final chapters = AppConstants.classChapters[_selectedClass] ?? [];
-
+    
     return Consumer<QuestionProvider>(
       builder: (context, provider, _) {
         return Scaffold(
@@ -808,10 +866,7 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                     )
                   : TextButton(
                       onPressed: _save,
-                      child: const Text(
-                        'SAVE',
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      child: const Text('SAVE', style: TextStyle(color: Colors.white)),
                     ),
             ],
           ),
@@ -827,96 +882,54 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                         enabled: !provider.isSaving,
                         controller: _questionCtrl,
                         maxLines: 5,
-                        decoration: const InputDecoration(
-                          labelText: 'Question Text',
-                          border: OutlineInputBorder(),
-                        ),
+                        decoration: const InputDecoration(labelText: 'Question Text', border: OutlineInputBorder()),
                       ),
                       const SizedBox(height: 16),
                       Row(
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<int>(
-                              initialValue: _selectedClass,
-                              onChanged: provider.isSaving
-                                  ? null
-                                  : (v) => setState(() {
-                                      _selectedClass = v!;
-                                      _selectedChapter =
-                                          AppConstants.classChapters[v]?.first;
-                                    }),
-                              items: [9, 10, 11, 12]
-                                  .map(
-                                    (c) => DropdownMenuItem(
-                                      value: c,
-                                      child: Text('Class $c'),
-                                    ),
-                                  )
-                                  .toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Class',
-                              ),
+                              value: _selectedClass,
+                              onChanged: provider.isSaving ? null : (v) => setState(() {
+                                _selectedClass = v!;
+                                _selectedChapter = AppConstants.classChapters[v]?.first;
+                              }),
+                              items: [9, 10, 11, 12, 13].map((c) => DropdownMenuItem(value: c, child: Text(c == 13 ? 'Joint Entrance' : 'Class $c'))).toList(),
+                              decoration: const InputDecoration(labelText: 'Class'),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              initialValue: _selectedLanguage,
-                              onChanged: provider.isSaving
-                                  ? null
-                                  : (v) =>
-                                        setState(() => _selectedLanguage = v!),
-                              items: ['English', 'Bengali', 'Both']
-                                  .map(
-                                    (l) => DropdownMenuItem(
-                                      value: l,
-                                      child: Text(l),
-                                    ),
-                                  )
-                                  .toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Language',
-                              ),
+                              value: _selectedLanguage,
+                              onChanged: provider.isSaving ? null : (v) => setState(() => _selectedLanguage = v!),
+                              items: ['English', 'Bengali', 'Both'].map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+                              decoration: const InputDecoration(labelText: 'Language'),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        initialValue: _selectedChapter,
-                        onChanged: provider.isSaving
-                            ? null
-                            : (v) => setState(() => _selectedChapter = v),
-                        items: chapters
-                            .map(
-                              (ch) =>
-                                  DropdownMenuItem(value: ch, child: Text(ch)),
-                            )
-                            .toList(),
+                        value: _selectedChapter,
+                        onChanged: provider.isSaving ? null : (v) => setState(() => _selectedChapter = v),
+                        items: chapters.map((ch) => DropdownMenuItem(value: ch, child: Text(ch))).toList(),
                         decoration: const InputDecoration(labelText: 'Chapter'),
                       ),
                       const SizedBox(height: 24),
-                      ...List.generate(
-                        4,
-                        (i) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: TextFormField(
-                            enabled: !provider.isSaving,
-                            controller: _optCtrls[i],
-                            decoration: InputDecoration(
-                              labelText:
-                                  'Option ${String.fromCharCode(65 + i)}',
-                            ),
-                          ),
+                      ...List.generate(4, (i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: TextFormField(
+                          enabled: !provider.isSaving,
+                          controller: _optCtrls[i],
+                          decoration: InputDecoration(labelText: 'Option ${String.fromCharCode(65 + i)}'),
                         ),
-                      ),
+                      )),
                       const SizedBox(height: 12),
                       TextFormField(
                         enabled: !provider.isSaving,
                         controller: _correctCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Correct Answer (Exact Text)',
-                        ),
+                        decoration: const InputDecoration(labelText: 'Correct Answer (Exact Text)'),
                       ),
                     ],
                   ),
@@ -943,9 +956,7 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
     final success = await provider.updateQuestion(widget.question.id!, data);
     if (success && mounted) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Question updated!')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Question updated!')));
     }
   }
 }
@@ -958,8 +969,7 @@ class _PulsingShimmer extends StatefulWidget {
   State<_PulsingShimmer> createState() => _PulsingShimmerState();
 }
 
-class _PulsingShimmerState extends State<_PulsingShimmer>
-    with SingleTickerProviderStateMixin {
+class _PulsingShimmerState extends State<_PulsingShimmer> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -970,10 +980,9 @@ class _PulsingShimmerState extends State<_PulsingShimmer>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
-    _animation = Tween<double>(
-      begin: 0.35,
-      end: 0.85,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _animation = Tween<double>(begin: 0.35, end: 0.85).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -987,7 +996,10 @@ class _PulsingShimmerState extends State<_PulsingShimmer>
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        return Opacity(opacity: _animation.value, child: child);
+        return Opacity(
+          opacity: _animation.value,
+          child: child,
+        );
       },
       child: widget.child,
     );
@@ -1054,34 +1066,20 @@ class _SkeletonQuestionCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 _skeletonBox(width: 200, height: 16),
                 const SizedBox(height: 24),
-                const Text(
-                  'Options:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: Colors.grey,
-                  ),
-                ),
+                const Text('Options:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
                 const SizedBox(height: 12),
-                ...List.generate(
-                  4,
-                  (i) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        _skeletonBox(width: 24, height: 24, borderRadius: 12),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _skeletonBox(
-                            width: double.infinity,
-                            height: 20,
-                            borderRadius: 8,
-                          ),
-                        ),
-                      ],
-                    ),
+                ...List.generate(4, (i) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      _skeletonBox(width: 24, height: 24, borderRadius: 12),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _skeletonBox(width: double.infinity, height: 20, borderRadius: 8),
+                      ),
+                    ],
                   ),
-                ),
+                )),
               ],
             ),
           ),
@@ -1090,17 +1088,153 @@ class _SkeletonQuestionCard extends StatelessWidget {
     );
   }
 
-  Widget _skeletonBox({
-    required double width,
-    required double height,
-    double borderRadius = 4,
-  }) {
+  Widget _skeletonBox({required double width, required double height, double borderRadius = 4}) {
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
         color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(borderRadius),
+      ),
+    );
+  }
+}
+
+class _ChapterPickerModal extends StatefulWidget {
+  final int? selectedClass;
+  final String? initialChapter;
+  final ValueChanged<String?> onChapterSelected;
+
+  const _ChapterPickerModal({
+    required this.selectedClass,
+    required this.initialChapter,
+    required this.onChapterSelected,
+  });
+
+  @override
+  State<_ChapterPickerModal> createState() => _ChapterPickerModalState();
+}
+
+class _ChapterPickerModalState extends State<_ChapterPickerModal> {
+  String _searchQuery = '';
+  late List<String> _allChapters;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.selectedClass != null) {
+      _allChapters = AppConstants.classChapters[widget.selectedClass] ?? [];
+    } else {
+      final Set<String> uniqueChapters = {};
+      AppConstants.classChapters.forEach((classNo, chaptersList) {
+        for (var ch in chaptersList) {
+          if (classNo == 13) {
+            uniqueChapters.add('$ch (Joint)');
+          } else {
+            uniqueChapters.add(ch);
+          }
+        }
+      });
+      _allChapters = uniqueChapters.toList();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredChapters = _allChapters
+        .where((ch) => ch.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.65,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Select Chapter',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    widget.onChapterSelected(null);
+                  },
+                  child: const Text('Clear Filter', style: TextStyle(color: Color(0xFFBA1A1A), fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search chapters...',
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF64748B)),
+                filled: true,
+                fillColor: const Color(0xFFF1F5F9),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+              ),
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val;
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: filteredChapters.isEmpty
+                ? const Center(
+                    child: Text('No chapters match your search', style: TextStyle(color: Colors.grey)),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    itemCount: filteredChapters.length,
+                    itemBuilder: (context, index) {
+                      final ch = filteredChapters[index];
+                      final isSelected = widget.initialChapter == ch || 
+                          (ch.endsWith(' (Joint)') && widget.initialChapter == ch.replaceAll(' (Joint)', ''));
+                      
+                      return ListTile(
+                        title: Text(
+                          ch,
+                          style: TextStyle(
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? const Color(0xFF0051D5) : const Color(0xFF0F172A),
+                          ),
+                        ),
+                        trailing: isSelected ? const Icon(Icons.check_circle, color: Color(0xFF0051D5)) : null,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        onTap: () {
+                          final cleanCh = ch.endsWith(' (Joint)') ? ch.replaceAll(' (Joint)', '') : ch;
+                          widget.onChapterSelected(cleanCh);
+                        },
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }

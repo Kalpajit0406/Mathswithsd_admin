@@ -25,6 +25,8 @@ class ApiService {
   final String _staticBaseUrl = AppConstants.baseUrl;
   String? _resolvedBaseUrl;
 
+  String get baseUrl => _resolvedBaseUrl ?? _staticBaseUrl;
+
   Future<String> _getBaseUrl() async {
     if (_resolvedBaseUrl != null && _resolvedBaseUrl!.isNotEmpty)
       return _resolvedBaseUrl!;
@@ -361,12 +363,16 @@ class ApiService {
   Future<List<Question>> getQuestions({
     int? classNo,
     String? language,
+    String? chapter,
+    String? search,
     int? page,
     int? pageSize,
   }) async {
     final params = <String, String>{};
     if (classNo != null) params['classNo'] = classNo.toString();
     if (language != null) params['language'] = language;
+    if (chapter != null && chapter.isNotEmpty) params['chapter'] = chapter;
+    if (search != null && search.isNotEmpty) params['search'] = search;
     if (page != null) params['page'] = page.toString();
     if (pageSize != null) params['pageSize'] = pageSize.toString();
 
@@ -1111,6 +1117,8 @@ class ApiService {
   Future<List<Question>> getQuestionsWithRetry({
     int? classNo,
     String? language,
+    String? chapter,
+    String? search,
     int? page,
     int? pageSize,
   }) async {
@@ -1123,6 +1131,8 @@ class ApiService {
         return await getQuestions(
           classNo: classNo,
           language: language,
+          chapter: chapter,
+          search: search,
           page: page,
           pageSize: pageSize,
         );
