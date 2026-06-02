@@ -120,6 +120,7 @@ class AppConstants {
       'Vector Algebra',
       'Three Dimensional Geometry',
       'Linear Programming',
+      'Probability',
     ],
     13: [
       '11',

@@ -67,7 +67,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          backgroundColor: Colors.transparent,
+          backgroundColor: const Color(0xFFF8FAFC),
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
@@ -168,7 +168,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         });
       },
       child: Scaffold(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFFF8FAFC),
         appBar: _currentIndex == 0
             ? AppBar(
                 backgroundColor: Colors.transparent,
@@ -374,7 +374,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                         decoration: BoxDecoration(
                           color: const Color(0xFF0051D5).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF0051D5).withValues(alpha: 0.2)),
+                          border: Border.all(
+                            color: const Color(
+                              0xFF0051D5,
+                            ).withValues(alpha: 0.2),
+                          ),
                         ),
                         child: const Icon(
                           Icons.admin_panel_settings_rounded,
@@ -386,11 +390,16 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ),
                   const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF0051D5).withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF0051D5).withValues(alpha: 0.15)),
+                      border: Border.all(
+                        color: const Color(0xFF0051D5).withValues(alpha: 0.15),
+                      ),
                     ),
                     child: const Row(
                       children: [
@@ -644,8 +653,9 @@ class _AdminDrawer extends StatelessWidget {
                   context,
                   listen: false,
                 ).logout();
-                if (context.mounted)
+                if (context.mounted) {
                   Navigator.pushReplacementNamed(context, '/login');
+                }
               },
             ),
             const SizedBox(height: 16),

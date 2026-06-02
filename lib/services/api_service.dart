@@ -28,8 +28,9 @@ class ApiService {
   String get baseUrl => _resolvedBaseUrl ?? _staticBaseUrl;
 
   Future<String> _getBaseUrl() async {
-    if (_resolvedBaseUrl != null && _resolvedBaseUrl!.isNotEmpty)
+    if (_resolvedBaseUrl != null && _resolvedBaseUrl!.isNotEmpty) {
       return _resolvedBaseUrl!;
+    }
     // Check for a manual override stored in secure storage
     try {
       final override = await AuthStorageService.getBaseUrlOverride();
@@ -226,8 +227,9 @@ class ApiService {
         final response = await http
             .get(uri)
             .timeout(const Duration(seconds: 5));
-        if (response.statusCode >= 200 && response.statusCode < 300)
+        if (response.statusCode >= 200 && response.statusCode < 300) {
           return true;
+        }
       }
       return false;
     } catch (e) {
@@ -249,8 +251,9 @@ class ApiService {
         final response = await http
             .get(uri, headers: await _headers())
             .timeout(const Duration(seconds: 5));
-        if (response.statusCode >= 200 && response.statusCode < 300)
+        if (response.statusCode >= 200 && response.statusCode < 300) {
           return true;
+        }
       }
       return false;
     } catch (e) {
@@ -349,8 +352,9 @@ class ApiService {
           .get(await _uri('/api/v1/student/me'), headers: await _headers())
           .timeout(const Duration(seconds: 10));
       if (response.statusCode >= 200 && response.statusCode < 300) return true;
-      if (response.statusCode == 401 || response.statusCode == 403)
+      if (response.statusCode == 401 || response.statusCode == 403) {
         return false;
+      }
       return true;
     } catch (_) {
       // Network/server issue: keep existing session state, don't force logout.

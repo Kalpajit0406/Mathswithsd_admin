@@ -905,8 +905,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                                       : Colors.black54,
                                 ),
                                 onSelected: (selected) {
-                                  if (selected)
+                                  if (selected) {
                                     setState(() => _useLaTeXPreview = true);
+                                  }
                                 },
                               ),
                               const SizedBox(width: 8),
@@ -926,8 +927,9 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                                       : Colors.black54,
                                 ),
                                 onSelected: (selected) {
-                                  if (selected)
+                                  if (selected) {
                                     setState(() => _useLaTeXPreview = false);
+                                  }
                                 },
                               ),
                             ],
@@ -1073,16 +1075,23 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                           child: _buildDropdown<int>(
                             label: 'Class',
                             value: _selectedClass,
-                            items: [9, 10, 11, 12, 13]
-                                .map(
-                                  (c) => DropdownMenuItem(
-                                    value: c,
-                                    child: Text(
-                                      c == 13 ? 'Joint Entrance' : 'Class $c',
+                            items: (() {
+                              final list = [9, 10, 11, 12, 13];
+                              if (!list.contains(_selectedClass)) {
+                                list.add(_selectedClass);
+                                list.sort();
+                              }
+                              return list
+                                  .map(
+                                    (c) => DropdownMenuItem(
+                                      value: c,
+                                      child: Text(
+                                        c == 13 ? 'Joint Entrance' : 'Class $c',
+                                      ),
                                     ),
-                                  ),
-                                )
-                                .toList(),
+                                  )
+                                  .toList();
+                            })(),
                             onChanged: (val) {
                               setState(() {
                                 _selectedClass = val!;
@@ -1098,14 +1107,20 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                           child: _buildDropdown<String>(
                             label: 'Language',
                             value: _selectedLanguage,
-                            items: ['Bengali', 'English', 'Both']
-                                .map(
-                                  (l) => DropdownMenuItem(
-                                    value: l,
-                                    child: Text(l),
-                                  ),
-                                )
-                                .toList(),
+                            items: (() {
+                              final list = ['Bengali', 'English', 'Both'];
+                              if (!list.contains(_selectedLanguage)) {
+                                list.add(_selectedLanguage);
+                              }
+                              return list
+                                  .map(
+                                    (l) => DropdownMenuItem(
+                                      value: l,
+                                      child: Text(l),
+                                    ),
+                                  )
+                                  .toList();
+                            })(),
                             onChanged: (val) =>
                                 setState(() => _selectedLanguage = val!),
                           ),
@@ -1117,14 +1132,24 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                       label: 'Chapter',
                       value: _selectedChapter,
                       isExpanded: true,
-                      items: chapters
-                          .map(
-                            (ch) => DropdownMenuItem(
-                              value: ch,
-                              child: Text(ch, overflow: TextOverflow.ellipsis),
-                            ),
-                          )
-                          .toList(),
+                      items: (() {
+                        final uniqueChapters = List<String>.from(chapters);
+                        if (_selectedChapter != null &&
+                            !uniqueChapters.contains(_selectedChapter)) {
+                          uniqueChapters.insert(0, _selectedChapter!);
+                        }
+                        return uniqueChapters
+                            .map(
+                              (ch) => DropdownMenuItem(
+                                value: ch,
+                                child: Text(
+                                  ch,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                            .toList();
+                      })(),
                       onChanged: (val) =>
                           setState(() => _selectedChapter = val),
                     ),

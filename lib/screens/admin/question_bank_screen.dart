@@ -26,7 +26,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   final Set<String> _selectedQuestionIds = {};
 
   final ScrollController _scrollController = ScrollController();
-  
+
   // Search state variables
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
@@ -53,7 +53,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       final provider = Provider.of<QuestionProvider>(context, listen: false);
       provider.loadMoreQuestions(
         classNo: _filterClass,
@@ -91,8 +92,13 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Bulk Delete', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Are you sure you want to permanently delete these ${ids.length} question(s) from the database? This is irreversible.'),
+        title: const Text(
+          'Bulk Delete',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete these ${ids.length} question(s) from the database? This is irreversible.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -102,7 +108,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
@@ -148,7 +156,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Some questions could not be deleted. Please try again.'),
+            content: Text(
+              'Some questions could not be deleted. Please try again.',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -177,48 +187,80 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                 },
               )
             : (_isSearching
-                ? IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
-                    onPressed: () {
-                      setState(() {
-                        _isSearching = false;
-                        _searchQuery = '';
-                        _searchController.clear();
-                      });
-                      _loadQuestions();
-                    },
-                  )
-                : (Navigator.canPop(context)
-                    ? IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 20),
-                        onPressed: () => Navigator.pop(context),
-                      )
-                    : null)),
+                  ? IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Color(0xFF0F172A),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isSearching = false;
+                          _searchQuery = '';
+                          _searchController.clear();
+                        });
+                        _loadQuestions();
+                      },
+                    )
+                  : (Navigator.canPop(context)
+                        ? IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: Color(0xFF0F172A),
+                              size: 20,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          )
+                        : null)),
         title: _isSelectionMode
-            ? Text('${_selectedQuestionIds.length} Selected', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))
+            ? Text(
+                '${_selectedQuestionIds.length} Selected',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              )
             : (_isSearching
-                ? TextField(
-                    controller: _searchController,
-                    focusNode: _searchFocusNode,
-                    decoration: const InputDecoration(
-                      hintText: 'Search question content...',
-                      border: InputBorder.none,
-                      hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
-                    ),
-                    style: const TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.w600),
-                    onChanged: _onSearchChanged,
-                  )
-                : const Text('Question Bank', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5))),
+                  ? TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      decoration: const InputDecoration(
+                        hintText: 'Search question content...',
+                        border: InputBorder.none,
+                        hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
+                      ),
+                      style: const TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onChanged: _onSearchChanged,
+                    )
+                  : const Text(
+                      'Question Bank',
+                      style: TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 22,
+                        letterSpacing: -0.5,
+                      ),
+                    )),
         actions: _isSelectionMode
             ? [
                 IconButton(
                   icon: const Icon(Icons.select_all, color: Colors.white),
                   tooltip: 'Select All',
                   onPressed: () {
-                    final provider = Provider.of<QuestionProvider>(context, listen: false);
-                    final visibleIds = provider.questions.map((q) => q.id!).toList();
+                    final provider = Provider.of<QuestionProvider>(
+                      context,
+                      listen: false,
+                    );
+                    final visibleIds = provider.questions
+                        .map((q) => q.id!)
+                        .toList();
                     setState(() {
-                      final allSelected = visibleIds.every((id) => _selectedQuestionIds.contains(id));
+                      final allSelected = visibleIds.every(
+                        (id) => _selectedQuestionIds.contains(id),
+                      );
                       if (allSelected) {
                         _selectedQuestionIds.removeAll(visibleIds);
                         _isSelectionMode = false;
@@ -237,7 +279,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             : [
                 if (_isSearching)
                   IconButton(
-                    icon: const Icon(Icons.clear_rounded, color: Color(0xFF0F172A)),
+                    icon: const Icon(
+                      Icons.clear_rounded,
+                      color: Color(0xFF0F172A),
+                    ),
                     onPressed: () {
                       if (_searchController.text.isNotEmpty) {
                         _searchController.clear();
@@ -253,7 +298,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   )
                 else ...[
                   IconButton(
-                    icon: const Icon(Icons.search_rounded, color: Color(0xFF0F172A)),
+                    icon: const Icon(
+                      Icons.search_rounded,
+                      color: Color(0xFF0F172A),
+                    ),
                     onPressed: () {
                       setState(() {
                         _isSearching = true;
@@ -286,7 +334,10 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                       child: Text(
                         provider.error ?? 'Error loading questions',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   );
@@ -303,7 +354,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
-                    itemCount: provider.questions.length + (provider.hasMore ? 1 : 0),
+                    itemCount:
+                        provider.questions.length + (provider.hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == provider.questions.length) {
                         return const Padding(
@@ -367,7 +419,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFF0051D5).withOpacity(0.05),
+                color: const Color(0xFF0051D5).withValues(alpha: 0.05),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -410,8 +462,13 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0051D5),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -436,7 +493,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             _filterChip<int>(
               label: _filterClass == null
                   ? 'All Classes'
-                  : (_filterClass == 13 ? 'Joint Entrance' : 'Class $_filterClass'),
+                  : (_filterClass == 13
+                        ? 'Joint Entrance'
+                        : 'Class $_filterClass'),
               icon: Icons.school_outlined,
               isActive: _filterClass != null,
               onTap: _showClassPicker,
@@ -473,7 +532,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF0051D5).withOpacity(0.08) : Colors.white,
+          color: isActive
+              ? const Color(0xFF0051D5).withValues(alpha: 0.08)
+              : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isActive ? const Color(0xFF0051D5) : Colors.grey.shade300,
@@ -494,7 +555,9 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: isActive ? const Color(0xFF0051D5) : Colors.grey.shade700,
+                color: isActive
+                    ? const Color(0xFF0051D5)
+                    : Colors.grey.shade700,
               ),
             ),
             const SizedBox(width: 4),
@@ -525,7 +588,11 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Text(
                 'Select Class',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
               ),
             ),
             const Divider(),
@@ -533,11 +600,15 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               title: const Text('All Classes'),
               onTap: () => _updateFilter(null, _filterLanguage, null),
             ),
-            ...[9, 10, 11, 12, 13].map((c) => ListTile(
-              title: Text(c == 13 ? 'Joint Entrance' : 'Class $c'),
-              trailing: _filterClass == c ? const Icon(Icons.check, color: Color(0xFF0051D5)) : null,
-              onTap: () => _updateFilter(c, _filterLanguage, null),
-            )),
+            ...[9, 10, 11, 12, 13].map(
+              (c) => ListTile(
+                title: Text(c == 13 ? 'Joint Entrance' : 'Class $c'),
+                trailing: _filterClass == c
+                    ? const Icon(Icons.check, color: Color(0xFF0051D5))
+                    : null,
+                onTap: () => _updateFilter(c, _filterLanguage, null),
+              ),
+            ),
           ],
         ),
       ),
@@ -560,7 +631,11 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Text(
                 'Select Language',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
               ),
             ),
             const Divider(),
@@ -568,11 +643,15 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               title: const Text('All Languages'),
               onTap: () => _updateFilter(_filterClass, null, _filterChapter),
             ),
-            ...['English', 'Bengali', 'Both'].map((l) => ListTile(
-              title: Text(l),
-              trailing: _filterLanguage == l ? const Icon(Icons.check, color: Color(0xFF0051D5)) : null,
-              onTap: () => _updateFilter(_filterClass, l, _filterChapter),
-            )),
+            ...['English', 'Bengali', 'Both'].map(
+              (l) => ListTile(
+                title: Text(l),
+                trailing: _filterLanguage == l
+                    ? const Icon(Icons.check, color: Color(0xFF0051D5))
+                    : null,
+                onTap: () => _updateFilter(_filterClass, l, _filterChapter),
+              ),
+            ),
           ],
         ),
       ),
@@ -640,25 +719,44 @@ class _QuestionCard extends StatelessWidget {
                   Checkbox(
                     value: isSelected,
                     activeColor: const Color(0xFF0051D5),
-                    onChanged: (_) {}, // Handled by GestureDetector at parent level
+                    onChanged:
+                        (_) {}, // Handled by GestureDetector at parent level
                   ),
                   const SizedBox(width: 8),
                 ],
                 _badge(
-                  question.classNo == 13 ? 'Joint Entrance' : 'Class ${question.classNo}',
-                  question.classNo == 13 ? const Color(0xFFE8F5E9) : const Color(0xFFE0F7FA),
-                  question.classNo == 13 ? const Color(0xFF2E7D32) : const Color(0xFF006064),
+                  question.classNo == 13
+                      ? 'Joint Entrance'
+                      : 'Class ${question.classNo}',
+                  question.classNo == 13
+                      ? const Color(0xFFE8F5E9)
+                      : const Color(0xFFE0F7FA),
+                  question.classNo == 13
+                      ? const Color(0xFF2E7D32)
+                      : const Color(0xFF006064),
                 ),
                 const SizedBox(width: 8),
-                _badge(question.language, const Color(0xFFF3E5F5), const Color(0xFF4A148C)),
+                _badge(
+                  question.language,
+                  const Color(0xFFF3E5F5),
+                  const Color(0xFF4A148C),
+                ),
                 const Spacer(),
                 if (!isSelectionMode) ...[
                   IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blue),
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      size: 20,
+                      color: Colors.blue,
+                    ),
                     onPressed: () => _editQuestion(context),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 20,
+                      color: Colors.red,
+                    ),
                     onPressed: () => _confirmDelete(context),
                   ),
                 ],
@@ -674,11 +772,16 @@ class _QuestionCard extends StatelessWidget {
               children: [
                 Text(
                   'Chapter: ${question.chapter}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 LaTeXWidget(text: question.questionText),
-                if (question.diagram != null && question.diagram!.isNotEmpty) ...[
+                if (question.diagram != null &&
+                    question.diagram!.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
@@ -689,18 +792,25 @@ class _QuestionCard extends StatelessWidget {
                       height: 120,
                       width: double.infinity,
                       fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
                     ),
                   ),
                 ],
                 const SizedBox(height: 16),
-                const Text('Options:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const Text(
+                  'Options:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
                 const SizedBox(height: 8),
                 ...List.generate(question.options.length, (i) {
-                  final isCorrect = question.options[i] == question.correctAnswer;
+                  final isCorrect =
+                      question.options[i] == question.correctAnswer;
                   return Container(
                     margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: isCorrect
                           ? const Color(0xFFE8F5E9)
@@ -729,13 +839,16 @@ class _QuestionCard extends StatelessWidget {
                         if (isCorrect)
                           const Padding(
                             padding: EdgeInsets.only(left: 6, top: 2),
-                            child: Icon(Icons.check_circle, color: Color(0xFF43A047), size: 16),
+                            child: Icon(
+                              Icons.check_circle,
+                              color: Color(0xFF43A047),
+                              size: 16,
+                            ),
                           ),
                       ],
                     ),
                   );
                 }),
-
               ],
             ),
           ),
@@ -747,8 +860,18 @@ class _QuestionCard extends StatelessWidget {
   Widget _badge(String label, Color bg, Color text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Text(label, style: TextStyle(color: text, fontSize: 10, fontWeight: FontWeight.bold)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: text,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
@@ -768,11 +891,14 @@ class _QuestionCard extends StatelessWidget {
         title: const Text('Delete Question?'),
         content: const Text('This action cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.pop(dialogContext); // close confirmation dialog
-              
+
               // show loading dialog
               BuildContext? loadingContext;
               showDialog(
@@ -784,8 +910,11 @@ class _QuestionCard extends StatelessWidget {
                 },
               );
 
-              final success = await Provider.of<QuestionProvider>(context, listen: false).deleteQuestion(question.id!);
-              
+              final success = await Provider.of<QuestionProvider>(
+                context,
+                listen: false,
+              ).deleteQuestion(question.id!);
+
               if (loadingContext != null && loadingContext!.mounted) {
                 Navigator.pop(loadingContext!); // close loading dialog
               }
@@ -793,7 +922,9 @@ class _QuestionCard extends StatelessWidget {
               if (context.mounted) {
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Question deleted successfully.')),
+                    const SnackBar(
+                      content: Text('Question deleted successfully.'),
+                    ),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -833,7 +964,9 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
   void initState() {
     super.initState();
     _questionCtrl = TextEditingController(text: widget.question.questionText);
-    _optCtrls = widget.question.options.map((o) => TextEditingController(text: o)).toList();
+    _optCtrls = widget.question.options
+        .map((o) => TextEditingController(text: o))
+        .toList();
     // Pad to 4 options if needed
     while (_optCtrls.length < 4) {
       _optCtrls.add(TextEditingController());
@@ -847,7 +980,7 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
   @override
   Widget build(BuildContext context) {
     final chapters = AppConstants.classChapters[_selectedClass] ?? [];
-    
+
     return Consumer<QuestionProvider>(
       builder: (context, provider, _) {
         return Scaffold(
@@ -870,7 +1003,13 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                     )
                   : TextButton(
                       onPressed: _save,
-                      child: const Text('SAVE', style: TextStyle(color: Color(0xFF0051D5), fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'SAVE',
+                        style: TextStyle(
+                          color: Color(0xFF0051D5),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
             ],
           ),
@@ -886,73 +1025,132 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                         enabled: !provider.isSaving,
                         controller: _questionCtrl,
                         maxLines: 5,
-                        decoration: const InputDecoration(labelText: 'Question Text', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                          labelText: 'Question Text',
+                          border: OutlineInputBorder(),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Row(
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<int>(
-                              value: _selectedClass,
-                              onChanged: provider.isSaving ? null : (v) => setState(() {
-                                _selectedClass = v!;
-                                _selectedChapter = AppConstants.classChapters[v]?.first;
-                              }),
+                              initialValue: _selectedClass,
+                              isExpanded: true,
+                              onChanged: provider.isSaving
+                                  ? null
+                                  : (v) => setState(() {
+                                      _selectedClass = v!;
+                                      _selectedChapter =
+                                          AppConstants.classChapters[v]?.first;
+                                    }),
                               items: (() {
                                 final list = [9, 10, 11, 12, 13];
                                 if (!list.contains(_selectedClass)) {
                                   list.add(_selectedClass);
                                   list.sort();
                                 }
-                                return list.map((c) => DropdownMenuItem(value: c, child: Text(c == 13 ? 'Joint Entrance' : 'Class $c'))).toList();
+                                return list
+                                    .map(
+                                      (c) => DropdownMenuItem(
+                                        value: c,
+                                        child: Text(
+                                          c == 13
+                                              ? 'Joint Entrance'
+                                              : 'Class $c',
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    )
+                                    .toList();
                               })(),
-                              decoration: const InputDecoration(labelText: 'Class'),
+                              decoration: const InputDecoration(
+                                labelText: 'Class',
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _selectedLanguage,
-                              onChanged: provider.isSaving ? null : (v) => setState(() => _selectedLanguage = v!),
+                              initialValue: _selectedLanguage,
+                              isExpanded: true,
+                              onChanged: provider.isSaving
+                                  ? null
+                                  : (v) =>
+                                        setState(() => _selectedLanguage = v!),
                               items: (() {
                                 final list = ['English', 'Bengali', 'Both'];
                                 if (!list.contains(_selectedLanguage)) {
                                   list.add(_selectedLanguage);
                                 }
-                                return list.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList();
+                                return list
+                                    .map(
+                                      (l) => DropdownMenuItem(
+                                        value: l,
+                                        child: Text(
+                                          l,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    )
+                                    .toList();
                               })(),
-                              decoration: const InputDecoration(labelText: 'Language'),
+                              decoration: const InputDecoration(
+                                labelText: 'Language',
+                              ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: _selectedChapter,
-                        onChanged: provider.isSaving ? null : (v) => setState(() => _selectedChapter = v),
+                        initialValue: _selectedChapter,
+                        isExpanded: true,
+                        onChanged: provider.isSaving
+                            ? null
+                            : (v) => setState(() => _selectedChapter = v),
                         items: (() {
                           final uniqueChapters = List<String>.from(chapters);
-                          if (_selectedChapter != null && !uniqueChapters.contains(_selectedChapter)) {
+                          if (_selectedChapter != null &&
+                              !uniqueChapters.contains(_selectedChapter)) {
                             uniqueChapters.insert(0, _selectedChapter!);
                           }
-                          return uniqueChapters.map((ch) => DropdownMenuItem(value: ch, child: Text(ch))).toList();
+                          return uniqueChapters
+                              .map(
+                                (ch) => DropdownMenuItem(
+                                  value: ch,
+                                  child: Text(
+                                    ch,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                              .toList();
                         })(),
                         decoration: const InputDecoration(labelText: 'Chapter'),
                       ),
                       const SizedBox(height: 24),
-                      ...List.generate(4, (i) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: TextFormField(
-                          enabled: !provider.isSaving,
-                          controller: _optCtrls[i],
-                          decoration: InputDecoration(labelText: 'Option ${String.fromCharCode(65 + i)}'),
+                      ...List.generate(
+                        4,
+                        (i) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: TextFormField(
+                            enabled: !provider.isSaving,
+                            controller: _optCtrls[i],
+                            decoration: InputDecoration(
+                              labelText:
+                                  'Option ${String.fromCharCode(65 + i)}',
+                            ),
+                          ),
                         ),
-                      )),
+                      ),
                       const SizedBox(height: 12),
                       TextFormField(
                         enabled: !provider.isSaving,
                         controller: _correctCtrl,
-                        decoration: const InputDecoration(labelText: 'Correct Answer (Exact Text)'),
+                        decoration: const InputDecoration(
+                          labelText: 'Correct Answer (Exact Text)',
+                        ),
                       ),
                       const SizedBox(height: 24),
                       _buildDiagramSection(provider),
@@ -987,9 +1185,18 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
                     )
-                  : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  : const Text(
+                      'Save Changes',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
             ),
           ),
         );
@@ -999,10 +1206,13 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
 
   Future<void> _cropOrTrimDiagram() async {
     final imageService = ImageService();
-    
+
     // Case 1: We already picked a new local file, crop it again
     if (_newDiagramFile != null) {
-      final cropped = await imageService.cropExistingImage(context, _newDiagramFile!);
+      final cropped = await imageService.cropExistingImage(
+        context,
+        _newDiagramFile!,
+      );
       if (cropped != null) {
         setState(() {
           _newDiagramFile = cropped;
@@ -1010,7 +1220,7 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
       }
       return;
     }
-    
+
     // Case 2: No new local file is picked, but there is an existing remote/relative diagram
     final diagramPath = widget.question.diagram;
     if (diagramPath != null && diagramPath.isNotEmpty) {
@@ -1018,17 +1228,29 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
         _isDownloadingDiagram = true;
       });
       try {
-        final baseUrl = Provider.of<QuestionProvider>(context, listen: false).baseUrl;
-        final fullUrl = diagramPath.startsWith('http') ? diagramPath : '$baseUrl$diagramPath';
-        
-        final response = await http.get(Uri.parse(fullUrl)).timeout(const Duration(seconds: 15));
+        final baseUrl = Provider.of<QuestionProvider>(
+          context,
+          listen: false,
+        ).baseUrl;
+        final fullUrl = diagramPath.startsWith('http')
+            ? diagramPath
+            : '$baseUrl$diagramPath';
+
+        final response = await http
+            .get(Uri.parse(fullUrl))
+            .timeout(const Duration(seconds: 15));
         if (response.statusCode == 200) {
           final tempDir = await getTemporaryDirectory();
-          final tempFile = File('${tempDir.path}/temp_crop_diagram_${DateTime.now().millisecondsSinceEpoch}.jpg');
+          final tempFile = File(
+            '${tempDir.path}/temp_crop_diagram_${DateTime.now().millisecondsSinceEpoch}.jpg',
+          );
           await tempFile.writeAsBytes(response.bodyBytes);
-          
+
           if (mounted) {
-            final cropped = await imageService.cropExistingImage(context, tempFile);
+            final cropped = await imageService.cropExistingImage(
+              context,
+              tempFile,
+            );
             if (cropped != null) {
               setState(() {
                 _newDiagramFile = cropped;
@@ -1053,7 +1275,9 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
 
   void _showError(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -1076,8 +1300,10 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
   }
 
   Widget _buildDiagramSection(QuestionProvider provider) {
-    final hasExistingDiagram = widget.question.diagram != null && widget.question.diagram!.isNotEmpty;
-    final showExisting = hasExistingDiagram && !_deleteDiagram && _newDiagramFile == null;
+    final hasExistingDiagram =
+        widget.question.diagram != null && widget.question.diagram!.isNotEmpty;
+    final showExisting =
+        hasExistingDiagram && !_deleteDiagram && _newDiagramFile == null;
     final showNew = _newDiagramFile != null;
 
     return Column(
@@ -1111,7 +1337,11 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                       height: 150,
                       color: Colors.grey.shade100,
                       child: const Center(
-                        child: Icon(Icons.broken_image_outlined, color: Colors.grey, size: 40),
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.grey,
+                          size: 40,
+                        ),
                       ),
                     ),
                   ),
@@ -1136,7 +1366,10 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                   child: const Center(
                     child: Text(
                       'Diagram marked for removal.',
-                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -1178,7 +1411,9 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: ElevatedButton.icon(
-                          onPressed: _isDownloadingDiagram ? null : _cropOrTrimDiagram,
+                          onPressed: _isDownloadingDiagram
+                              ? null
+                              : _cropOrTrimDiagram,
                           icon: const Icon(Icons.crop, size: 16),
                           label: const Text('Trim/Crop'),
                           style: ElevatedButton.styleFrom(
@@ -1194,12 +1429,18 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: OutlinedButton.icon(
-                        onPressed: _isDownloadingDiagram ? null : () => _showPickerOptions(context),
+                        onPressed: _isDownloadingDiagram
+                            ? null
+                            : () => _showPickerOptions(context),
                         icon: Icon(
-                          (showExisting || showNew) ? Icons.sync : Icons.add_a_photo,
+                          (showExisting || showNew)
+                              ? Icons.sync
+                              : Icons.add_a_photo,
                           size: 16,
                         ),
-                        label: Text((showExisting || showNew) ? 'Replace' : 'Add Image'),
+                        label: Text(
+                          (showExisting || showNew) ? 'Replace' : 'Add Image',
+                        ),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                         ),
@@ -1211,9 +1452,18 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: OutlinedButton.icon(
-                          onPressed: _isDownloadingDiagram ? null : _removeDiagram,
-                          icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                          label: const Text('Remove', style: TextStyle(color: Colors.red)),
+                          onPressed: _isDownloadingDiagram
+                              ? null
+                              : _removeDiagram,
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            size: 16,
+                            color: Colors.red,
+                          ),
+                          label: const Text(
+                            'Remove',
+                            style: TextStyle(color: Colors.red),
+                          ),
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Colors.red),
                             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1295,7 +1545,9 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
     );
     if (success && mounted) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Question updated!')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Question updated!')));
     }
   }
 }
@@ -1308,7 +1560,8 @@ class _PulsingShimmer extends StatefulWidget {
   State<_PulsingShimmer> createState() => _PulsingShimmerState();
 }
 
-class _PulsingShimmerState extends State<_PulsingShimmer> with SingleTickerProviderStateMixin {
+class _PulsingShimmerState extends State<_PulsingShimmer>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -1319,9 +1572,10 @@ class _PulsingShimmerState extends State<_PulsingShimmer> with SingleTickerProvi
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
-    _animation = Tween<double>(begin: 0.35, end: 0.85).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _animation = Tween<double>(
+      begin: 0.35,
+      end: 0.85,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -1335,10 +1589,7 @@ class _PulsingShimmerState extends State<_PulsingShimmer> with SingleTickerProvi
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        return Opacity(
-          opacity: _animation.value,
-          child: child,
-        );
+        return Opacity(opacity: _animation.value, child: child);
       },
       child: widget.child,
     );
@@ -1405,20 +1656,34 @@ class _SkeletonQuestionCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 _skeletonBox(width: 200, height: 16),
                 const SizedBox(height: 24),
-                const Text('Options:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
-                const SizedBox(height: 12),
-                ...List.generate(4, (i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      _skeletonBox(width: 24, height: 24, borderRadius: 12),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _skeletonBox(width: double.infinity, height: 20, borderRadius: 8),
-                      ),
-                    ],
+                const Text(
+                  'Options:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.grey,
                   ),
-                )),
+                ),
+                const SizedBox(height: 12),
+                ...List.generate(
+                  4,
+                  (i) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        _skeletonBox(width: 24, height: 24, borderRadius: 12),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _skeletonBox(
+                            width: double.infinity,
+                            height: 20,
+                            borderRadius: 8,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1427,7 +1692,11 @@ class _SkeletonQuestionCard extends StatelessWidget {
     );
   }
 
-  Widget _skeletonBox({required double width, required double height, double borderRadius = 4}) {
+  Widget _skeletonBox({
+    required double width,
+    required double height,
+    double borderRadius = 4,
+  }) {
     return Container(
       width: width,
       height: height,
@@ -1510,13 +1779,23 @@ class _ChapterPickerModalState extends State<_ChapterPickerModal> {
               children: [
                 const Text(
                   'Select Chapter',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
                 ),
                 TextButton(
                   onPressed: () {
                     widget.onChapterSelected(null);
                   },
-                  child: const Text('Clear Filter', style: TextStyle(color: Color(0xFFBA1A1A), fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Clear Filter',
+                    style: TextStyle(
+                      color: Color(0xFFBA1A1A),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1533,7 +1812,10 @@ class _ChapterPickerModalState extends State<_ChapterPickerModal> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 0,
+                  horizontal: 16,
+                ),
               ),
               onChanged: (val) {
                 setState(() {
@@ -1545,28 +1827,50 @@ class _ChapterPickerModalState extends State<_ChapterPickerModal> {
           Expanded(
             child: filteredChapters.isEmpty
                 ? const Center(
-                    child: Text('No chapters match your search', style: TextStyle(color: Colors.grey)),
+                    child: Text(
+                      'No chapters match your search',
+                      style: TextStyle(color: Colors.grey),
+                    ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     itemCount: filteredChapters.length,
                     itemBuilder: (context, index) {
                       final ch = filteredChapters[index];
-                      final isSelected = widget.initialChapter == ch || 
-                          (ch.endsWith(' (Joint)') && widget.initialChapter == ch.replaceAll(' (Joint)', ''));
-                      
+                      final isSelected =
+                          widget.initialChapter == ch ||
+                          (ch.endsWith(' (Joint)') &&
+                              widget.initialChapter ==
+                                  ch.replaceAll(' (Joint)', ''));
+
                       return ListTile(
                         title: Text(
                           ch,
                           style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? const Color(0xFF0051D5) : const Color(0xFF0F172A),
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isSelected
+                                ? const Color(0xFF0051D5)
+                                : const Color(0xFF0F172A),
                           ),
                         ),
-                        trailing: isSelected ? const Icon(Icons.check_circle, color: Color(0xFF0051D5)) : null,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        trailing: isSelected
+                            ? const Icon(
+                                Icons.check_circle,
+                                color: Color(0xFF0051D5),
+                              )
+                            : null,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         onTap: () {
-                          final cleanCh = ch.endsWith(' (Joint)') ? ch.replaceAll(' (Joint)', '') : ch;
+                          final cleanCh = ch.endsWith(' (Joint)')
+                              ? ch.replaceAll(' (Joint)', '')
+                              : ch;
                           widget.onChapterSelected(cleanCh);
                         },
                       );
