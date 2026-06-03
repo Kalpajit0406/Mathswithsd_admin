@@ -1218,8 +1218,10 @@ class ApiService {
 
   // ─── PDF PROCESSING ──────────────────────────────────────────────────────────
 
-  /// Upload PDF file and extract questions
-  /// Sends multipart request with file and options
+  /// Upload PDF file and extract questions.
+  ///
+  /// The backend now returns 200 with status='completed' synchronously.
+  /// The old 202 async path is kept as a fallback for backwards compatibility.
   Future<Map<String, dynamic>?> uploadPdfAndExtractQuestions(
     File pdfFile, {
     Function(double)? onProgress,
@@ -1253,19 +1255,46 @@ class ApiService {
         ),
       );
 
+      // Allow up to 10 minutes for large multi-page PDFs to process
       final streamedResponse = await client
           .send(request)
-          .timeout(const Duration(seconds: 120));
+          .timeout(const Duration(minutes: 10));
       final response = await http.Response.fromStream(streamedResponse);
 
-      final initialData = _processResponse(response);
+      final responseData = _processResponse(response);
 
-      if (response.statusCode == 202 && initialData['success'] == true) {
-        final sessionId = initialData['data']['sessionId'] as String;
-        debugPrint('[ApiService] uploadPdfAndExtractQuestions: enqueued job. Polling session $sessionId...');
+      // ── New synchronous path: backend returns 200 with status='completed' ──
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        final data = responseData['data'] as Map<String, dynamic>?;
+        if (data != null && data['status'] == 'completed') {
+          debugPrint('[ApiService] PDF extracted synchronously: ${data['total']} questions');
+          return {
+            'success': true,
+            'data': {
+              'pdfId': data['sessionId'] ?? data['pdfId'],
+              'sessionId': data['sessionId'] ?? data['pdfId'],
+              'queueSessionId': data['sessionId'] ?? data['pdfId'],
+              'currentIndex': data['currentIndex'] ?? 0,
+              'total': data['total'] ?? 0,
+              'items': data['items'] ?? [],
+              'questions': data['items'] ?? [],
+              'totalQuestions': data['total'] ?? 0,
+            }
+          };
+        }
+        return responseData;
+      }
+
+      // ── Legacy async path: backend returns 202 → poll until done ──────────
+      if (response.statusCode == 202 && responseData['success'] == true) {
+        final sessionId = responseData['data']['sessionId'] as String?;
+        if (sessionId == null) {
+          throw ApiException('No session ID in async PDF response.', 500);
+        }
+        debugPrint('[ApiService] PDF async mode: polling session $sessionId...');
 
         int pollAttempts = 0;
-        const maxPollAttempts = 90; // 180 seconds total poll time for large PDFs
+        const maxPollAttempts = 90; // 3 minutes total
         while (pollAttempts < maxPollAttempts) {
           await Future.delayed(const Duration(seconds: 2));
           pollAttempts++;
@@ -1274,7 +1303,7 @@ class ApiService {
             if (sessionData['success'] == true && sessionData['data'] != null) {
               final status = sessionData['data']['status'] as String?;
               if (status == 'completed') {
-                debugPrint('[ApiService] uploadPdfAndExtractQuestions: complete!');
+                debugPrint('[ApiService] PDF async complete!');
                 final dataObj = sessionData['data'] as Map<String, dynamic>;
                 return {
                   'success': true,
@@ -1285,27 +1314,32 @@ class ApiService {
                     'currentIndex': dataObj['currentIndex'],
                     'total': dataObj['total'],
                     'items': dataObj['items'],
-                    'questions': dataObj['items']
+                    'questions': dataObj['items'],
+                    'totalQuestions': dataObj['total'],
                   }
                 };
               } else if (status == 'failed') {
                 throw ApiException('PDF background job processing failed.', 500);
               }
-              debugPrint('[ApiService] uploadPdfAndExtractQuestions: progress = ${sessionData['data']['progress']}%');
+              debugPrint('[ApiService] PDF progress = ${sessionData['data']['progress']}%');
             }
           } catch (e) {
+            if (e is ApiException) rethrow;
             debugPrint('[ApiService] Polling PDF session error (retrying): $e');
           }
         }
         throw ApiException('PDF processing timed out on the backend.', 504);
       }
-      return initialData;
+
+      return responseData;
     } catch (e) {
+      if (e is ApiException) rethrow;
       throw ApiException('PDF upload failed: $e', 500);
     } finally {
       client.close();
     }
   }
+
 
   /// Submit PDF by URL for processing
   /// Initiates async processing on backend
