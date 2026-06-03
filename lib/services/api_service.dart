@@ -848,7 +848,36 @@ class ApiService {
           .send(request)
           .timeout(const Duration(seconds: 60));
       final response = await http.Response.fromStream(streamedResponse);
-      return _processResponse(response);
+      final initialData = _processResponse(response);
+
+      if (response.statusCode == 202 && initialData['success'] == true) {
+        final sessionId = initialData['data']['sessionId'] as String;
+        debugPrint('[ApiService] startOcrSession: enqueued job. Polling session $sessionId...');
+        
+        int pollAttempts = 0;
+        const maxPollAttempts = 40; // 60 seconds total poll time
+        while (pollAttempts < maxPollAttempts) {
+          await Future.delayed(const Duration(milliseconds: 1500));
+          pollAttempts++;
+          try {
+            final sessionData = await getOcrSession(sessionId);
+            if (sessionData['success'] == true && sessionData['data'] != null) {
+              final status = sessionData['data']['status'] as String?;
+              if (status == 'completed') {
+                debugPrint('[ApiService] startOcrSession: complete!');
+                return sessionData;
+              } else if (status == 'failed') {
+                throw ApiException('OCR background job processing failed.', 500);
+              }
+              debugPrint('[ApiService] startOcrSession: progress = ${sessionData['data']['progress']}%');
+            }
+          } catch (e) {
+            debugPrint('[ApiService] Polling session error (retrying): $e');
+          }
+        }
+        throw ApiException('OCR processing timed out on the backend.', 504);
+      }
+      return initialData;
     } on TimeoutException {
       throw ApiException(
         'OCR request timed out. The image may be too large or the server is slow.',
@@ -1229,8 +1258,48 @@ class ApiService {
           .timeout(const Duration(seconds: 120));
       final response = await http.Response.fromStream(streamedResponse);
 
-      final data = _processResponse(response);
-      return data;
+      final initialData = _processResponse(response);
+
+      if (response.statusCode == 202 && initialData['success'] == true) {
+        final sessionId = initialData['data']['sessionId'] as String;
+        debugPrint('[ApiService] uploadPdfAndExtractQuestions: enqueued job. Polling session $sessionId...');
+
+        int pollAttempts = 0;
+        const maxPollAttempts = 90; // 180 seconds total poll time for large PDFs
+        while (pollAttempts < maxPollAttempts) {
+          await Future.delayed(const Duration(seconds: 2));
+          pollAttempts++;
+          try {
+            final sessionData = await getOcrSession(sessionId);
+            if (sessionData['success'] == true && sessionData['data'] != null) {
+              final status = sessionData['data']['status'] as String?;
+              if (status == 'completed') {
+                debugPrint('[ApiService] uploadPdfAndExtractQuestions: complete!');
+                final dataObj = sessionData['data'] as Map<String, dynamic>;
+                return {
+                  'success': true,
+                  'data': {
+                    'pdfId': dataObj['sessionId'],
+                    'sessionId': dataObj['sessionId'],
+                    'queueSessionId': dataObj['sessionId'],
+                    'currentIndex': dataObj['currentIndex'],
+                    'total': dataObj['total'],
+                    'items': dataObj['items'],
+                    'questions': dataObj['items']
+                  }
+                };
+              } else if (status == 'failed') {
+                throw ApiException('PDF background job processing failed.', 500);
+              }
+              debugPrint('[ApiService] uploadPdfAndExtractQuestions: progress = ${sessionData['data']['progress']}%');
+            }
+          } catch (e) {
+            debugPrint('[ApiService] Polling PDF session error (retrying): $e');
+          }
+        }
+        throw ApiException('PDF processing timed out on the backend.', 504);
+      }
+      return initialData;
     } catch (e) {
       throw ApiException('PDF upload failed: $e', 500);
     } finally {

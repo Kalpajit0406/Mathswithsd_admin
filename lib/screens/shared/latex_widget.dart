@@ -1,207 +1,181 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 
-/// LaTeX math rendering widget using WebView with MathJax and dynamic height calculation
+enum _MathSegmentType { text, inlineMath, blockMath }
+
+class _MathSegment {
+  final _MathSegmentType type;
+  final String content;
+
+  _MathSegment(this.type, this.content);
+}
+
+/// A high-performance parsed segment cache to prevent regex parsing overhead on re-renders
+final Map<String, List<_MathSegment>> _segmentCache = {};
+
+List<_MathSegment> _parseSegments(String input) {
+  if (_segmentCache.containsKey(input)) {
+    return _segmentCache[input]!;
+  }
+
+  final segments = <_MathSegment>[];
+  // Pattern to extract block math ($$ or \[...\]) and inline math ($ or \(...\))
+  final pattern = RegExp(
+    r'(?:\$\$(.*?)\$\$)|(?:\$(.*?)\$)|(?:\\\[(.*?)\\\])|(?:\\\((.*?)\\\))',
+    dotAll: true,
+  );
+
+  int lastIndex = 0;
+  for (final match in pattern.allMatches(input)) {
+    if (match.start > lastIndex) {
+      segments.add(_MathSegment(
+        _MathSegmentType.text,
+        input.substring(lastIndex, match.start),
+      ));
+    }
+
+    if (match.group(1) != null) {
+      segments.add(_MathSegment(_MathSegmentType.blockMath, match.group(1)!));
+    } else if (match.group(2) != null) {
+      segments.add(_MathSegment(_MathSegmentType.inlineMath, match.group(2)!));
+    } else if (match.group(3) != null) {
+      segments.add(_MathSegment(_MathSegmentType.blockMath, match.group(3)!));
+    } else if (match.group(4) != null) {
+      segments.add(_MathSegment(_MathSegmentType.inlineMath, match.group(4)!));
+    }
+
+    lastIndex = match.end;
+  }
+
+  if (lastIndex < input.length) {
+    segments.add(_MathSegment(
+      _MathSegmentType.text,
+      input.substring(lastIndex),
+    ));
+  }
+
+  _segmentCache[input] = segments;
+  return segments;
+}
+
+/// LaTeX math rendering widget using high-performance native canvas calls via flutter_math_fork
 class LaTeXWidget extends StatelessWidget {
   final String text;
   final double? height;
   final TextAlign? textAlign;
+  final Color? color;
 
   const LaTeXWidget({
     super.key,
     required this.text,
     this.height,
     this.textAlign,
+    this.color,
   });
-
-  bool get _hasMath {
-    return text.contains(r'$') ||
-        text.contains(r'\(') ||
-        text.contains(r'\[') ||
-        text.contains(r'$$') ||
-        text.contains('\\');
-  }
-
-  static String formatMathSpacing(String val) {
-    String result = val;
-
-    // Fix raw \sqrt missing arguments to prevent parsing crash
-    result = result.replaceAll(RegExp(r'\\sqrt\s*(?![\{\[\w\d\\])'), r'\sqrt{}');
-
-    // 1. Double dollar block math
-    result = result.replaceAllMapped(RegExp(r'(\w)(\$\$)'), (m) => '${m[1]} ${m[2]}');
-    result = result.replaceAllMapped(RegExp(r'(\$\$)(\w)'), (m) => '${m[1]} ${m[2]}');
-
-    // 2. Single dollar inline math (ignoring escaped \$)
-    result = result.replaceAllMapped(RegExp(r'(\w)(?<!\\)\$(?!\$)'), (m) => '${m[1]} \$');
-    result = result.replaceAllMapped(RegExp(r'(?<!\\)\$(?!\$)(\w)'), (m) => '\$ ${m[1]}');
-
-    // 3. LaTeX inline/block brackets
-    result = result.replaceAllMapped(RegExp(r'(\w)(\\\(|\\\[)'), (m) => '${m[1]} ${m[2]}');
-    result = result.replaceAllMapped(RegExp(r'(\\\)|\\\])(\w)'), (m) => '${m[1]} ${m[2]}');
-
-    return result;
-  }
 
   @override
   Widget build(BuildContext context) {
-    final formattedText = formatMathSpacing(text);
-    if (!_hasMath) {
-      return Text(
-        formattedText,
-        textAlign: textAlign,
-        style: const TextStyle(
-          fontSize: 15,
-          color: Color(0xFF1A1A2E),
-          height: 1.4,
-        ),
+    final segments = _parseSegments(text);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final defaultColor = color ?? (isDark ? const Color(0xFFDAE2FD) : const Color(0xFF1A1A2E));
+
+    final children = <Widget>[];
+    final inlineSpans = <InlineSpan>[];
+
+    void flushInlineSpans() {
+      if (inlineSpans.isNotEmpty) {
+        children.add(
+          RichText(
+            textAlign: textAlign ?? TextAlign.start,
+            text: TextSpan(
+              style: TextStyle(
+                fontSize: 15,
+                color: defaultColor,
+                height: 1.4,
+              ),
+              children: List.from(inlineSpans),
+            ),
+          ),
+        );
+        inlineSpans.clear();
+      }
+    }
+
+    for (final seg in segments) {
+      if (seg.type == _MathSegmentType.text) {
+        inlineSpans.add(TextSpan(text: seg.content));
+      } else if (seg.type == _MathSegmentType.inlineMath) {
+        inlineSpans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2.0),
+              child: Math.tex(
+                seg.content.trim(),
+                mathStyle: MathStyle.text,
+                textStyle: TextStyle(
+                  fontSize: 15,
+                  color: defaultColor,
+                ),
+                onErrorFallback: (err) {
+                  return Text(
+                    '\$${seg.content}\$',
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      } else if (seg.type == _MathSegmentType.blockMath) {
+        flushInlineSpans();
+        children.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Center(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Math.tex(
+                  seg.content.trim(),
+                  mathStyle: MathStyle.display,
+                  textStyle: TextStyle(
+                    fontSize: 16,
+                    color: defaultColor,
+                  ),
+                  onErrorFallback: (err) {
+                    return Text(
+                      '\$\$${seg.content}\$\$',
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    flushInlineSpans();
+
+    final mainColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: children,
+    );
+
+    if (height != null) {
+      return SizedBox(
+        height: height,
+        child: SingleChildScrollView(child: mainColumn),
       );
     }
-    return _WebViewLaTeXRenderer(
-      text: formattedText,
-      height: height,
-      textAlign: textAlign,
-    );
+
+    return mainColumn;
   }
 }
 
-class _WebViewLaTeXRenderer extends StatefulWidget {
-  final String text;
-  final double? height;
-  final TextAlign? textAlign;
-
-  const _WebViewLaTeXRenderer({
-    required this.text,
-    this.height,
-    this.textAlign,
-  });
-
-  @override
-  State<_WebViewLaTeXRenderer> createState() => _WebViewLaTeXRendererState();
-}
-
-class _WebViewLaTeXRendererState extends State<_WebViewLaTeXRenderer> {
-  late WebViewController _controller;
-  bool _isLoaded = false;
-  double _contentHeight = 45.0; // Start with compact default height
-
-  static const String _baseHtml = '''
-<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <script>
-    window.MathJax = {
-      tex: {
-        inlineMath: [['\$', '\$'], ['\\\\(', '\\\\)']],
-        displayMath: [['\$\$', '\$\$'], ['\\\\[', '\\\\]']],
-        processEscapes: true
-      },
-      options: {
-        ignoreHtmlClass: 'tex2jax_ignore',
-        processHtmlClass: 'tex2jax_process'
-      },
-      startup: {
-        pageReady: () => {
-          return MathJax.startup.defaultPageReady().then(() => {
-            sendHeight();
-          });
-        }
-      }
-    };
-  </script>
-  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, 'Segoe UI', sans-serif;
-      font-size: 15px;
-      color: #1A1A2E;
-      padding: 4px;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-    #content { visibility: hidden; line-height: 1.6; }
-    .MathJax { font-size: 1.05em !important; }
-  </style>
-  <script>
-    function sendHeight() {
-      if (window.HeightChannel) {
-        var height = document.body.scrollHeight || document.documentElement.scrollHeight;
-        window.HeightChannel.postMessage(height.toString());
-      }
-    }
-    function renderContent(text) {
-      var el = document.getElementById('content');
-      el.innerHTML = text;
-      el.style.visibility = 'visible';
-      if (window.MathJax && window.MathJax.typesetPromise) {
-        MathJax.typesetPromise([el]).then(() => {
-          sendHeight();
-        });
-      } else {
-        setTimeout(function(){ renderContent(text); }, 80);
-      }
-    }
-  </script>
-</head>
-<body>
-  <div id="content" class="tex2jax_process"></div>
-</body>
-</html>
-''';
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.transparent)
-      ..addJavaScriptChannel(
-        'HeightChannel',
-        onMessageReceived: (JavaScriptMessage message) {
-          final height = double.tryParse(message.message);
-          if (height != null && mounted) {
-            setState(() {
-              _contentHeight = height + 12; // Add a small buffer
-            });
-          }
-        },
-      )
-      ..loadHtmlString(_baseHtml)
-      ..setNavigationDelegate(NavigationDelegate(
-        onPageFinished: (_) {
-          if (!mounted) return;
-          _updateContent();
-          setState(() => _isLoaded = true);
-        },
-      ));
-  }
-
-  @override
-  void didUpdateWidget(covariant _WebViewLaTeXRenderer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text && _isLoaded) {
-      _updateContent();
-    }
-  }
-
-  void _updateContent() {
-    final encoded = jsonEncode(widget.text.replaceAll('\r', ''));
-    _controller.runJavaScript('renderContent($encoded);');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: widget.height ?? _contentHeight,
-      child: WebViewWidget(controller: _controller),
-    );
-  }
-}
-
-/// Inline math text — use for option rendering in exams
+/// Inline math text — optimized wrapper for list view rendering and student option selections
 class InlineMathText extends StatelessWidget {
   final String text;
   final double fontSize;
@@ -214,16 +188,29 @@ class InlineMathText extends StatelessWidget {
     this.color,
   });
 
-  bool get _hasMath => text.contains(r'$') || text.contains(r'\(') || text.contains(r'\[') || text.contains('\\');
+  bool get _hasMath =>
+      text.contains(r'$') ||
+      text.contains(r'\(') ||
+      text.contains(r'\[') ||
+      text.contains('\\');
 
   @override
   Widget build(BuildContext context) {
+    final resolvedColor = color ??
+        (Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFFDAE2FD)
+            : const Color(0xFF1A1A2E));
+
     if (_hasMath) {
-      return LaTeXWidget(text: text);
+      return LaTeXWidget(
+        text: text,
+        color: resolvedColor,
+        textAlign: TextAlign.start,
+      );
     }
     return Text(
       text,
-      style: TextStyle(fontSize: fontSize, color: color ?? const Color(0xFF1A1A2E)),
+      style: TextStyle(fontSize: fontSize, color: resolvedColor),
     );
   }
 }
