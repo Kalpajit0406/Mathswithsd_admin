@@ -785,14 +785,29 @@ class _QuestionCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      question.diagram!.startsWith('http')
-                          ? question.diagram!
-                          : '${Provider.of<QuestionProvider>(context, listen: false).baseUrl}${question.diagram}',
-                      height: 120,
-                      width: double.infinity,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                    child: Builder(
+                      builder: (context) {
+                        final url = Provider.of<QuestionProvider>(context, listen: false)
+                            .getDiagramUrl(question.diagram);
+                        if (url == null) return const SizedBox.shrink();
+                        return Image.network(
+                          url,
+                          height: 120,
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            height: 120,
+                            color: Colors.grey.shade100,
+                            child: const Center(
+                              child: Icon(
+                                Icons.broken_image_outlined,
+                                color: Colors.grey,
+                                size: 32,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
                     ),
                   ),
                 ],
@@ -1326,24 +1341,28 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
               if (showExisting) ...[
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    widget.question.diagram!.startsWith('http')
-                        ? widget.question.diagram!
-                        : '${provider.baseUrl}${widget.question.diagram}',
-                    height: 150,
-                    width: double.infinity,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      height: 150,
-                      color: Colors.grey.shade100,
-                      child: const Center(
-                        child: Icon(
-                          Icons.broken_image_outlined,
-                          color: Colors.grey,
-                          size: 40,
+                  child: Builder(
+                    builder: (context) {
+                      final url = provider.getDiagramUrl(widget.question.diagram);
+                      if (url == null) return const SizedBox.shrink();
+                      return Image.network(
+                        url,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          height: 150,
+                          color: Colors.grey.shade100,
+                          child: const Center(
+                            child: Icon(
+                              Icons.broken_image_outlined,
+                              color: Colors.grey,
+                              size: 40,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 12),
