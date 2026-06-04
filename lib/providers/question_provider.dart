@@ -12,7 +12,9 @@ enum QuestionLoadState { idle, loading, loaded, error }
 class QuestionProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
   String get baseUrl => _apiService.baseUrl;
+  Future<String> getBaseUrlAsync() => _apiService.getBaseUrlAsync();
   String? getDiagramUrl(String? diagramPath) => _apiService.getDiagramUrl(diagramPath);
+  Future<String?> getDiagramUrlAsync(String? diagramPath) => _apiService.getDiagramUrlAsync(diagramPath);
   static const String _queuePrefsKey = 'ocr_question_queue_state_v1';
   static const int _maxQueueSize = 100;
 

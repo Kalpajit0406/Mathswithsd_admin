@@ -785,13 +785,15 @@ class _QuestionCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Builder(
-                      builder: (context) {
-                        final url = Provider.of<QuestionProvider>(context, listen: false)
-                            .getDiagramUrl(question.diagram);
-                        if (url == null) return const SizedBox.shrink();
+                    child: FutureBuilder<String?>(
+                      future: Provider.of<QuestionProvider>(context, listen: false)
+                          .getDiagramUrlAsync(question.diagram),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData || snapshot.data == null) {
+                          return const SizedBox(height: 40, child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+                        }
                         return Image.network(
-                          url,
+                          snapshot.data!,
                           height: 120,
                           width: double.infinity,
                           fit: BoxFit.contain,
@@ -1243,13 +1245,11 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
         _isDownloadingDiagram = true;
       });
       try {
-        final baseUrl = Provider.of<QuestionProvider>(
-          context,
-          listen: false,
-        ).baseUrl;
+        final provider = Provider.of<QuestionProvider>(context, listen: false);
+        final resolvedBase = await provider.getBaseUrlAsync();
         final fullUrl = diagramPath.startsWith('http')
             ? diagramPath
-            : '$baseUrl$diagramPath';
+            : '$resolvedBase$diagramPath';
 
         final response = await http
             .get(Uri.parse(fullUrl))
@@ -1341,12 +1341,14 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
               if (showExisting) ...[
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Builder(
-                    builder: (context) {
-                      final url = provider.getDiagramUrl(widget.question.diagram);
-                      if (url == null) return const SizedBox.shrink();
+                  child: FutureBuilder<String?>(
+                    future: provider.getDiagramUrlAsync(widget.question.diagram),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData || snapshot.data == null) {
+                        return const SizedBox(height: 40, child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+                      }
                       return Image.network(
-                        url,
+                        snapshot.data!,
                         height: 150,
                         width: double.infinity,
                         fit: BoxFit.contain,

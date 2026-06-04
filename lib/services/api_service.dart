@@ -1485,6 +1485,20 @@ class ApiService {
     final cleanPath = diagramPath.startsWith('/') ? diagramPath : '/$diagramPath';
     return '$cleanBase$cleanPath';
   }
+
+  /// Async version of getDiagramUrl — always uses the fully-resolved server URL.
+  /// Use this instead of getDiagramUrl() when the resolved URL might not be set yet.
+  Future<String?> getDiagramUrlAsync(String? diagramPath) async {
+    if (diagramPath == null || diagramPath.isEmpty) return null;
+    if (diagramPath.startsWith('http')) return diagramPath;
+    final resolvedBase = await _getBaseUrl();
+    final cleanBase = resolvedBase.endsWith('/') ? resolvedBase.substring(0, resolvedBase.length - 1) : resolvedBase;
+    final cleanPath = diagramPath.startsWith('/') ? diagramPath : '/$diagramPath';
+    return '$cleanBase$cleanPath';
+  }
+
+  /// Async version of baseUrl — always returns the fully-resolved server URL.
+  Future<String> getBaseUrlAsync() => _getBaseUrl();
 }
 
 class MultipartRequestWithProgress extends http.MultipartRequest {
