@@ -1338,14 +1338,14 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
               if (showExisting) ...[
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: FutureBuilder<String?>(
-                    future: provider.getDiagramUrlAsync(widget.question.diagram),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData || snapshot.data == null) {
+                  child: Builder(
+                    builder: (context) {
+                      final diagramUrl = provider.getDiagramUrl(widget.question.diagram);
+                      if (diagramUrl == null) {
                         return const SizedBox(height: 40, child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
                       }
                       return Image.network(
-                        snapshot.data!,
+                        diagramUrl,
                         height: 150,
                         width: double.infinity,
                         fit: BoxFit.contain,
