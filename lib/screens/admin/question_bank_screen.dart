@@ -785,15 +785,15 @@ class _QuestionCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: FutureBuilder<String?>(
-                      future: Provider.of<QuestionProvider>(context, listen: false)
-                          .getDiagramUrlAsync(question.diagram),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData || snapshot.data == null) {
+                    child: Builder(
+                      builder: (context) {
+                        final provider = Provider.of<QuestionProvider>(context, listen: false);
+                        final diagramUrl = provider.getDiagramUrl(question.diagram);
+                        if (diagramUrl == null) {
                           return const SizedBox(height: 40, child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
                         }
                         return Image.network(
-                          snapshot.data!,
+                          diagramUrl,
                           height: 120,
                           width: double.infinity,
                           fit: BoxFit.contain,
@@ -809,7 +809,7 @@ class _QuestionCard extends StatelessWidget {
                             ),
                           ),
                         );
-                      }
+                      },
                     ),
                   ),
                 ],
@@ -1246,10 +1246,7 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
       });
       try {
         final provider = Provider.of<QuestionProvider>(context, listen: false);
-        final resolvedBase = await provider.getBaseUrlAsync();
-        final fullUrl = diagramPath.startsWith('http')
-            ? diagramPath
-            : '$resolvedBase$diagramPath';
+        final fullUrl = provider.getDiagramUrl(diagramPath)!;
 
         final response = await http
             .get(Uri.parse(fullUrl))
