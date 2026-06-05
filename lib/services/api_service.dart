@@ -855,7 +855,7 @@ class ApiService {
         debugPrint('[ApiService] startOcrSession: enqueued job. Polling session $sessionId...');
         
         int pollAttempts = 0;
-        const maxPollAttempts = 40; // 60 seconds total poll time
+        const maxPollAttempts = 80; // 2 minutes total poll time (80 × 1.5s)
         while (pollAttempts < maxPollAttempts) {
           await Future.delayed(const Duration(milliseconds: 1500));
           pollAttempts++;
@@ -864,18 +864,19 @@ class ApiService {
             if (sessionData['success'] == true && sessionData['data'] != null) {
               final status = sessionData['data']['status'] as String?;
               if (status == 'completed') {
-                debugPrint('[ApiService] startOcrSession: complete!');
+                debugPrint('[ApiService] startOcrSession: complete after ${pollAttempts * 1.5}s!');
                 return sessionData;
               } else if (status == 'failed') {
                 throw ApiException('OCR background job processing failed.', 500);
               }
-              debugPrint('[ApiService] startOcrSession: progress = ${sessionData['data']['progress']}%');
+              debugPrint('[ApiService] startOcrSession: status=$status progress=${sessionData['data']['progress']}% (attempt $pollAttempts/$maxPollAttempts)');
             }
           } catch (e) {
+            if (e is ApiException) rethrow;
             debugPrint('[ApiService] Polling session error (retrying): $e');
           }
         }
-        throw ApiException('OCR processing timed out on the backend.', 504);
+        throw ApiException('OCR processing timed out. The image may be complex — please try again.', 504);
       }
       return initialData;
     } on TimeoutException {
