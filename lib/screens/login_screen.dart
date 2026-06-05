@@ -19,7 +19,9 @@ class _LoginScreenState extends State<LoginScreen> {
     // Hardcoded teacher/admin credentials
     final success = await authProvider.login('6289855545', 'admin123');
 
-    if (!success && mounted) {
+    if (success && mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+    } else if (!success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Login failed'),
