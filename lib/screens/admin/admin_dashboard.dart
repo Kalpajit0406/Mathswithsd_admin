@@ -4,8 +4,12 @@ import 'dart:io';
 import 'dart:ui';
 import 'dart:math' as math;
 
+import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/admin_provider.dart';
+import '../../providers/planner_provider.dart';
 import '../../services/image_service.dart';
+import 'test_planner_screen.dart';
 import 'manage_students_screen.dart';
 import 'create_test_screen.dart';
 import 'your_tests_screen.dart';
@@ -45,12 +49,79 @@ class _AdminDashboardState extends State<AdminDashboard>
     )..repeat(reverse: true);
     // Check for lost data if the app was killed during camera session
     _checkLostData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AdminProvider>(context, listen: false).loadStudents();
+    });
   }
 
   @override
   void dispose() {
     _bgAnimationController.dispose();
     super.dispose();
+  }
+
+  void _showUpcomingNotifications(BuildContext context, PlannerProvider planner) {
+    final upcoming = planner.upcomingExams;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.notifications_active_rounded, color: Color(0xFF0051D5)),
+            SizedBox(width: 10),
+            Text(
+              'Upcoming Exams Info',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: upcoming.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24.0),
+                  child: Text(
+                    'No upcoming planned exams.',
+                    style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                  ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: upcoming.length,
+                  itemBuilder: (context, index) {
+                    final exam = upcoming[index];
+                    final dateStr = DateFormat('MMM d, hh:mm a').format(exam.dateTime);
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFF0051D5).withValues(alpha: 0.1),
+                        child: Text(
+                          'C${exam.classNo}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0051D5),
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        exam.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      subtitle: Text('$dateStr • ${exam.chapters}', style: const TextStyle(fontSize: 12)),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Dismiss'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _checkLostData() async {
@@ -194,13 +265,56 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ],
                 ),
                 actions: [
+                  Consumer<PlannerProvider>(
+                    builder: (context, plannerProvider, child) {
+                      final upcomingCount = plannerProvider.upcomingExams.length;
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.notifications_none_rounded,
+                              color: Color(0xFF0F172A),
+                              size: 24,
+                            ),
+                            onPressed: () => _showUpcomingNotifications(context, plannerProvider),
+                          ),
+                          if (upcomingCount > 0)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 16,
+                                  minHeight: 16,
+                                ),
+                                child: Text(
+                                  upcomingCount.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                   Container(
                     margin: const EdgeInsets.only(right: 16, left: 8),
                     child: const CircleAvatar(
                       backgroundColor: Color(0xFF0051D5),
                       radius: 16,
                       child: Text(
-                        'T',
+                        'S',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -339,6 +453,19 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 6 && hour < 12) {
+      return 'Good morning,\nSoumen Sir 🎓';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good afternoon,\nSoumen Sir 🎓';
+    } else if (hour >= 17 && hour < 23) {
+      return 'Good evening,\nSoumen Sir 🎓';
+    } else {
+      return 'Have some Rest,\nSoumen Sir 💤';
+    }
+  }
+
   Widget _buildHomeTab() {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -356,10 +483,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Welcome Back,\nSoumen Sir 🎓',
-                          style: TextStyle(
+                          _getGreeting(),
+                          style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w900,
                             color: Color(0xFF0F172A),
@@ -388,38 +515,63 @@ class _AdminDashboardState extends State<AdminDashboard>
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0051D5).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: const Color(0xFF0051D5).withValues(alpha: 0.15),
-                      ),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(
-                          Icons.notifications_active_outlined,
-                          color: Color(0xFF0051D5),
-                          size: 16,
+                  Consumer<AdminProvider>(
+                    builder: (context, adminProvider, child) {
+                      final pendingCount = adminProvider.pendingStudents.length;
+                      final pendingProfileEdits = adminProvider.verifiedStudents
+                          .where((s) => s.pendingProfileEdit != null)
+                          .length;
+                      final totalPending = pendingCount + pendingProfileEdits;
+
+                      String text;
+                      if (adminProvider.studentsState == LoadState.loading) {
+                        text = 'Checking student management tasks...';
+                      } else if (adminProvider.studentsState == LoadState.error) {
+                        text = 'Failed to retrieve student management status.';
+                      } else {
+                        if (totalPending == 0) {
+                          text = 'No student management tasks pending.';
+                        } else if (totalPending == 1) {
+                          text = '1 student management task pending.';
+                        } else {
+                          text = '$totalPending student management tasks pending.';
+                        }
+                      }
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
                         ),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '12 new assessment responses received today.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF0051D5),
-                            ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0051D5).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFF0051D5).withValues(alpha: 0.15),
                           ),
                         ),
-                      ],
-                    ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.notifications_active_outlined,
+                              color: Color(0xFF0051D5),
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                text,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF0051D5),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -599,7 +751,7 @@ class _AdminDrawer extends StatelessWidget {
                     backgroundColor: Color(0xFF0051D5),
                     radius: 24,
                     child: Text(
-                      'T',
+                      'S',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -631,6 +783,27 @@ class _AdminDrawer extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            const Divider(color: Color(0xFFECEEF0)),
+            ListTile(
+              leading: const Icon(
+                Icons.calendar_month_rounded,
+                color: Color(0xFF0051D5),
+              ),
+              title: const Text(
+                'Exam & Test Planner',
+                style: TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TestPlannerScreen()),
+                );
+              },
             ),
             const Divider(color: Color(0xFFECEEF0)),
             const Spacer(),

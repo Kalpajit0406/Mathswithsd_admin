@@ -6,6 +6,7 @@ import 'providers/auth_provider.dart';
 import 'providers/admin_provider.dart';
 import 'providers/exam_provider.dart';
 import 'providers/question_provider.dart';
+import 'providers/planner_provider.dart';
 
 import 'utils/app_theme.dart';
 import 'screens/login_screen.dart';
@@ -29,6 +30,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AdminProvider()),
         ChangeNotifierProvider(create: (_) => ExamProvider()),
         ChangeNotifierProvider(create: (_) => QuestionProvider()),
+        ChangeNotifierProvider(create: (_) => PlannerProvider()..loadPlanner()),
       ],
       child: const MathsWithSDApp(),
     ),
