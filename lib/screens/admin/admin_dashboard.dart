@@ -19,6 +19,7 @@ import 'create_question_screen.dart';
 import 'question_bank_screen.dart';
 import '../../widgets/fade_in_slide.dart';
 import '../../widgets/glass_card.dart';
+import 'chapter_management_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -664,6 +665,26 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ),
                 ),
               ),
+              FadeInSlide(
+                duration: const Duration(milliseconds: 500),
+                delay: const Duration(milliseconds: 400),
+                slideOffset: 24,
+                child: BounceOnTap(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ChapterManagementScreen(),
+                    ),
+                  ),
+                  child: const _ActionCard(
+                    icon: Icons.collections_bookmark_rounded,
+                    iconBgColor: Color(0xFFDBE1FF),
+                    iconColor: Color(0xFF0051D5),
+                    title: 'Manage\nChapters',
+                    subtitle: 'Add, edit, and cascade-delete course syllabus chapters.',
+                  ),
+                ),
+              ),
             ],
           ),
         ],
@@ -802,6 +823,27 @@ class _AdminDrawer extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const TestPlannerScreen()),
+                );
+              },
+            ),
+            const Divider(color: Color(0xFFECEEF0)),
+            ListTile(
+              leading: const Icon(
+                Icons.collections_bookmark_rounded,
+                color: Color(0xFF0051D5),
+              ),
+              title: const Text(
+                'Manage Chapters',
+                style: TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ChapterManagementScreen()),
                 );
               },
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/admin_provider.dart';
+import '../../providers/question_provider.dart';
 import '../../utils/constants.dart';
 
 class CreateTestScreen extends StatefulWidget {
@@ -32,6 +33,7 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<QuestionProvider>(context, listen: false).syncChapters();
       _checkAndLoadDraft();
     });
   }
@@ -270,8 +272,11 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final chapters =
-        AppConstants.classChapters[int.parse(_selectedClass)] ?? [];
+    final questionProvider = Provider.of<QuestionProvider>(context);
+    final chapters = List<String>.from(questionProvider.getChaptersForClass(int.parse(_selectedClass)));
+    if (chapters.isEmpty) {
+      chapters.addAll(AppConstants.classChapters[int.parse(_selectedClass)] ?? []);
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FB),

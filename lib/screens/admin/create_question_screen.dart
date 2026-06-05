@@ -54,8 +54,17 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
     super.initState();
     _selectedChapter = AppConstants.classChapters[_selectedClass]?.first;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = Provider.of<QuestionProvider>(context, listen: false);
+      await provider.syncChapters();
+      if (mounted) {
+        setState(() {
+          final classChaps = provider.getChaptersForClass(_selectedClass);
+          if (classChaps.isNotEmpty && (_selectedChapter == null || !classChaps.contains(_selectedChapter))) {
+            _selectedChapter = classChaps.first;
+          }
+        });
+      }
       provider.restoreQueueState().then((_) {
         if (!mounted) return;
         _syncFromQueue();
@@ -638,7 +647,10 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
   Widget build(BuildContext context) {
     return Consumer<QuestionProvider>(
       builder: (context, provider, _) {
-        final chapters = AppConstants.classChapters[_selectedClass] ?? [];
+        final chapters = List<String>.from(provider.getChaptersForClass(_selectedClass));
+        if (chapters.isEmpty) {
+          chapters.addAll(AppConstants.classChapters[_selectedClass] ?? []);
+        }
         final bool hasQueue = provider.questionQueue.isNotEmpty;
 
         // Show PDF picker if requested
@@ -1095,9 +1107,10 @@ class _CreateQuestionTabState extends State<CreateQuestionTab> {
                             onChanged: (val) {
                               setState(() {
                                 _selectedClass = val!;
-                                _selectedChapter = AppConstants
-                                    .classChapters[_selectedClass]
-                                    ?.first;
+                                final classChaps = provider.getChaptersForClass(_selectedClass);
+                                _selectedChapter = classChaps.isNotEmpty
+                                    ? classChaps.first
+                                    : (AppConstants.classChapters[_selectedClass]?.first);
                               });
                             },
                           ),

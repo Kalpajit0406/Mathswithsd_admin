@@ -1498,6 +1498,77 @@ class ApiService {
     return '$cleanBase$cleanPath';
   }
 
+  // ─── Chapters ────────────────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getChapters({int? classId}) async {
+    final queryStr = classId != null ? '?classId=$classId' : '';
+    final uri = await _uri('/api/v1/chapters$queryStr');
+    final headers = await _headers();
+    await _logRequest('GET', uri, headers);
+    final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
+    final decoded = _processResponse(response);
+    final list = List<dynamic>.from(decoded['data'] ?? []);
+    return list.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  Future<Map<String, dynamic>> addChapter(int classId, String chapterName) async {
+    final uri = await _uri('/api/v1/chapters/add');
+    final headers = await _headers();
+    await _logRequest('POST', uri, headers);
+    final response = await http
+        .post(
+          uri,
+          headers: headers,
+          body: jsonEncode({'classId': classId, 'chapterName': chapterName}),
+        )
+        .timeout(const Duration(seconds: 15));
+    final decoded = _processResponse(response);
+    return Map<String, dynamic>.from(decoded['data'] ?? {});
+  }
+
+  Future<Map<String, dynamic>> editChapter(String chapterId, String action, {String? chapterName}) async {
+    final uri = await _uri('/api/v1/chapters/edit/$chapterId');
+    final headers = await _headers();
+    await _logRequest('PUT', uri, headers);
+    final response = await http
+        .put(
+          uri,
+          headers: headers,
+          body: jsonEncode({
+            'action': action,
+            if (chapterName != null) 'chapterName': chapterName,
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
+    return Map<String, dynamic>.from(response.body.isNotEmpty ? _processResponse(response) : {});
+  }
+
+  Future<void> deleteChapter(String chapterId) async {
+    final uri = await _uri('/api/v1/chapters/delete/$chapterId');
+    final headers = await _headers();
+    await _logRequest('DELETE', uri, headers);
+    final response = await http.delete(uri, headers: headers).timeout(const Duration(seconds: 15));
+    _processResponse(response);
+  }
+
+  Future<int> getChapterUsage(String chapterId) async {
+    final uri = await _uri('/api/v1/chapters/$chapterId/usage');
+    final headers = await _headers();
+    await _logRequest('GET', uri, headers);
+    final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
+    final decoded = _processResponse(response);
+    return decoded['count'] ?? 0;
+  }
+
+  Future<int> getChapterVersion() async {
+    final uri = await _uri('/api/v1/chapters/version');
+    final headers = await _headers();
+    await _logRequest('GET', uri, headers);
+    final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
+    final decoded = _processResponse(response);
+    return decoded['version'] ?? 1;
+  }
+
   /// Async version of baseUrl — always returns the fully-resolved server URL.
   Future<String> getBaseUrlAsync() => _getBaseUrl();
 }

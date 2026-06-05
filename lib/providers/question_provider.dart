@@ -32,6 +32,40 @@ class QuestionProvider with ChangeNotifier {
   bool get hasMore => _hasMore;
   bool get isLoadingMore => _isLoadingMore;
 
+  // Centralized Chapters Cache
+  List<Map<String, dynamic>> _cachedChapters = [];
+  int _cachedChapterVersion = 0;
+  bool _isLoadingChapters = false;
+
+  List<Map<String, dynamic>> get cachedChapters => _cachedChapters;
+  bool get isLoadingChapters => _isLoadingChapters;
+
+  Future<void> syncChapters() async {
+    try {
+      final currentVersion = await _apiService.getChapterVersion();
+      if (_cachedChapters.isEmpty || currentVersion != _cachedChapterVersion) {
+        _isLoadingChapters = true;
+        notifyListeners();
+        
+        final chapters = await _apiService.getChapters();
+        _cachedChapters = chapters;
+        _cachedChapterVersion = currentVersion;
+      }
+    } catch (e) {
+      debugPrint('[QuestionProvider] Error syncing chapters: $e');
+    } finally {
+      _isLoadingChapters = false;
+      notifyListeners();
+    }
+  }
+
+  List<String> getChaptersForClass(int classNo) {
+    return _cachedChapters
+        .where((ch) => ch['classId'] == classNo && (ch['isActive'] ?? true))
+        .map((ch) => ch['chapterName'].toString())
+        .toList();
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ENHANCED QUEUE SYSTEM
   // ═══════════════════════════════════════════════════════════════════════════

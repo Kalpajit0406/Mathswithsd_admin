@@ -39,6 +39,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<QuestionProvider>(context, listen: false).syncChapters();
       _loadQuestions();
     });
   }
@@ -992,14 +993,29 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
     _selectedClass = widget.question.classNo;
     _selectedLanguage = widget.question.language;
     _selectedChapter = widget.question.chapter;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = Provider.of<QuestionProvider>(context, listen: false);
+      await provider.syncChapters();
+      if (mounted) {
+        setState(() {
+          final classChaps = provider.getChaptersForClass(_selectedClass);
+          if (classChaps.isNotEmpty && (_selectedChapter == null || !classChaps.contains(_selectedChapter))) {
+            _selectedChapter = classChaps.first;
+          }
+        });
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final chapters = AppConstants.classChapters[_selectedClass] ?? [];
-
     return Consumer<QuestionProvider>(
       builder: (context, provider, _) {
+        final chapters = List<String>.from(provider.getChaptersForClass(_selectedClass));
+        if (chapters.isEmpty) {
+          chapters.addAll(AppConstants.classChapters[_selectedClass] ?? []);
+        }
         return Scaffold(
           appBar: AppBar(
             title: const Text('Edit Question'),
@@ -1057,10 +1073,12 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                               onChanged: provider.isSaving
                                   ? null
                                   : (v) => setState(() {
-                                      _selectedClass = v!;
-                                      _selectedChapter =
-                                          AppConstants.classChapters[v]?.first;
-                                    }),
+                                       _selectedClass = v!;
+                                       final classChaps = provider.getChaptersForClass(_selectedClass);
+                                       _selectedChapter = classChaps.isNotEmpty
+                                           ? classChaps.first
+                                           : (AppConstants.classChapters[_selectedClass]?.first);
+                                     }),
                               items: (() {
                                 final list = [9, 10, 11, 12, 13];
                                 if (!list.contains(_selectedClass)) {
@@ -1748,19 +1766,36 @@ class _ChapterPickerModalState extends State<_ChapterPickerModal> {
   @override
   void initState() {
     super.initState();
+    final provider = Provider.of<QuestionProvider>(context, listen: false);
     if (widget.selectedClass != null) {
-      _allChapters = AppConstants.classChapters[widget.selectedClass] ?? [];
+      _allChapters = provider.getChaptersForClass(widget.selectedClass!);
+      if (_allChapters.isEmpty) {
+        _allChapters = AppConstants.classChapters[widget.selectedClass] ?? [];
+      }
     } else {
       final Set<String> uniqueChapters = {};
-      AppConstants.classChapters.forEach((classNo, chaptersList) {
-        for (var ch in chaptersList) {
-          if (classNo == 13) {
-            uniqueChapters.add('$ch (Joint)');
+      final chapters = provider.cachedChapters;
+      if (chapters.isNotEmpty) {
+        for (var ch in chapters) {
+          final cId = ch['classId'];
+          final cName = ch['chapterName'].toString();
+          if (cId == 13) {
+            uniqueChapters.add('$cName (Joint)');
           } else {
-            uniqueChapters.add(ch);
+            uniqueChapters.add(cName);
           }
         }
-      });
+      } else {
+        AppConstants.classChapters.forEach((classNo, chaptersList) {
+          for (var ch in chaptersList) {
+            if (classNo == 13) {
+              uniqueChapters.add('$ch (Joint)');
+            } else {
+              uniqueChapters.add(ch);
+            }
+          }
+        });
+      }
       _allChapters = uniqueChapters.toList();
     }
   }
