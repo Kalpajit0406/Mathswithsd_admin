@@ -329,6 +329,10 @@ class _TestPlannerScreenState extends State<TestPlannerScreen> {
         cardColor = const Color(0xFFF3E5F5);
         accentColor = const Color(0xFF6A1B9A);
         break;
+      case 13:
+        cardColor = const Color(0xFFE0F7FA);
+        accentColor = const Color(0xFF006064);
+        break;
       case 12:
       default:
         cardColor = const Color(0xFFFFF3E0);
@@ -387,7 +391,7 @@ class _TestPlannerScreenState extends State<TestPlannerScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              'Class ${exam.classNo}',
+                              exam.classNo == 13 ? 'Joint Entrance' : 'Class ${exam.classNo}',
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
@@ -580,11 +584,11 @@ class _TestPlannerScreenState extends State<TestPlannerScreen> {
                                     value: selectedClass,
                                     isExpanded: true,
                                     icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                                    items: [9, 10, 11, 12].map((c) {
+                                    items: [9, 10, 11, 12, 13].map((c) {
                                       return DropdownMenuItem<int>(
                                         value: c,
                                         child: Text(
-                                          'Class $c',
+                                          c == 13 ? 'Joint Entrance' : 'Class $c',
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w600,
                                             fontSize: 14,
@@ -833,7 +837,7 @@ class _TestPlannerScreenState extends State<TestPlannerScreen> {
                       leading: CircleAvatar(
                         backgroundColor: const Color(0xFF0051D5).withValues(alpha: 0.1),
                         child: Text(
-                          'C${exam.classNo}',
+                          exam.classNo == 13 ? 'JE' : 'C${exam.classNo}',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
