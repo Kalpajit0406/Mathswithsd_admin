@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
-import '../../utils/constants.dart';
-import '../../widgets/animations.dart';
-import '../../widgets/glass_card.dart';
+import '../../utils/constants.dart' hide AppColors;
 import '../../widgets/fade_in_slide.dart';
+import '../../widgets/glass_card.dart';
+
+class AppColors {
+  static const Color error = Color(0xFFBA1A1A);
+  static const Color success = Color(0xFF43A047);
+  static const Color warning = Color(0xFFE65100);
+}
+
 
 class ChapterManagementScreen extends StatefulWidget {
   const ChapterManagementScreen({super.key});
@@ -486,174 +492,14 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
   }
 
   void _showDeleteChapterDialog(Map<String, dynamic> chapter) {
-    final chapterId = chapter['_id'] ?? chapter['id'];
-    final chapterName = chapter['chapterName'];
-    bool isFetchingUsage = true;
-    int usageCount = 0;
-    String? fetchError;
-
-    // Load usage count on dialog open
-    Future.microtask(() async {
-      try {
-        final count = await _apiService.getChapterUsage(chapterId);
-        if (mounted) {
-          setState(() {
-            isFetchingUsage = false;
-            usageCount = count;
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            isFetchingUsage = false;
-            fetchError = e.toString();
-          });
-        }
-      }
-    });
-
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            if (isFetchingUsage) {
-              return const AlertDialog(
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Analyzing chapter references...', style: TextStyle(fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              );
-            }
-
-            if (fetchError != null) {
-              return AlertDialog(
-                title: const Text('Error'),
-                content: Text('Failed to check chapter usage: $fetchError'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
-                  ),
-                ],
-              );
-            }
-
-            final hasLinkedQuestions = usageCount > 0;
-            final confirmationController = TextEditingController();
-            bool isDeleting = false;
-
-            return AlertDialog(
-              backgroundColor: const Color(0xFFF7F9FB),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Row(
-                children: const [
-                  Icon(Icons.warning_rounded, color: AppColors.error),
-                  SizedBox(width: 8),
-                  Text(
-                    'Delete Chapter',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Are you sure you want to delete "$chapterName"?',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                  const SizedBox(height: 12),
-                  if (hasLinkedQuestions) ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEAEA),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.error),
-                      ),
-                      child: Text(
-                        'WARNING: This chapter contains $usageCount active questions. Deleting this chapter will CASCADE and permanently delete all these questions and references. This action is irreversible!',
-                        style: const TextStyle(color: Color(0xFF7A1C1C), fontSize: 12, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text('Type "DELETE" to confirm cascade delete:'),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: confirmationController,
-                      enabled: !isDeleting,
-                      decoration: const InputDecoration(
-                        hintText: 'DELETE',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ] else ...[
-                    const Text('This chapter is empty and has no linked questions. Deleting it is safe.'),
-                  ],
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isDeleting ? null : () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Color(0xFF75859D))),
-                ),
-                ElevatedButton(
-                  onPressed: isDeleting
-                      ? null
-                      : () async {
-                          if (hasLinkedQuestions && confirmationController.text.trim() != 'DELETE') {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please type "DELETE" to confirm'), backgroundColor: AppColors.error),
-                            );
-                            return;
-                          }
-
-                          setDialogState(() => isDeleting = true);
-                          try {
-                            await _apiService.deleteChapter(chapterId);
-                            if (mounted) {
-                              Navigator.pop(context);
-                              _fetchChapters();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Chapter deleted successfully.'),
-                                  backgroundColor: AppColors.success,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            setDialogState(() => isDeleting = false);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error deleting chapter: $e'),
-                                  backgroundColor: AppColors.error,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.error,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: isDeleting
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Delete'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (context) => _DeleteChapterDialog(
+        chapterId: chapter['_id'] ?? chapter['id'] ?? '',
+        chapterName: chapter['chapterName'] ?? '',
+        onDeleted: _fetchChapters,
+      ),
     );
   }
 
@@ -865,3 +711,194 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
     );
   }
 }
+
+class _DeleteChapterDialog extends StatefulWidget {
+  final String chapterId;
+  final String chapterName;
+  final VoidCallback onDeleted;
+
+  const _DeleteChapterDialog({
+    required this.chapterId,
+    required this.chapterName,
+    required this.onDeleted,
+  });
+
+  @override
+  State<_DeleteChapterDialog> createState() => _DeleteChapterDialogState();
+}
+
+class _DeleteChapterDialogState extends State<_DeleteChapterDialog> {
+  final ApiService _apiService = ApiService();
+  final TextEditingController _confirmationController = TextEditingController();
+  bool _isFetchingUsage = true;
+  bool _isDeleting = false;
+  int _usageCount = 0;
+  String? _fetchError;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUsage();
+  }
+
+  @override
+  void dispose() {
+    _confirmationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchUsage() async {
+    try {
+      final count = await _apiService.getChapterUsage(widget.chapterId);
+      if (mounted) {
+        setState(() {
+          _isFetchingUsage = false;
+          _usageCount = count;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isFetchingUsage = false;
+          _fetchError = e.toString();
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isFetchingUsage) {
+      return const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Analyzing chapter references...', style: TextStyle(fontWeight: FontWeight.w500)),
+          ],
+        ),
+      );
+    }
+
+    if (_fetchError != null) {
+      return AlertDialog(
+        title: const Text('Error'),
+        content: Text('Failed to check chapter usage: $_fetchError'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      );
+    }
+
+    final hasLinkedQuestions = _usageCount > 0;
+
+    return AlertDialog(
+      backgroundColor: const Color(0xFFF7F9FB),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Row(
+        children: [
+          Icon(Icons.warning_rounded, color: AppColors.error),
+          SizedBox(width: 8),
+          Text(
+            'Delete Chapter',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Are you sure you want to delete "${widget.chapterName}"?',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          const SizedBox(height: 12),
+          if (hasLinkedQuestions) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFEAEA),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.error),
+              ),
+              child: Text(
+                'WARNING: This chapter contains $_usageCount active questions. Deleting this chapter will CASCADE and permanently delete all these questions and references. This action is irreversible!',
+                style: const TextStyle(color: Color(0xFF7A1C1C), fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Type "DELETE" to confirm cascade delete:'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _confirmationController,
+              enabled: !_isDeleting,
+              decoration: const InputDecoration(
+                hintText: 'DELETE',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ] else ...[
+            const Text('This chapter is empty and has no linked questions. Deleting it is safe.'),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isDeleting ? null : () => Navigator.pop(context),
+          child: const Text('Cancel', style: TextStyle(color: Color(0xFF75859D))),
+        ),
+        ElevatedButton(
+          onPressed: _isDeleting
+              ? null
+              : () async {
+                  if (hasLinkedQuestions && _confirmationController.text.trim() != 'DELETE') {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please type "DELETE" to confirm'), backgroundColor: AppColors.error),
+                    );
+                    return;
+                  }
+
+                  setState(() => _isDeleting = true);
+                  try {
+                    await _apiService.deleteChapter(widget.chapterId);
+                    if (mounted) {
+                      Navigator.pop(context);
+                      widget.onDeleted();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Chapter deleted successfully.'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      setState(() => _isDeleting = false);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error deleting chapter: $e'),
+                          backgroundColor: AppColors.error,
+                        ),
+                      );
+                    }
+                  }
+                },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.error,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: _isDeleting
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Delete'),
+        ),
+      ],
+    );
+  }
+}
+
