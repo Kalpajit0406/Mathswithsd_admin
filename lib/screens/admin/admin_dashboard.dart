@@ -33,12 +33,16 @@ class _AdminDashboardState extends State<AdminDashboard>
   int _currentIndex = 0;
   final ImageService _imageService = ImageService();
   late AnimationController _bgAnimationController;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   late final List<Widget> _pages = [
     _buildHomeTab(),
     const YourTestsScreen(),
     const QuestionBankScreen(),
     const SettingsScreen(),
+    ChapterManagementScreen(
+      onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+    ),
   ];
 
   @override
@@ -239,6 +243,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         });
       },
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: const Color(0xFFF8FAFC),
         appBar: _currentIndex == 0
             ? AppBar(
@@ -327,7 +332,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ],
               )
             : null,
-        drawer: const _AdminDrawer(),
+        drawer: _AdminDrawer(
+          onNavigate: (index) {
+            setState(() => _currentIndex = index);
+          },
+          currentIndex: _currentIndex,
+        ),
         body: Stack(
           children: [
             // Drifting ambient glows
@@ -665,26 +675,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ),
                 ),
               ),
-              FadeInSlide(
-                duration: const Duration(milliseconds: 500),
-                delay: const Duration(milliseconds: 400),
-                slideOffset: 24,
-                child: BounceOnTap(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ChapterManagementScreen(),
-                    ),
-                  ),
-                  child: const _ActionCard(
-                    icon: Icons.collections_bookmark_rounded,
-                    iconBgColor: Color(0xFFDBE1FF),
-                    iconColor: Color(0xFF0051D5),
-                    title: 'Manage\nChapters',
-                    subtitle: 'Add, edit, and cascade-delete course syllabus chapters.',
-                  ),
-                ),
-              ),
             ],
           ),
         ],
@@ -755,7 +745,43 @@ class _ActionCard extends StatelessWidget {
 }
 
 class _AdminDrawer extends StatelessWidget {
-  const _AdminDrawer();
+  final void Function(int index) onNavigate;
+  final int currentIndex;
+
+  const _AdminDrawer({
+    required this.onNavigate,
+    required this.currentIndex,
+  });
+
+  Widget _drawerItem({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required int index,
+  }) {
+    final isActive = currentIndex == index;
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: isActive ? const Color(0xFF0051D5) : const Color(0xFF75859D),
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: isActive ? const Color(0xFF0051D5) : const Color(0xFF0F172A),
+          fontWeight: isActive ? FontWeight.w800 : FontWeight.bold,
+        ),
+      ),
+      selected: isActive,
+      selectedTileColor: const Color(0xFF0051D5).withValues(alpha: 0.08),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      onTap: () {
+        Navigator.pop(context);
+        onNavigate(index);
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -765,7 +791,7 @@ class _AdminDrawer extends StatelessWidget {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
               child: Row(
                 children: [
                   const CircleAvatar(
@@ -785,7 +811,7 @@ class _AdminDrawer extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
-                        'Teacher SD',
+                        'Soumen Sir',
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF0F172A),
@@ -793,7 +819,7 @@ class _AdminDrawer extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Lead Educator',
+                        'Boss',
                         style: TextStyle(
                           color: Color(0xFF75859D),
                           fontWeight: FontWeight.w500,
@@ -806,71 +832,70 @@ class _AdminDrawer extends StatelessWidget {
               ),
             ),
             const Divider(color: Color(0xFFECEEF0)),
-            ListTile(
-              leading: const Icon(
-                Icons.calendar_month_rounded,
-                color: Color(0xFF0051D5),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Column(
+                children: [
+                  _drawerItem(
+                    context: context,
+                    icon: Icons.collections_bookmark_rounded,
+                    label: 'Manage Chapters',
+                    index: 4,
+                  ),
+                  const SizedBox(height: 4),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.calendar_month_rounded,
+                      color: Color(0xFF75859D),
+                    ),
+                    title: const Text(
+                      'Exam & Test Planner',
+                      style: TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const TestPlannerScreen()),
+                      );
+                    },
+                  ),
+                ],
               ),
-              title: const Text(
-                'Exam & Test Planner',
-                style: TextStyle(
-                  color: Color(0xFF0F172A),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context); // Close the drawer
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const TestPlannerScreen()),
-                );
-              },
-            ),
-            const Divider(color: Color(0xFFECEEF0)),
-            ListTile(
-              leading: const Icon(
-                Icons.collections_bookmark_rounded,
-                color: Color(0xFF0051D5),
-              ),
-              title: const Text(
-                'Manage Chapters',
-                style: TextStyle(
-                  color: Color(0xFF0F172A),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context); // Close the drawer
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ChapterManagementScreen()),
-                );
-              },
             ),
             const Divider(color: Color(0xFFECEEF0)),
             const Spacer(),
             const Divider(color: Color(0xFFECEEF0)),
-            ListTile(
-              leading: const Icon(
-                Icons.logout_rounded,
-                color: Color(0xFFBA1A1A),
-              ),
-              title: const Text(
-                'Logout',
-                style: TextStyle(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: ListTile(
+                leading: const Icon(
+                  Icons.logout_rounded,
                   color: Color(0xFFBA1A1A),
-                  fontWeight: FontWeight.bold,
                 ),
+                title: const Text(
+                  'Logout',
+                  style: TextStyle(
+                    color: Color(0xFFBA1A1A),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                onTap: () async {
+                  await Provider.of<AuthProvider>(
+                    context,
+                    listen: false,
+                  ).logout();
+                  if (context.mounted) {
+                    Navigator.pushReplacementNamed(context, '/login');
+                  }
+                },
               ),
-              onTap: () async {
-                await Provider.of<AuthProvider>(
-                  context,
-                  listen: false,
-                ).logout();
-                if (context.mounted) {
-                  Navigator.pushReplacementNamed(context, '/login');
-                }
-              },
             ),
             const SizedBox(height: 16),
           ],

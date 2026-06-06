@@ -12,7 +12,9 @@ class AppColors {
 
 
 class ChapterManagementScreen extends StatefulWidget {
-  const ChapterManagementScreen({super.key});
+  final VoidCallback? onOpenDrawer;
+
+  const ChapterManagementScreen({super.key, this.onOpenDrawer});
 
   @override
   State<ChapterManagementScreen> createState() => _ChapterManagementScreenState();
@@ -510,10 +512,15 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A)),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: widget.onOpenDrawer != null
+            ? IconButton(
+                icon: const Icon(Icons.menu_rounded, color: Color(0xFF0F172A)),
+                onPressed: widget.onOpenDrawer,
+              )
+            : IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A)),
+                onPressed: () => Navigator.pop(context),
+              ),
         title: const Text(
           'Chapter Manager',
           style: TextStyle(
