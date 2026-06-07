@@ -852,8 +852,10 @@ class ApiService {
 
       if (response.statusCode == 202 && initialData['success'] == true) {
         final sessionId = initialData['data']['sessionId'] as String;
-        debugPrint('[ApiService] startOcrSession: enqueued job. Polling session $sessionId...');
-        
+        debugPrint(
+          '[ApiService] startOcrSession: enqueued job. Polling session $sessionId...',
+        );
+
         int pollAttempts = 0;
         const maxPollAttempts = 80; // 2 minutes total poll time (80 × 1.5s)
         while (pollAttempts < maxPollAttempts) {
@@ -864,19 +866,29 @@ class ApiService {
             if (sessionData['success'] == true && sessionData['data'] != null) {
               final status = sessionData['data']['status'] as String?;
               if (status == 'completed') {
-                debugPrint('[ApiService] startOcrSession: complete after ${pollAttempts * 1.5}s!');
+                debugPrint(
+                  '[ApiService] startOcrSession: complete after ${pollAttempts * 1.5}s!',
+                );
                 return sessionData;
               } else if (status == 'failed') {
-                throw ApiException('OCR background job processing failed.', 500);
+                throw ApiException(
+                  'OCR background job processing failed.',
+                  500,
+                );
               }
-              debugPrint('[ApiService] startOcrSession: status=$status progress=${sessionData['data']['progress']}% (attempt $pollAttempts/$maxPollAttempts)');
+              debugPrint(
+                '[ApiService] startOcrSession: status=$status progress=${sessionData['data']['progress']}% (attempt $pollAttempts/$maxPollAttempts)',
+              );
             }
           } catch (e) {
             if (e is ApiException) rethrow;
             debugPrint('[ApiService] Polling session error (retrying): $e');
           }
         }
-        throw ApiException('OCR processing timed out. The image may be complex — please try again.', 504);
+        throw ApiException(
+          'OCR processing timed out. The image may be complex — please try again.',
+          504,
+        );
       }
       return initialData;
     } on TimeoutException {
@@ -1268,7 +1280,9 @@ class ApiService {
       if (response.statusCode == 200 && responseData['success'] == true) {
         final data = responseData['data'] as Map<String, dynamic>?;
         if (data != null && data['status'] == 'completed') {
-          debugPrint('[ApiService] PDF extracted synchronously: ${data['total']} questions');
+          debugPrint(
+            '[ApiService] PDF extracted synchronously: ${data['total']} questions',
+          );
           return {
             'success': true,
             'data': {
@@ -1280,7 +1294,7 @@ class ApiService {
               'items': data['items'] ?? [],
               'questions': data['items'] ?? [],
               'totalQuestions': data['total'] ?? 0,
-            }
+            },
           };
         }
         return responseData;
@@ -1292,7 +1306,9 @@ class ApiService {
         if (sessionId == null) {
           throw ApiException('No session ID in async PDF response.', 500);
         }
-        debugPrint('[ApiService] PDF async mode: polling session $sessionId...');
+        debugPrint(
+          '[ApiService] PDF async mode: polling session $sessionId...',
+        );
 
         int pollAttempts = 0;
         const maxPollAttempts = 90; // 3 minutes total
@@ -1317,12 +1333,17 @@ class ApiService {
                     'items': dataObj['items'],
                     'questions': dataObj['items'],
                     'totalQuestions': dataObj['total'],
-                  }
+                  },
                 };
               } else if (status == 'failed') {
-                throw ApiException('PDF background job processing failed.', 500);
+                throw ApiException(
+                  'PDF background job processing failed.',
+                  500,
+                );
               }
-              debugPrint('[ApiService] PDF progress = ${sessionData['data']['progress']}%');
+              debugPrint(
+                '[ApiService] PDF progress = ${sessionData['data']['progress']}%',
+              );
             }
           } catch (e) {
             if (e is ApiException) rethrow;
@@ -1340,7 +1361,6 @@ class ApiService {
       client.close();
     }
   }
-
 
   /// Submit PDF by URL for processing
   /// Initiates async processing on backend
@@ -1482,8 +1502,12 @@ class ApiService {
     if (diagramPath == null || diagramPath.isEmpty) return null;
     if (diagramPath.startsWith('http')) return diagramPath;
     final base = baseUrl;
-    final cleanBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
-    final cleanPath = diagramPath.startsWith('/') ? diagramPath : '/$diagramPath';
+    final cleanBase = base.endsWith('/')
+        ? base.substring(0, base.length - 1)
+        : base;
+    final cleanPath = diagramPath.startsWith('/')
+        ? diagramPath
+        : '/$diagramPath';
     return '$cleanBase$cleanPath';
   }
 
@@ -1493,8 +1517,12 @@ class ApiService {
     if (diagramPath == null || diagramPath.isEmpty) return null;
     if (diagramPath.startsWith('http')) return diagramPath;
     final resolvedBase = await _getBaseUrl();
-    final cleanBase = resolvedBase.endsWith('/') ? resolvedBase.substring(0, resolvedBase.length - 1) : resolvedBase;
-    final cleanPath = diagramPath.startsWith('/') ? diagramPath : '/$diagramPath';
+    final cleanBase = resolvedBase.endsWith('/')
+        ? resolvedBase.substring(0, resolvedBase.length - 1)
+        : resolvedBase;
+    final cleanPath = diagramPath.startsWith('/')
+        ? diagramPath
+        : '/$diagramPath';
     return '$cleanBase$cleanPath';
   }
 
@@ -1505,13 +1533,18 @@ class ApiService {
     final uri = await _uri('/api/v1/chapters$queryStr');
     final headers = await _headers();
     await _logRequest('GET', uri, headers);
-    final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
+    final response = await http
+        .get(uri, headers: headers)
+        .timeout(const Duration(seconds: 15));
     final decoded = _processResponse(response);
     final list = List<dynamic>.from(decoded['data'] ?? []);
     return list.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
-  Future<Map<String, dynamic>> addChapter(int classId, String chapterName) async {
+  Future<Map<String, dynamic>> addChapter(
+    int classId,
+    String chapterName,
+  ) async {
     final uri = await _uri('/api/v1/chapters/add');
     final headers = await _headers();
     await _logRequest('POST', uri, headers);
@@ -1526,7 +1559,11 @@ class ApiService {
     return Map<String, dynamic>.from(decoded['data'] ?? {});
   }
 
-  Future<Map<String, dynamic>> editChapter(String chapterId, String action, {String? chapterName}) async {
+  Future<Map<String, dynamic>> editChapter(
+    String chapterId,
+    String action, {
+    String? chapterName,
+  }) async {
     final uri = await _uri('/api/v1/chapters/edit/$chapterId');
     final headers = await _headers();
     await _logRequest('PUT', uri, headers);
@@ -1534,20 +1571,21 @@ class ApiService {
         .put(
           uri,
           headers: headers,
-          body: jsonEncode({
-            'action': action,
-            if (chapterName != null) 'chapterName': chapterName,
-          }),
+          body: jsonEncode({'action': action, 'chapterName': ?chapterName}),
         )
         .timeout(const Duration(seconds: 15));
-    return Map<String, dynamic>.from(response.body.isNotEmpty ? _processResponse(response) : {});
+    return Map<String, dynamic>.from(
+      response.body.isNotEmpty ? _processResponse(response) : {},
+    );
   }
 
   Future<void> deleteChapter(String chapterId) async {
     final uri = await _uri('/api/v1/chapters/delete/$chapterId');
     final headers = await _headers();
     await _logRequest('DELETE', uri, headers);
-    final response = await http.delete(uri, headers: headers).timeout(const Duration(seconds: 15));
+    final response = await http
+        .delete(uri, headers: headers)
+        .timeout(const Duration(seconds: 15));
     _processResponse(response);
   }
 
@@ -1555,7 +1593,9 @@ class ApiService {
     final uri = await _uri('/api/v1/chapters/$chapterId/usage');
     final headers = await _headers();
     await _logRequest('GET', uri, headers);
-    final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
+    final response = await http
+        .get(uri, headers: headers)
+        .timeout(const Duration(seconds: 15));
     final decoded = _processResponse(response);
     return decoded['count'] ?? 0;
   }
@@ -1564,7 +1604,9 @@ class ApiService {
     final uri = await _uri('/api/v1/chapters/version');
     final headers = await _headers();
     await _logRequest('GET', uri, headers);
-    final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
+    final response = await http
+        .get(uri, headers: headers)
+        .timeout(const Duration(seconds: 15));
     final decoded = _processResponse(response);
     return decoded['version'] ?? 1;
   }

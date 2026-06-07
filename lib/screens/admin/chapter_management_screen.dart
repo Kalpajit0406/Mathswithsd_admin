@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
-import '../../utils/constants.dart' hide AppColors;
 import '../../widgets/fade_in_slide.dart';
 import '../../widgets/glass_card.dart';
 
@@ -10,20 +9,21 @@ class AppColors {
   static const Color warning = Color(0xFFE65100);
 }
 
-
 class ChapterManagementScreen extends StatefulWidget {
   final VoidCallback? onOpenDrawer;
 
   const ChapterManagementScreen({super.key, this.onOpenDrawer});
 
   @override
-  State<ChapterManagementScreen> createState() => _ChapterManagementScreenState();
+  State<ChapterManagementScreen> createState() =>
+      _ChapterManagementScreenState();
 }
 
-class _ChapterManagementScreenState extends State<ChapterManagementScreen> with SingleTickerProviderStateMixin {
+class _ChapterManagementScreenState extends State<ChapterManagementScreen>
+    with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   late TabController _tabController;
-  
+
   List<Map<String, dynamic>> _allChapters = [];
   List<Map<String, dynamic>> _filteredChapters = [];
   bool _isLoading = false;
@@ -81,15 +81,17 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
   void _applyFilters() {
     List<Map<String, dynamic>> temp = _allChapters.where((ch) {
       final matchesClass = ch['classId'] == _selectedClass;
-      final matchesSearch = ch['chapterName']
-          .toString()
-          .toLowerCase()
-          .contains(_searchQuery.toLowerCase());
+      final matchesSearch = ch['chapterName'].toString().toLowerCase().contains(
+        _searchQuery.toLowerCase(),
+      );
       return matchesClass && matchesSearch;
     }).toList();
 
     if (_sortBy == 'name') {
-      temp.sort((a, b) => a['chapterName'].toString().compareTo(b['chapterName'].toString()));
+      temp.sort(
+        (a, b) =>
+            a['chapterName'].toString().compareTo(b['chapterName'].toString()),
+      );
     } else {
       // Sort by date created (newest first)
       temp.sort((a, b) {
@@ -117,7 +119,9 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
           builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: const Color(0xFFF7F9FB),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               title: Row(
                 children: const [
                   Icon(Icons.add_circle_outline, color: Color(0xFF0051D5)),
@@ -136,7 +140,10 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                   children: [
                     Text(
                       'Class: ${_selectedClass == 13 ? "Joint Entrance" : "Class $_selectedClass"}',
-                      style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF75859D)),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF75859D),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -146,10 +153,15 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                       decoration: InputDecoration(
                         labelText: 'Chapter Name',
                         hintText: 'e.g. Differential Equations',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF0051D5), width: 2),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF0051D5),
+                            width: 2,
+                          ),
                         ),
                       ),
                       validator: (val) {
@@ -165,7 +177,10 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
               actions: [
                 TextButton(
                   onPressed: isSaving ? null : () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Color(0xFF75859D))),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Color(0xFF75859D)),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: isSaving
@@ -174,13 +189,18 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                           if (formKey.currentState!.validate()) {
                             setDialogState(() => isSaving = true);
                             try {
-                              await _apiService.addChapter(_selectedClass, textController.text.trim());
+                              await _apiService.addChapter(
+                                _selectedClass,
+                                textController.text.trim(),
+                              );
                               if (mounted) {
                                 Navigator.pop(context);
                                 _fetchChapters();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Chapter added successfully!'),
+                                    content: Text(
+                                      'Chapter added successfully!',
+                                    ),
                                     backgroundColor: AppColors.success,
                                   ),
                                 );
@@ -201,10 +221,19 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0051D5),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   child: isSaving
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
                       : const Text('Add'),
                 ),
               ],
@@ -220,7 +249,7 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
     final chapterName = chapter['chapterName'];
     final textController = TextEditingController(text: chapterName);
     final formKey = GlobalKey<FormState>();
-    
+
     bool isFetchingUsage = true;
     bool isSaving = false;
     int usageCount = 0;
@@ -260,7 +289,10 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                   children: [
                     CircularProgressIndicator(),
                     SizedBox(height: 16),
-                    Text('Analyzing chapter questions...', style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(
+                      'Analyzing chapter questions...',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
                   ],
                 ),
               );
@@ -283,7 +315,9 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
 
             return AlertDialog(
               backgroundColor: const Color(0xFFF7F9FB),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               title: Row(
                 children: const [
                   Icon(Icons.edit, color: Color(0xFF0051D5)),
@@ -304,7 +338,9 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                       'Contains: $usageCount linked questions.',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: showDestructiveOption ? AppColors.warning : const Color(0xFF75859D),
+                        color: showDestructiveOption
+                            ? AppColors.warning
+                            : const Color(0xFF75859D),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -313,7 +349,9 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                       enabled: !isSaving,
                       decoration: InputDecoration(
                         labelText: 'Chapter Name',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) {
@@ -326,7 +364,11 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                       const SizedBox(height: 16),
                       const Text(
                         'This chapter contains active questions. Choose an action:',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
                     ],
                   ],
@@ -335,19 +377,28 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
               actions: [
                 TextButton(
                   onPressed: isSaving ? null : () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Color(0xFF75859D))),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Color(0xFF75859D)),
+                  ),
                 ),
-                
+
                 // If there are questions, offer the destructive delete option
                 if (showDestructiveOption)
                   ElevatedButton(
                     onPressed: isSaving
                         ? null
-                        : () => _confirmDestructiveEdit(chapterId, chapterName, setDialogState),
+                        : () => _confirmDestructiveEdit(
+                            chapterId,
+                            chapterName,
+                            setDialogState,
+                          ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.error,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     child: const Text('Delete Questions & Chapter'),
                   ),
@@ -369,7 +420,9 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                                 _fetchChapters();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Chapter renamed everywhere successfully!'),
+                                    content: Text(
+                                      'Chapter renamed everywhere successfully!',
+                                    ),
                                     backgroundColor: AppColors.success,
                                   ),
                                 );
@@ -379,7 +432,9 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Failed to rename chapter: $e'),
+                                    content: Text(
+                                      'Failed to rename chapter: $e',
+                                    ),
                                     backgroundColor: AppColors.error,
                                   ),
                                 );
@@ -390,11 +445,22 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0051D5),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   child: isSaving
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : Text(showDestructiveOption ? 'Rename Everywhere' : 'Save'),
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          showDestructiveOption ? 'Rename Everywhere' : 'Save',
+                        ),
                 ),
               ],
             );
@@ -404,7 +470,11 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
     );
   }
 
-  void _confirmDestructiveEdit(String chapterId, String chapterName, StateSetter setDialogState) {
+  void _confirmDestructiveEdit(
+    String chapterId,
+    String chapterName,
+    StateSetter setDialogState,
+  ) {
     final confirmationController = TextEditingController();
     bool isVerifying = false;
 
@@ -415,7 +485,13 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
         return StatefulBuilder(
           builder: (context, setSubstate) {
             return AlertDialog(
-              title: const Text('⚠️ DANGER ZONE', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+              title: const Text(
+                '⚠️ DANGER ZONE',
+                style: TextStyle(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -449,20 +525,28 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                       : () async {
                           if (confirmationController.text.trim() != 'DELETE') {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Text does not match "DELETE"'), backgroundColor: AppColors.error),
+                              const SnackBar(
+                                content: Text('Text does not match "DELETE"'),
+                                backgroundColor: AppColors.error,
+                              ),
                             );
                             return;
                           }
                           setSubstate(() => isVerifying = true);
                           try {
-                            await _apiService.editChapter(chapterId, 'delete_questions');
+                            await _apiService.editChapter(
+                              chapterId,
+                              'delete_questions',
+                            );
                             if (mounted) {
                               Navigator.pop(context); // Close sub-dialog
                               Navigator.pop(context); // Close edit dialog
                               _fetchChapters();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Chapter and questions deleted successfully.'),
+                                  content: Text(
+                                    'Chapter and questions deleted successfully.',
+                                  ),
                                   backgroundColor: AppColors.success,
                                 ),
                               );
@@ -471,7 +555,10 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                             setSubstate(() => isVerifying = false);
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Delete failed: $e'), backgroundColor: AppColors.error),
+                                SnackBar(
+                                  content: Text('Delete failed: $e'),
+                                  backgroundColor: AppColors.error,
+                                ),
                               );
                             }
                           }
@@ -479,10 +566,19 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.error,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   child: isVerifying
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
                       : const Text('Permanently Delete Everything'),
                 ),
               ],
@@ -518,7 +614,10 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                 onPressed: widget.onOpenDrawer,
               )
             : IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A)),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Color(0xFF0F172A),
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
         title: const Text(
@@ -541,7 +640,10 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
           unselectedLabelColor: const Color(0xFF75859D),
           indicatorColor: const Color(0xFF0051D5),
           indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
           tabs: const [
             Tab(text: 'Class 9'),
             Tab(text: 'Class 10'),
@@ -555,7 +657,10 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
         onPressed: _showAddChapterDialog,
         backgroundColor: const Color(0xFF0051D5),
         icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: const Text('Add Chapter', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        label: const Text(
+          'Add Chapter',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
       ),
       body: Column(
         children: [
@@ -571,7 +676,9 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                          color: const Color(
+                            0xFF0F172A,
+                          ).withValues(alpha: 0.04),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -586,9 +693,15 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                       },
                       decoration: const InputDecoration(
                         hintText: 'Search chapters...',
-                        prefixIcon: Icon(Icons.search_rounded, color: Color(0xFF75859D)),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: Color(0xFF75859D),
+                        ),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ),
@@ -607,7 +720,10 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                     ],
                   ),
                   child: PopupMenuButton<String>(
-                    icon: const Icon(Icons.sort_rounded, color: Color(0xFF0051D5)),
+                    icon: const Icon(
+                      Icons.sort_rounded,
+                      color: Color(0xFF0051D5),
+                    ),
                     onSelected: (val) {
                       setState(() {
                         _sortBy = val;
@@ -640,14 +756,25 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                         ? ListView(
                             physics: const AlwaysScrollableScrollPhysics(),
                             children: [
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.25,
+                              ),
                               Center(
                                 child: Column(
                                   children: [
-                                    Icon(Icons.menu_book_rounded, size: 72, color: const Color(0xFF75859D).withValues(alpha: 0.3)),
+                                    Icon(
+                                      Icons.menu_book_rounded,
+                                      size: 72,
+                                      color: const Color(
+                                        0xFF75859D,
+                                      ).withValues(alpha: 0.3),
+                                    ),
                                     const SizedBox(height: 16),
                                     Text(
-                                      _searchQuery.isEmpty ? 'No Chapters Found' : 'No matches for "$_searchQuery"',
+                                      _searchQuery.isEmpty
+                                          ? 'No Chapters Found'
+                                          : 'No matches for "$_searchQuery"',
                                       style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -657,7 +784,9 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                                     const SizedBox(height: 8),
                                     const Text(
                                       'Add a chapter using the button below.',
-                                      style: TextStyle(color: Color(0xFF75859D)),
+                                      style: TextStyle(
+                                        color: Color(0xFF75859D),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -666,7 +795,10 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                           )
                         : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                             itemCount: _filteredChapters.length,
                             itemBuilder: (context, index) {
                               final ch = _filteredChapters[index];
@@ -677,13 +809,20 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                                   padding: const EdgeInsets.only(bottom: 12.0),
                                   child: GlassCard(
                                     borderRadius: 16,
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
                                     child: Row(
                                       children: [
                                         const CircleAvatar(
                                           backgroundColor: Color(0xFFE0EAFD),
                                           radius: 20,
-                                          child: Icon(Icons.bookmark_outline_rounded, color: Color(0xFF0051D5), size: 20),
+                                          child: Icon(
+                                            Icons.bookmark_outline_rounded,
+                                            color: Color(0xFF0051D5),
+                                            size: 20,
+                                          ),
                                         ),
                                         const SizedBox(width: 14),
                                         Expanded(
@@ -697,12 +836,20 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> with 
                                           ),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.edit_outlined, color: Color(0xFF316BF3)),
-                                          onPressed: () => _showEditChapterDialog(ch),
+                                          icon: const Icon(
+                                            Icons.edit_outlined,
+                                            color: Color(0xFF316BF3),
+                                          ),
+                                          onPressed: () =>
+                                              _showEditChapterDialog(ch),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFBA1A1A)),
-                                          onPressed: () => _showDeleteChapterDialog(ch),
+                                          icon: const Icon(
+                                            Icons.delete_outline_rounded,
+                                            color: Color(0xFFBA1A1A),
+                                          ),
+                                          onPressed: () =>
+                                              _showDeleteChapterDialog(ch),
                                         ),
                                       ],
                                     ),
@@ -782,7 +929,10 @@ class _DeleteChapterDialogState extends State<_DeleteChapterDialog> {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text('Analyzing chapter references...', style: TextStyle(fontWeight: FontWeight.w500)),
+            Text(
+              'Analyzing chapter references...',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
           ],
         ),
       );
@@ -835,7 +985,11 @@ class _DeleteChapterDialogState extends State<_DeleteChapterDialog> {
               ),
               child: Text(
                 'WARNING: This chapter contains $_usageCount active questions. Deleting this chapter will CASCADE and permanently delete all these questions and references. This action is irreversible!',
-                style: const TextStyle(color: Color(0xFF7A1C1C), fontSize: 12, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  color: Color(0xFF7A1C1C),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -850,22 +1004,31 @@ class _DeleteChapterDialogState extends State<_DeleteChapterDialog> {
               ),
             ),
           ] else ...[
-            const Text('This chapter is empty and has no linked questions. Deleting it is safe.'),
+            const Text(
+              'This chapter is empty and has no linked questions. Deleting it is safe.',
+            ),
           ],
         ],
       ),
       actions: [
         TextButton(
           onPressed: _isDeleting ? null : () => Navigator.pop(context),
-          child: const Text('Cancel', style: TextStyle(color: Color(0xFF75859D))),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(color: Color(0xFF75859D)),
+          ),
         ),
         ElevatedButton(
           onPressed: _isDeleting
               ? null
               : () async {
-                  if (hasLinkedQuestions && _confirmationController.text.trim() != 'DELETE') {
+                  if (hasLinkedQuestions &&
+                      _confirmationController.text.trim() != 'DELETE') {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please type "DELETE" to confirm'), backgroundColor: AppColors.error),
+                      const SnackBar(
+                        content: Text('Please type "DELETE" to confirm'),
+                        backgroundColor: AppColors.error,
+                      ),
                     );
                     return;
                   }
@@ -898,14 +1061,22 @@ class _DeleteChapterDialogState extends State<_DeleteChapterDialog> {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.error,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
           child: _isDeleting
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
               : const Text('Delete'),
         ),
       ],
     );
   }
 }
-
