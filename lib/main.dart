@@ -13,6 +13,7 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/admin/admin_dashboard.dart';
 import 'screens/student/student_dashboard.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,7 +47,7 @@ class MathsWithSDApp extends StatelessWidget {
       title: 'MathswithSD Admin',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: const _AuthGate(),
+      home: const SplashScreen(),
       routes: {
         '/login': (context) => LoginScreen(
               onNavigateToRegister: () => Navigator.pushReplacementNamed(context, '/register'),
@@ -61,45 +62,4 @@ class MathsWithSDApp extends StatelessWidget {
   }
 }
 
-class _AuthGate extends StatelessWidget {
-  const _AuthGate();
 
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, auth, _) {
-        if (auth.status == AuthStatus.initial || auth.status == AuthStatus.loading && auth.user == null) {
-          // Splash screen while checking auto-login
-          return const Scaffold(
-            backgroundColor: Color(0xFF0A1628),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.school, color: Color(0xFF00BCD4), size: 80),
-                  SizedBox(height: 24),
-                  CircularProgressIndicator(color: Color(0xFF00BCD4)),
-                ],
-              ),
-            ),
-          );
-        }
-
-        if (auth.isAuthenticated) {
-          if (auth.isAdmin) {
-            return const AdminDashboard();
-          } else {
-            return const StudentDashboard();
-          }
-        }
-
-        // Unauthenticated
-        return LoginScreen(
-          onNavigateToRegister: () {
-            Navigator.pushReplacementNamed(context, '/register');
-          },
-        );
-      },
-    );
-  }
-}

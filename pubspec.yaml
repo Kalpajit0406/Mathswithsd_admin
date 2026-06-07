@@ -44,6 +44,7 @@ dependencies:
   intl: ^0.20.2
   path_provider: ^2.1.5
   path: ^1.9.1
+  flutter_avif: ^3.1.0
 
 dependency_overrides:
   path_provider_android: 2.2.12
