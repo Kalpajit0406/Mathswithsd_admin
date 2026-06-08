@@ -711,6 +711,37 @@ class ApiService {
     _processResponse(response);
   }
 
+  Future<void> blacklistStudent(String studentId, bool blacklist) async {
+    final response = await http
+        .post(
+          await _uri('/api/v1/auth/blacklist'),
+          headers: await _headers(),
+          body: jsonEncode({'id': studentId, 'blacklist': blacklist}),
+        )
+        .timeout(const Duration(seconds: 10));
+    _processResponse(response);
+  }
+
+  Future<void> updateAccountStatus(String studentId, {
+    String? accountType,
+    bool? isJoint,
+    bool? resetTrialLimits,
+  }) async {
+    final body = <String, dynamic>{'id': studentId};
+    if (accountType != null) body['accountType'] = accountType;
+    if (isJoint != null) body['isJoint'] = isJoint;
+    if (resetTrialLimits != null) body['resetTrialLimits'] = resetTrialLimits;
+
+    final response = await http
+        .post(
+          await _uri('/api/v1/auth/update-account-status'),
+          headers: await _headers(),
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 10));
+    _processResponse(response);
+  }
+
   Future<Question> createQuestionResilient(
     Question question, {
     File? diagramFile,

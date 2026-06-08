@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/admin_provider.dart';
 import '../../models/user_model.dart';
@@ -845,7 +846,13 @@ class _StudentCardState extends State<_StudentCard> {
       shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        onTap: widget.isSelectionMode ? widget.onTap : null,
+        onTap: () {
+          if (widget.isSelectionMode) {
+            widget.onTap();
+          } else {
+            _showStudentDetailsSheet(context, s);
+          }
+        },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -858,7 +865,9 @@ class _StudentCardState extends State<_StudentCard> {
                     Checkbox(
                       value: widget.isSelected,
                       activeColor: const Color(0xFF009688),
-                      onChanged: (_) => widget.onTap(),
+                      onChanged: (_) {
+                        widget.onTap();
+                      },
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -893,12 +902,18 @@ class _StudentCardState extends State<_StudentCard> {
                             fontSize: 13,
                           ),
                         ),
-                        Text(
-                          'Class ${s.classNo ?? 'N/A'}',
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 13,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              'Class ${s.classNo ?? 'N/A'}',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildAccountTypeBadge(s.accountType, s.isJoint),
+                          ],
                         ),
                       ],
                     ),
@@ -983,6 +998,393 @@ class _StudentCardState extends State<_StudentCard> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAccountTypeBadge(String? type, bool? isJoint) {
+    String text = type ?? 'NORMAL';
+    Color color = const Color(0xFF2196F3); // Default blue for Normal
+    if (text == 'TRIAL') {
+      color = const Color(0xFFE65100); // Dark orange for Trial
+    } else if (text == 'JOINT_ENTRANCE' || isJoint == true) {
+      color = const Color(0xFF9C27B0); // Purple for Joint Entrance
+      text = 'JOINT';
+    } else if (text == 'PREMIUM') {
+      color = const Color(0xFFFFB300); // Amber/Gold for Premium
+    } else if (text == 'BLOCKED') {
+      color = Colors.red;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  void _showStudentDetailsSheet(BuildContext context, StudentUser s) {
+    final provider = Provider.of<AdminProvider>(context, listen: false);
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final sheetBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+        final textColor = isDark ? Colors.white : Colors.black87;
+        final secondaryTextColor = isDark ? Colors.white60 : Colors.black54;
+        final isVerified = s.verified == true;
+        
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: sheetBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, -2))
+                ]
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade400,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                s.fullName,
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  color: textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Class ${s.classNo ?? 'N/A'} • ${s.language ?? 'English'} Medium',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: secondaryTextColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildAccountTypeBadge(s.accountType, s.isJoint),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 32),
+                    
+                    // Info blocks
+                    _infoRow(context, Icons.phone_android_rounded, 'Phone Number', s.phone ?? 'N/A', 
+                      action: IconButton(
+                        icon: const Icon(Icons.copy_all_rounded, size: 20),
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: s.phone ?? ''));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Phone number copied to clipboard')),
+                          );
+                        },
+                      ),
+                    ),
+                    _infoRow(context, Icons.fingerprint_rounded, 'Device Fingerprint', s.deviceFingerprint ?? 'Not registered yet'),
+                    _infoRow(context, Icons.warning_amber_rounded, 'Rejection Attempts', '${s.requestAttempts ?? 0} / 5'),
+                    
+                    const SizedBox(height: 24),
+                    Text(
+                      'Admin Actions',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    if (!isVerified) ...[
+                      // If request is pending or rejected
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                Navigator.pop(ctx);
+                                final ok = await provider.acceptStudent(s.id);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(ok ? 'Student approved successfully' : 'Failed to approve student'),
+                                      backgroundColor: ok ? Colors.green : Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF43A047),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
+                              label: const Text('Approve Student', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                Navigator.pop(ctx);
+                                final ok = await provider.rejectStudent(s.id);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(ok ? 'Student declined successfully' : 'Failed to decline student'),
+                                      backgroundColor: ok ? Colors.green : Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                                side: const BorderSide(color: Colors.red),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+                              label: const Text('Decline Request'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            Navigator.pop(ctx);
+                            final ok = await provider.blacklistStudent(s.id, true);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(ok ? 'Student blacklisted successfully' : 'Failed to blacklist student'),
+                                  backgroundColor: ok ? Colors.black87 : Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black87,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: const Icon(Icons.gavel_rounded, color: Colors.white),
+                          label: const Text('Blacklist Student (Fingerprint & Phone)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ] else ...[
+                      // If student is verified
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          if (s.accountType == 'TRIAL')
+                            _actionChip(
+                              context,
+                              label: 'Convert TRIAL → NORMAL',
+                              icon: Icons.person_add_rounded,
+                              color: const Color(0xFF2196F3),
+                              onTap: () async {
+                                Navigator.pop(ctx);
+                                final ok = await provider.updateAccountStatus(s.id, accountType: 'NORMAL');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(ok ? 'Successfully converted account to NORMAL' : 'Failed to convert account'),
+                                      backgroundColor: ok ? Colors.green : Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          if (s.accountType != 'TRIAL')
+                            _actionChip(
+                              context,
+                              label: 'Convert NORMAL → TRIAL',
+                              icon: Icons.hourglass_empty_rounded,
+                              color: const Color(0xFFE65100),
+                              onTap: () async {
+                                Navigator.pop(ctx);
+                                final ok = await provider.updateAccountStatus(s.id, accountType: 'TRIAL');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(ok ? 'Successfully converted account to TRIAL' : 'Failed to convert account'),
+                                      backgroundColor: ok ? Colors.green : Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          if (s.isJoint != true && (s.classNo == 11 || s.classNo == 12))
+                            _actionChip(
+                              context,
+                              label: 'Approve JOINT entrance',
+                              icon: Icons.school_rounded,
+                              color: const Color(0xFF9C27B0),
+                              onTap: () async {
+                                Navigator.pop(ctx);
+                                final ok = await provider.updateAccountStatus(s.id, isJoint: true);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(ok ? 'Successfully approved JOINT entrance' : 'Failed to approve JOINT entrance'),
+                                      backgroundColor: ok ? Colors.green : Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          _actionChip(
+                            context,
+                            label: s.accountType == 'BLOCKED' ? 'Unblock Student' : 'Block Student',
+                            icon: s.accountType == 'BLOCKED' ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
+                            color: Colors.redAccent,
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              final block = s.accountType != 'BLOCKED';
+                              final ok = await provider.updateAccountStatus(s.id, accountType: block ? 'BLOCKED' : 'NORMAL');
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(ok ? (block ? 'Student blocked successfully' : 'Student unblocked successfully') : 'Failed to update student block status'),
+                                    backgroundColor: ok ? Colors.green : Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                          _actionChip(
+                            context,
+                            label: 'Reset Trial Limits',
+                            icon: Icons.refresh_rounded,
+                            color: Colors.teal,
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              final ok = await provider.updateAccountStatus(s.id, resetTrialLimits: true);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(ok ? 'Successfully reset trial limits' : 'Failed to reset trial limits'),
+                                    backgroundColor: ok ? Colors.green : Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _infoRow(BuildContext context, IconData icon, String label, String value, {Widget? action}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: const Color(0xFF009688), size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (action != null) action,
+        ],
+      ),
+    );
+  }
+
+  Widget _actionChip(BuildContext context, {
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color.withValues(alpha: 0.12),
+        elevation: 0,
+        side: BorderSide(color: color.withValues(alpha: 0.3)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      icon: Icon(icon, color: color, size: 16),
+      label: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
       ),
     );
   }

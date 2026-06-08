@@ -136,6 +136,35 @@ class AdminProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> blacklistStudent(String studentId, bool blacklist) async {
+    try {
+      await _apiService.blacklistStudent(studentId, blacklist);
+      await loadStudents();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> updateAccountStatus(String studentId, {
+    String? accountType,
+    bool? isJoint,
+    bool? resetTrialLimits,
+  }) async {
+    try {
+      await _apiService.updateAccountStatus(
+        studentId,
+        accountType: accountType,
+        isJoint: isJoint,
+        resetTrialLimits: resetTrialLimits,
+      );
+      await loadStudents();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // ─── Tests ────────────────────────────────────────────────────────────────────
 
   Future<void> loadTests() async {

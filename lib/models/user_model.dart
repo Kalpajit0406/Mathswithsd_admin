@@ -59,6 +59,10 @@ class StudentUser {
   final String? dateOfBirth;
   final String? language;
   final Map<String, dynamic>? pendingProfileEdit;
+  final String? accountType;
+  final bool? trialApproved;
+  final int? requestAttempts;
+  final String? deviceFingerprint;
 
   StudentUser({
     required this.id,
@@ -74,6 +78,10 @@ class StudentUser {
     this.dateOfBirth,
     this.language,
     this.pendingProfileEdit,
+    this.accountType,
+    this.trialApproved,
+    this.requestAttempts,
+    this.deviceFingerprint,
   });
 
   String get fullName => '$firstName $lastName';
@@ -93,6 +101,10 @@ class StudentUser {
       dateOfBirth: json['dateOfBirth'],
       language: json['language'],
       pendingProfileEdit: json['pendingProfileEdit'],
+      accountType: json['accountType'] ?? 'NORMAL',
+      trialApproved: json['trialApproved'] ?? false,
+      requestAttempts: json['requestAttempts'] != null ? int.tryParse(json['requestAttempts'].toString()) : 0,
+      deviceFingerprint: json['deviceFingerprint'],
     );
   }
 }
