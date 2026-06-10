@@ -520,6 +520,16 @@ class ApiService {
     return list.map((t) => TestConfig.fromJson(t)).toList();
   }
 
+  Future<void> deleteTest(String id) async {
+    final response = await http
+        .delete(
+          await _uri('/api/v1/tests/delete/$id'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 15));
+    _processResponse(response);
+  }
+
   Future<List<exam.Exam>> fetchExams(String token) async {
     final response = await http
         .get(await _uri(AppConstants.testsEndpoint), headers: await _headers())

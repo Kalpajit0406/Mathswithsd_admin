@@ -185,6 +185,17 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> bulkDeleteTests(List<String> ids) async {
+    try {
+      await Future.wait(ids.map((id) => _apiService.deleteTest(id)));
+      await loadTests();
+      return true;
+    } catch (e) {
+      debugPrint('[AdminProvider] Error bulk deleting tests: $e');
+      return false;
+    }
+  }
+
   Future<bool> createTest({
     required String date,
     required String time,

@@ -16,6 +16,8 @@ class YourTestsScreen extends StatefulWidget {
 class _YourTestsScreenState extends State<YourTestsScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _bgController;
+  bool _isSelectionMode = false;
+  final Set<String> _selectedTestIds = {};
 
   @override
   void initState() {
@@ -35,33 +37,143 @@ class _YourTestsScreenState extends State<YourTestsScreen>
     super.dispose();
   }
 
+  Future<void> _bulkDelete(BuildContext context) async {
+    final ids = _selectedTestIds.toList();
+    if (ids.isEmpty) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Assessments?'),
+        content: Text('Are you sure you want to permanently delete these ${ids.length} assessments? This action is irreversible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    if (!context.mounted) return;
+    
+    // Show progress indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0051D5)),
+      ),
+    );
+
+    final provider = Provider.of<AdminProvider>(context, listen: false);
+    final success = await provider.bulkDeleteTests(ids);
+
+    if (!context.mounted) return;
+    Navigator.pop(context); // Dismiss loading spinner
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${ids.length} assessments deleted successfully.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      setState(() {
+        _isSelectionMode = false;
+        _selectedTestIds.clear();
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to delete some assessments. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: _isSelectionMode ? const Color(0xFF0051D5) : Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: Navigator.canPop(context)
+        leading: _isSelectionMode
             ? IconButton(
-                icon: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: Color(0xFF0F172A),
-                  size: 20,
-                ),
-                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () {
+                  setState(() {
+                    _isSelectionMode = false;
+                    _selectedTestIds.clear();
+                  });
+                },
               )
+            : (Navigator.canPop(context)
+                ? IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Color(0xFF0F172A),
+                      size: 20,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  )
+                : null),
+        title: _isSelectionMode
+            ? Text(
+                '${_selectedTestIds.length} Selected',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              )
+            : const Text(
+                'Assessments',
+                style: TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                  letterSpacing: -0.5,
+                ),
+              ),
+        actions: _isSelectionMode
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.select_all, color: Colors.white),
+                  tooltip: 'Select All',
+                  onPressed: () {
+                    final provider = Provider.of<AdminProvider>(context, listen: false);
+                    final visibleIds = provider.tests.map((t) => t.id).toList();
+                    setState(() {
+                      final allSelected = visibleIds.every((id) => _selectedTestIds.contains(id));
+                      if (allSelected) {
+                        _selectedTestIds.removeAll(visibleIds);
+                        _isSelectionMode = false;
+                      } else {
+                        _selectedTestIds.addAll(visibleIds);
+                      }
+                    });
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.white),
+                  tooltip: 'Delete Selected',
+                  onPressed: () => _bulkDelete(context),
+                ),
+              ]
             : null,
-        title: const Text(
-          'Assessments',
-          style: TextStyle(
-            color: Color(0xFF0F172A),
-            fontWeight: FontWeight.w800,
-            fontSize: 22,
-            letterSpacing: -0.5,
-          ),
-        ),
       ),
       body: Stack(
         children: [
@@ -234,8 +346,37 @@ class _YourTestsScreenState extends State<YourTestsScreen>
                 child: ListView.builder(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                   itemCount: provider.tests.length,
-                  itemBuilder: (context, i) =>
-                      _TestCard(test: provider.tests[i]),
+                  itemBuilder: (context, i) {
+                    final test = provider.tests[i];
+                    final isSelected = _selectedTestIds.contains(test.id);
+                    return _TestCard(
+                      test: test,
+                      isSelectionMode: _isSelectionMode,
+                      isSelected: isSelected,
+                      onTap: () {
+                        if (_isSelectionMode) {
+                          setState(() {
+                            if (isSelected) {
+                              _selectedTestIds.remove(test.id);
+                              if (_selectedTestIds.isEmpty) {
+                                _isSelectionMode = false;
+                              }
+                            } else {
+                              _selectedTestIds.add(test.id);
+                            }
+                          });
+                        }
+                      },
+                      onLongPress: () {
+                        if (!_isSelectionMode) {
+                          setState(() {
+                            _isSelectionMode = true;
+                            _selectedTestIds.add(test.id);
+                          });
+                        }
+                      },
+                    );
+                  },
                 ),
               );
             },
@@ -286,122 +427,149 @@ class _GlassPanel extends StatelessWidget {
 
 class _TestCard extends StatelessWidget {
   final TestConfig test;
-  const _TestCard({required this.test});
+  final bool isSelectionMode;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  const _TestCard({
+    required this.test,
+    required this.isSelectionMode,
+    required this.isSelected,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.75),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0051D5).withValues(alpha: 0.05),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? const Color(0xFF0051D5).withValues(alpha: 0.08)
+                    : Colors.white.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: isSelected
+                      ? const Color(0xFF0051D5)
+                      : Colors.white.withValues(alpha: 0.75),
+                  width: isSelected ? 2.0 : 1.5,
                 ),
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      // Icon badge with glass tint
-                      Container(
-                        width: 54,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xFF0051D5).withValues(alpha: 0.12),
-                              const Color(0xFF316BF3).withValues(alpha: 0.08),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFF0051D5)
-                                .withValues(alpha: 0.15),
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.fact_check_rounded,
-                          color: Color(0xFF0051D5),
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${test.classNo == 13 ? 'Joint Entrance' : 'Class ${test.classNo}'} • ${test.language}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 17,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(Icons.calendar_today_outlined,
-                                    size: 12,
-                                    color: const Color(0xFF64748B)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${test.date} at ${test.time}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF64748B),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      _badge('${test.totalQuestions}Q'),
-                    ],
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0051D5).withValues(alpha: 0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
                   ),
-                  const SizedBox(height: 16),
-                  Divider(
-                    height: 1,
-                    color: const Color(0xFF0051D5).withValues(alpha: 0.08),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      _infoChip(Icons.timer_outlined,
-                          '${test.totalTime} min'),
-                      const SizedBox(width: 14),
-                      _infoChip(Icons.add_chart_outlined,
-                          '${test.marksPerQuestion} pts'),
-                      const Spacer(),
-                      _LeaderboardButton(test: test),
-                    ],
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        if (isSelectionMode) ...[
+                          Checkbox(
+                            value: isSelected,
+                            activeColor: const Color(0xFF0051D5),
+                            onChanged: (_) => onTap(),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        // Icon badge with glass tint
+                        Container(
+                          width: 54,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF0051D5).withValues(alpha: 0.12),
+                                const Color(0xFF316BF3).withValues(alpha: 0.08),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF0051D5)
+                                  .withValues(alpha: 0.15),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.fact_check_rounded,
+                            color: Color(0xFF0051D5),
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${test.classNo == 13 ? 'Joint Entrance' : 'Class ${test.classNo}'} • ${test.language}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 17,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(Icons.calendar_today_outlined,
+                                      size: 12,
+                                      color: const Color(0xFF64748B)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${test.date} at ${test.time}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF64748B),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        _badge('${test.totalQuestions}Q'),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Divider(
+                      height: 1,
+                      color: const Color(0xFF0051D5).withValues(alpha: 0.08),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        _infoChip(Icons.timer_outlined,
+                            '${test.totalTime} min'),
+                        const SizedBox(width: 14),
+                        _infoChip(Icons.add_chart_outlined,
+                            '${test.marksPerQuestion} pts'),
+                        const Spacer(),
+                        _LeaderboardButton(test: test, isSelectionMode: isSelectionMode),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -454,10 +622,12 @@ class _TestCard extends StatelessWidget {
 
 class _LeaderboardButton extends StatelessWidget {
   final TestConfig test;
-  const _LeaderboardButton({required this.test});
+  final bool isSelectionMode;
+  const _LeaderboardButton({required this.test, required this.isSelectionMode});
 
   @override
   Widget build(BuildContext context) {
+    if (isSelectionMode) return const SizedBox.shrink();
     return GestureDetector(
       onTap: () {
         Navigator.push(
