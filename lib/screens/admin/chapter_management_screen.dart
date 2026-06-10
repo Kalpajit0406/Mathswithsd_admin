@@ -38,7 +38,7 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen>
     super.initState();
     _tabController = TabController(length: _classes.length, vsync: this);
     _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
+      if (_selectedClass != _classes[_tabController.index]) {
         setState(() {
           _selectedClass = _classes[_tabController.index];
           _applyFilters();
