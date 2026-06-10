@@ -110,6 +110,7 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen>
     final textController = TextEditingController();
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
+    String? parentChapter = _selectedClass == 13 ? 'JEE' : null;
 
     showDialog(
       context: context,
@@ -171,6 +172,52 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen>
                         return null;
                       },
                     ),
+                    if (_selectedClass == 13) ...[
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: parentChapter,
+                        decoration: InputDecoration(
+                          labelText: 'Parent Chapter / Category',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF0051D5),
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: '11',
+                            child: Text('Class 11'),
+                          ),
+                          DropdownMenuItem(
+                            value: '12',
+                            child: Text('Class 12'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'JEE',
+                            child: Text('JEE'),
+                          ),
+                        ],
+                        onChanged: isSaving
+                            ? null
+                            : (val) {
+                                setDialogState(() {
+                                  parentChapter = val;
+                                });
+                              },
+                        validator: (val) {
+                          if (val == null || val.isEmpty) {
+                            return 'Please select a parent category';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -192,6 +239,7 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen>
                               await _apiService.addChapter(
                                 _selectedClass,
                                 textController.text.trim(),
+                                parentChapter: parentChapter,
                               );
                               if (mounted) {
                                 Navigator.pop(context);
@@ -254,26 +302,7 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen>
     bool isSaving = false;
     int usageCount = 0;
     String? fetchError;
-
-    // Load usage count on dialog open
-    Future.microtask(() async {
-      try {
-        final count = await _apiService.getChapterUsage(chapterId);
-        if (mounted) {
-          setState(() {
-            isFetchingUsage = false;
-            usageCount = count;
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            isFetchingUsage = false;
-            fetchError = e.toString();
-          });
-        }
-      }
-    });
+    bool hasStartedFetch = false;
 
     showDialog(
       context: context,
@@ -281,7 +310,20 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen>
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            // Keep dialog state synced with outer async task
+            if (!hasStartedFetch) {
+              hasStartedFetch = true;
+              _apiService.getChapterUsage(chapterId).then((count) {
+                setDialogState(() {
+                  isFetchingUsage = false;
+                  usageCount = count;
+                });
+              }).catchError((e) {
+                setDialogState(() {
+                  isFetchingUsage = false;
+                  fetchError = e.toString();
+                });
+              });
+            }
             if (isFetchingUsage) {
               return const AlertDialog(
                 content: Column(

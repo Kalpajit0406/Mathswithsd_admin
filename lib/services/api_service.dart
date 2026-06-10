@@ -1574,16 +1574,24 @@ class ApiService {
 
   Future<Map<String, dynamic>> addChapter(
     int classId,
-    String chapterName,
-  ) async {
+    String chapterName, {
+    String? parentChapter,
+  }) async {
     final uri = await _uri('/api/v1/chapters/add');
     final headers = await _headers();
     await _logRequest('POST', uri, headers);
+    final body = <String, dynamic>{
+      'classId': classId,
+      'chapterName': chapterName,
+    };
+    if (parentChapter != null) {
+      body['parentChapter'] = parentChapter;
+    }
     final response = await http
         .post(
           uri,
           headers: headers,
-          body: jsonEncode({'classId': classId, 'chapterName': chapterName}),
+          body: jsonEncode(body),
         )
         .timeout(const Duration(seconds: 15));
     final decoded = _processResponse(response);
