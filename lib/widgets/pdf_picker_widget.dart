@@ -353,6 +353,22 @@ class _PdfPickerWidgetState extends State<PdfPickerWidget> {
       return;
     }
 
+    try {
+      final sizeInBytes = await _selectedFile!.length();
+      final sizeInMB = sizeInBytes / (1024 * 1024);
+      if (sizeInMB > 15) {
+        setState(() {
+          _errorMessage = 'The selected PDF is too large (${sizeInMB.toStringAsFixed(1)} MB). Please upload a file smaller than 15 MB.';
+        });
+        return;
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Could not read PDF file size.';
+      });
+      return;
+    }
+
     setState(() {
       _isExtracting = true;
       _uploadProgress = 0.0;

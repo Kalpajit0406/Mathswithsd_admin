@@ -191,6 +191,8 @@ class ApiService {
         throw ApiException('You do not have permission to perform this action.', 403);
       case 404:
         throw ApiException('The requested resource was not found.', 404);
+      case 413:
+        throw ApiException('The selected file is too large. Please upload a smaller file.', 413);
       case 429:
         throw ApiException('Too many requests. Please wait a moment and try again.', 429);
       case 500:
