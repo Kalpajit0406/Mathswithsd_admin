@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/question_model.dart';
 
 class ExtractedQuestion {
@@ -207,7 +207,9 @@ class LatexExtractorService {
             rawText: section.trim()
           ));
         } catch (e) {
-          debugPrint('Error parsing question section: $e');
+          if (kDebugMode) {
+            debugPrint('Error parsing question section: $e');
+          }
           // Fallback for this specific section
           results.add(ScanData(
             questionText: cleanContent(section),
@@ -218,7 +220,9 @@ class LatexExtractorService {
         }
       }
     } catch (e) {
-      debugPrint('Critical error in extractQuestions: $e');
+      if (kDebugMode) {
+        debugPrint('Critical error in extractQuestions: $e');
+      }
     }
 
     if (results.isEmpty && rawText.trim().isNotEmpty) {

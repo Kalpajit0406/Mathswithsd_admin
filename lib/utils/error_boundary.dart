@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Global error handler for uncaught exceptions
@@ -26,17 +27,18 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
         _hasError = true;
         _errorDetails = details;
       });
-      debugPrint(
-        'Flutter Error: ${details.exceptionAsString()}\n'
-        'Error: ${details.exception}\n'
-        'StackTrace: ${details.stack}',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          'Flutter Error: ${details.exceptionAsString()}\n'
+          'StackTrace: ${details.stack}',
+        );
+      }
       widget.onError?.call();
     };
 
     // Catch platform channel errors
     PlatformDispatcher.instance.onError = (error, stack) {
-      debugPrint('Platform Error: $error\nStackTrace: $stack');
+      if (kDebugMode) debugPrint('Platform Error: $error\nStackTrace: $stack');
       return true;
     };
   }
@@ -52,7 +54,7 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
           ),
           body: Center(
             child: ErrorDisplayWidget(
-              error: _errorDetails?.exceptionAsString() ?? 'Unknown error',
+              error: 'Something went wrong. Please restart the app.',
               onRetry: () => setState(() => _hasError = false),
             ),
           ),

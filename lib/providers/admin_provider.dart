@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/test_model.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
@@ -56,6 +56,7 @@ class AdminProvider with ChangeNotifier {
   // ─── Students ─────────────────────────────────────────────────────────────────
 
   Future<void> loadStudents() async {
+    if (_studentsState == LoadState.loading) return;
     _studentsState = LoadState.loading;
     _studentsError = null;
     notifyListeners();
@@ -168,6 +169,7 @@ class AdminProvider with ChangeNotifier {
   // ─── Tests ────────────────────────────────────────────────────────────────────
 
   Future<void> loadTests() async {
+    if (_testsState == LoadState.loading) return;
     _testsState = LoadState.loading;
     _testsError = null;
     notifyListeners();
@@ -191,7 +193,9 @@ class AdminProvider with ChangeNotifier {
       await loadTests();
       return true;
     } catch (e) {
-      debugPrint('[AdminProvider] Error bulk deleting tests: $e');
+      if (kDebugMode) {
+        debugPrint('[AdminProvider] Error bulk deleting tests: $e');
+      }
       return false;
     }
   }
@@ -207,6 +211,7 @@ class AdminProvider with ChangeNotifier {
     double marksPerQuestion = 1.0,
     List<String> chapters = const [],
   }) async {
+    if (_isCreatingTest) return false;
     _isCreatingTest = true;
     _createTestError = null;
     _createTestSuccess = false;
@@ -246,6 +251,7 @@ class AdminProvider with ChangeNotifier {
   // ─── Announcements ────────────────────────────────────────────────────────────
 
   Future<void> loadAnnouncements({String? targetClass}) async {
+    if (_announcementsState == LoadState.loading) return;
     _announcementsState = LoadState.loading;
     _announcementsError = null;
     notifyListeners();
@@ -269,6 +275,7 @@ class AdminProvider with ChangeNotifier {
     String? imageUrl,
     required String targetClass,
   }) async {
+    if (_isCreatingAnnouncement) return false;
     _isCreatingAnnouncement = true;
     _createAnnouncementError = null;
     _createAnnouncementSuccess = false;

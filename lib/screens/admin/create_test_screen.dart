@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -51,7 +52,9 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
       await prefs.setDouble('test_draft_marks_per_question', _marksPerQuestion);
       await prefs.setStringList('test_draft_chapters', _selectedChapters);
     } catch (e) {
-      debugPrint('Failed to save test draft: $e');
+      if (kDebugMode) {
+        debugPrint('Failed to save test draft: $e');
+      }
     }
   }
 
@@ -68,7 +71,9 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
       await prefs.remove('test_draft_marks_per_question');
       await prefs.remove('test_draft_chapters');
     } catch (e) {
-      debugPrint('Failed to clear test draft: $e');
+      if (kDebugMode) {
+        debugPrint('Failed to clear test draft: $e');
+      }
     }
   }
 
@@ -145,7 +150,9 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
         ),
       );
     } catch (e) {
-      debugPrint('Failed to check and load draft: $e');
+      if (kDebugMode) {
+        debugPrint('Failed to check and load draft: $e');
+      }
     }
   }
 

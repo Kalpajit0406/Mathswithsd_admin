@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/user_model.dart';
@@ -36,15 +37,21 @@ class ApiService {
       final override = await AuthStorageService.getBaseUrlOverride();
       if (override != null && override.isNotEmpty) {
         _resolvedBaseUrl = override;
-        debugPrint('[ApiService] Using stored base URL override: $override');
+        if (kDebugMode) {
+          debugPrint('[ApiService] Using stored base URL override.');
+        }
         return override;
       }
     } catch (e) {
-      debugPrint('[ApiService] Error reading base URL override: $e');
+      if (kDebugMode) {
+        debugPrint('[ApiService] Error reading base URL override: $e');
+      }
     }
 
     // Use the compile-time constant — defaults to production.
-    debugPrint('[ApiService] Using static base URL: $_staticBaseUrl');
+    if (kDebugMode) {
+      debugPrint('[ApiService] Using static base URL.');
+    }
     _resolvedBaseUrl = _staticBaseUrl;
     return _staticBaseUrl;
   }
@@ -71,7 +78,9 @@ class ApiService {
   }
 
   Future<void> _handleUnauthorized() async {
-    debugPrint('[ApiService] 401 Unauthorized - clearing all stored data');
+    if (kDebugMode) {
+      debugPrint('[ApiService] 401 Unauthorized - clearing all stored data');
+    }
     await AuthStorageService.clearAll();
     onUnauthorized?.call();
   }
@@ -79,7 +88,7 @@ class ApiService {
   Future<String> _requireAuthToken() async {
     final token = await AuthStorageService.getToken();
     if (token == null || token.trim().isEmpty) {
-      throw ApiException('Session expired. Please login again.', 401);
+      throw ApiException('Your session has expired. Please log in again.', 401);
     }
     return token.trim();
   }
@@ -103,7 +112,9 @@ class ApiService {
       }
       return false;
     } catch (e) {
-      debugPrint('[ApiService] Backend health check failed: $e');
+      if (kDebugMode) {
+        debugPrint('[ApiService] Backend health check failed: $e');
+      }
       return false;
     }
   }
@@ -127,7 +138,9 @@ class ApiService {
       }
       return false;
     } catch (e) {
-      debugPrint('[ApiService] OCR health check failed: $e');
+      if (kDebugMode) {
+        debugPrint('[ApiService] OCR health check failed: $e');
+      }
       return false;
     }
   }
@@ -136,10 +149,6 @@ class ApiService {
   Future<String> getConfiguredBaseUrl() async => _getBaseUrl();
 
   dynamic _processResponse(http.Response response) {
-    debugPrint(
-      '[ApiService] Response: ${response.statusCode} (${response.request?.url})',
-    );
-
     // Handle 401 unauthorized
     if (response.statusCode == 401) {
       _handleUnauthorized();
@@ -147,18 +156,19 @@ class ApiService {
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) {
-        debugPrint('[ApiService] Empty response body');
+        if (kDebugMode) {
+          debugPrint('[ApiService] Empty response body');
+        }
         return {};
       }
       try {
         final decoded = jsonDecode(response.body);
-        debugPrint(
-          '[ApiService] Response body (truncated): ${response.body.length > 200 ? '${response.body.substring(0, 200)}...' : response.body}',
-        );
         return decoded;
       } catch (e) {
-        debugPrint('[ApiService] JSON decode error: $e');
-        throw ApiException('Invalid JSON response: $e', response.statusCode);
+        if (kDebugMode) {
+          debugPrint('[ApiService] JSON decode error: $e');
+        }
+        throw ApiException('Received an unexpected response from the server. Please try again.', response.statusCode);
       }
     }
     String message = 'Request failed (${response.statusCode})';
@@ -166,10 +176,31 @@ class ApiService {
       final body = jsonDecode(response.body);
       message = body['message'] ?? message;
     } catch (_) {
-      debugPrint('[ApiService] Error response body: ${response.body}');
+      if (kDebugMode) {
+        debugPrint('[ApiService] Error response body received');
+      }
     }
-    debugPrint('[ApiService] Error: $message');
-    throw ApiException(message, response.statusCode);
+    if (kDebugMode) {
+      debugPrint('[ApiService] Error: $message');
+    }
+
+    switch (response.statusCode) {
+      case 401:
+        throw ApiException('Your session has expired. Please log in again.', 401);
+      case 403:
+        throw ApiException('You do not have permission to perform this action.', 403);
+      case 404:
+        throw ApiException('The requested resource was not found.', 404);
+      case 429:
+        throw ApiException('Too many requests. Please wait a moment and try again.', 429);
+      case 500:
+      case 502:
+      case 503:
+      case 504:
+        throw ApiException('The server encountered an issue. Please try again in a few moments.', response.statusCode);
+      default:
+        throw ApiException(message, response.statusCode);
+    }
   }
 
   Future<void> _logRequest(
@@ -177,33 +208,41 @@ class ApiService {
     Uri uri,
     Map<String, String>? headers,
   ) async {
-    debugPrint('[ApiService] Request: $method ${uri.path}');
-    if (headers != null) {
-      final sanitized = Map<String, String>.from(headers);
-      if (sanitized.containsKey('Authorization')) {
-        sanitized['Authorization'] = sanitized['Authorization']!.replaceAll(
-          RegExp(r'.{20}'),
-          'X',
-        );
+    // Verbose logging disabled for production.
+  }
+
+  Future<T> _safeRequest<T>(Future<T> Function() fn, {String? operation}) async {
+    try {
+      return await fn();
+    } on SocketException {
+      throw ApiException('Unable to connect to the server. Please check your internet connection.', 0);
+    } on TimeoutException {
+      throw ApiException('The request timed out. Please try again.', 408);
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ApiService] ${operation ?? "Request"} failed: $e');
       }
-      debugPrint('[ApiService] Headers: $sanitized');
+      throw ApiException('An unexpected error occurred. Please try again.', 500);
     }
   }
 
   // ─── Auth ────────────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> login(String phone, String password) async {
-    final uri = await _uri(AppConstants.loginEndpoint);
-    final headers = await _headers(includeAuth: false);
-    await _logRequest('POST', uri, headers);
-    final response = await http
-        .post(
-          uri,
-          headers: headers,
-          body: jsonEncode({'studentPhone': phone, 'password': password}),
-        )
-        .timeout(const Duration(seconds: 20));
-    return _processResponse(response);
+    return _safeRequest(operation: 'Login', () async {
+      final uri = await _uri(AppConstants.loginEndpoint);
+      final headers = await _headers(includeAuth: false);
+      final response = await http
+          .post(
+            uri,
+            headers: headers,
+            body: jsonEncode({'studentPhone': phone, 'password': password}),
+          )
+          .timeout(const Duration(seconds: 20));
+      return _processResponse(response);
+    });
   }
 
   Future<http.Response> register(Map<String, dynamic> data) async {
@@ -306,17 +345,15 @@ class ApiService {
   Future<Map<String, dynamic>> processOcrImage(File file) async {
     final client = http.Client();
     try {
-      debugPrint("[ApiService] processOcrImage file path: ${file.path}");
       final bool exists = await file.exists();
       if (!exists) {
         throw ApiException(
-          'Image file does not exist at path: ${file.path}',
+          'Image file does not exist.',
           400,
         );
       }
 
       final int length = await file.length();
-      debugPrint("[ApiService] File length: $length bytes");
       if (length == 0) {
         throw ApiException(
           'Captured image is empty (0 bytes). Please try taking the photo again.',
@@ -326,7 +363,7 @@ class ApiService {
 
       final token = await AuthStorageService.getToken();
       if (token == null || token.trim().isEmpty) {
-        throw ApiException('Session expired. Please login again.', 401);
+        throw ApiException('Your session has expired. Please log in again.', 401);
       }
       final request = http.MultipartRequest(
         'POST',
@@ -335,7 +372,6 @@ class ApiService {
 
       request.headers['Authorization'] = 'Bearer ${token.trim()}';
       request.headers['ngrok-skip-browser-warning'] = 'true';
-      debugPrint('[ApiService] Multipart OCR request headers set with auth');
 
       final bytes = await file.readAsBytes();
       request.files.add(
@@ -721,17 +757,15 @@ class ApiService {
   Future<Map<String, dynamic>> startOcrSession(File imageFile) async {
     final client = http.Client();
     try {
-      debugPrint("[ApiService] startOcrSession file path: ${imageFile.path}");
       final bool exists = await imageFile.exists();
       if (!exists) {
         throw ApiException(
-          'Image file does not exist at path: ${imageFile.path}',
+          'Image file does not exist.',
           400,
         );
       }
 
       final int length = await imageFile.length();
-      debugPrint("[ApiService] startOcrSession File length: $length bytes");
       if (length == 0) {
         throw ApiException(
           'Captured image is empty (0 bytes). Please try taking the photo again.',
@@ -764,9 +798,11 @@ class ApiService {
 
       if (response.statusCode == 202 && initialData['success'] == true) {
         final sessionId = initialData['data']['sessionId'] as String;
-        debugPrint(
-          '[ApiService] startOcrSession: enqueued job. Polling session $sessionId...',
-        );
+        if (kDebugMode) {
+          debugPrint(
+            '[ApiService] startOcrSession: enqueued job. Polling session...',
+          );
+        }
 
         int pollAttempts = 0;
         const maxPollAttempts = 80; // 2 minutes total poll time (80 × 1.5s)
@@ -778,45 +814,50 @@ class ApiService {
             if (sessionData['success'] == true && sessionData['data'] != null) {
               final status = sessionData['data']['status'] as String?;
               if (status == 'completed') {
-                debugPrint(
-                  '[ApiService] startOcrSession: complete after ${pollAttempts * 1.5}s!',
-                );
+                if (kDebugMode) {
+                  debugPrint(
+                    '[ApiService] startOcrSession: complete!',
+                  );
+                }
                 return sessionData;
               } else if (status == 'failed') {
                 throw ApiException(
-                  'OCR background job processing failed.',
+                  'The server encountered an issue. Please try again in a few moments.',
                   500,
                 );
               }
-              debugPrint(
-                '[ApiService] startOcrSession: status=$status progress=${sessionData['data']['progress']}% (attempt $pollAttempts/$maxPollAttempts)',
-              );
+              if (kDebugMode) {
+                debugPrint(
+                  '[ApiService] startOcrSession: status=$status progress=${sessionData['data']['progress']}%',
+                );
+              }
             }
           } catch (e) {
             if (e is ApiException) rethrow;
-            debugPrint('[ApiService] Polling session error (retrying): $e');
+            if (kDebugMode) {
+              debugPrint('[ApiService] Polling session error (retrying): $e');
+            }
           }
         }
         throw ApiException(
-          'OCR processing timed out. The image may be complex — please try again.',
+          'The server encountered an issue. Please try again in a few moments.',
           504,
         );
       }
       return initialData;
     } on TimeoutException {
       throw ApiException(
-        'OCR request timed out. The image may be too large or the server is slow.',
+        'The request timed out. Please try again.',
         408,
       );
-    } on SocketException catch (e) {
-      final baseUrl = await getConfiguredBaseUrl();
+    } on SocketException {
       throw ApiException(
-        'Cannot reach OCR server at $baseUrl. Is the backend running?\nError: ${e.message}',
+        'Unable to connect to the server. Please check your internet connection.',
         503,
       );
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('OCR session start failed: $e', 500);
+      throw ApiException('An unexpected error occurred. Please try again.', 500);
     } finally {
       client.close();
     }
@@ -861,18 +902,20 @@ class ApiService {
         attempt++;
         if (attempt >= maxAttempts) {
           throw ApiException(
-            'OCR session failed after $maxAttempts attempts: $e',
+            'An unexpected error occurred. Please try again.',
             500,
           );
         }
-        debugPrint(
-          '[ApiService] OCR attempt $attempt failed, retrying in ${delay.inSeconds}s...',
-        );
+        if (kDebugMode) {
+          debugPrint(
+            '[ApiService] OCR attempt $attempt failed, retrying in ${delay.inSeconds}s...',
+          );
+        }
         await Future.delayed(delay);
         delay = Duration(seconds: delay.inSeconds * 2); // exponential backoff
       }
     }
-    throw ApiException('OCR session failed after $maxAttempts attempts', 500);
+    throw ApiException('An unexpected error occurred. Please try again.', 500);
   }
 
   Future<Map<String, dynamic>> getOcrSession(String sessionId) async {
@@ -1192,9 +1235,11 @@ class ApiService {
       if (response.statusCode == 200 && responseData['success'] == true) {
         final data = responseData['data'] as Map<String, dynamic>?;
         if (data != null && data['status'] == 'completed') {
-          debugPrint(
-            '[ApiService] PDF extracted synchronously: ${data['total']} questions',
-          );
+          if (kDebugMode) {
+            debugPrint(
+              '[ApiService] PDF extracted synchronously.',
+            );
+          }
           return {
             'success': true,
             'data': {
@@ -1216,11 +1261,13 @@ class ApiService {
       if (response.statusCode == 202 && responseData['success'] == true) {
         final sessionId = responseData['data']['sessionId'] as String?;
         if (sessionId == null) {
-          throw ApiException('No session ID in async PDF response.', 500);
+          throw ApiException('An unexpected error occurred. Please try again.', 500);
         }
-        debugPrint(
-          '[ApiService] PDF async mode: polling session $sessionId...',
-        );
+        if (kDebugMode) {
+          debugPrint(
+            '[ApiService] PDF async mode: polling session...',
+          );
+        }
 
         int pollAttempts = 0;
         const maxPollAttempts = 90; // 3 minutes total
@@ -1232,7 +1279,9 @@ class ApiService {
             if (sessionData['success'] == true && sessionData['data'] != null) {
               final status = sessionData['data']['status'] as String?;
               if (status == 'completed') {
-                debugPrint('[ApiService] PDF async complete!');
+                if (kDebugMode) {
+                  debugPrint('[ApiService] PDF async complete!');
+                }
                 final dataObj = sessionData['data'] as Map<String, dynamic>;
                 return {
                   'success': true,
@@ -1249,20 +1298,24 @@ class ApiService {
                 };
               } else if (status == 'failed') {
                 throw ApiException(
-                  'PDF background job processing failed.',
+                  'The server encountered an issue. Please try again in a few moments.',
                   500,
                 );
               }
-              debugPrint(
-                '[ApiService] PDF progress = ${sessionData['data']['progress']}%',
-              );
+              if (kDebugMode) {
+                debugPrint(
+                  '[ApiService] PDF progress = ${sessionData['data']['progress']}%',
+                );
+              }
             }
           } catch (e) {
             if (e is ApiException) rethrow;
-            debugPrint('[ApiService] Polling PDF session error (retrying): $e');
+            if (kDebugMode) {
+              debugPrint('[ApiService] Polling PDF session error (retrying): $e');
+            }
           }
         }
-        throw ApiException('PDF processing timed out on the backend.', 504);
+        throw ApiException('The server encountered an issue. Please try again in a few moments.', 504);
       }
 
       return responseData;

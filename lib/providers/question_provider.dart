@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/question_model.dart';
 import '../services/api_service.dart';
@@ -41,6 +41,7 @@ class QuestionProvider with ChangeNotifier {
   bool get isLoadingChapters => _isLoadingChapters;
 
   Future<void> syncChapters() async {
+    if (_isLoadingChapters) return;
     try {
       final currentVersion = await _apiService.getChapterVersion();
       if (_cachedChapters.isEmpty || currentVersion != _cachedChapterVersion) {
@@ -52,7 +53,9 @@ class QuestionProvider with ChangeNotifier {
         _cachedChapterVersion = currentVersion;
       }
     } catch (e) {
-      debugPrint('[QuestionProvider] Error syncing chapters: $e');
+      if (kDebugMode) {
+        debugPrint('[QuestionProvider] Error syncing chapters: $e');
+      }
     } finally {
       _isLoadingChapters = false;
       notifyListeners();
@@ -152,7 +155,9 @@ class QuestionProvider with ChangeNotifier {
     try {
       await _apiService.setCurrentOcrSessionIndex(_queueSessionId!, _currentQueueIndex);
     } catch (e) {
-      debugPrint('Failed to sync index with backend: $e');
+      if (kDebugMode) {
+        debugPrint('Failed to sync index with backend: $e');
+      }
     }
   }
 
@@ -161,7 +166,9 @@ class QuestionProvider with ChangeNotifier {
     try {
       await _apiService.deleteOcrSessionItem(_queueSessionId!, indexToDelete);
     } catch (e) {
-      debugPrint('Failed to delete queue item on backend: $e');
+      if (kDebugMode) {
+        debugPrint('Failed to delete queue item on backend: $e');
+      }
     }
   }
 
@@ -177,7 +184,9 @@ class QuestionProvider with ChangeNotifier {
         verified: updatedData.verified,
       );
     } catch (e) {
-      debugPrint('Failed to update queue item on backend: $e');
+      if (kDebugMode) {
+        debugPrint('Failed to update queue item on backend: $e');
+      }
     }
   }
 
@@ -201,7 +210,9 @@ class QuestionProvider with ChangeNotifier {
             .map((item) => ScanData.fromJson(Map<String, dynamic>.from(item)))
             .toList();
         if (items.length > _maxQueueSize) {
-          debugPrint('OCR queue capped at $_maxQueueSize items during restore.');
+          if (kDebugMode) {
+            debugPrint('OCR queue capped at $_maxQueueSize items during restore.');
+          }
         }
         if (_questionQueue.isNotEmpty && _currentQueueIndex >= _questionQueue.length) {
           _currentQueueIndex = _questionQueue.length - 1;
@@ -221,7 +232,9 @@ class QuestionProvider with ChangeNotifier {
             await _populateQueueFromOcrSession(sessionData);
           }
         } catch (e) {
-          debugPrint('Failed to sync queue state with backend, using local cache: $e');
+          if (kDebugMode) {
+            debugPrint('Failed to sync queue state with backend, using local cache: $e');
+          }
         }
       }
     } catch (_) {
@@ -234,6 +247,7 @@ class QuestionProvider with ChangeNotifier {
   // ═══════════════════════════════════════════════════════════════════════════
 
   Future<void> loadQuestions({int? classNo, String? language, String? chapter, String? search, bool clearCache = true}) async {
+    if (_loadState == QuestionLoadState.loading) return;
     if (clearCache) {
       _loadState = QuestionLoadState.loading;
       _error = null;
@@ -291,7 +305,9 @@ class QuestionProvider with ChangeNotifier {
       _hasMore = newQuestions.length >= _pageSize;
     } catch (e) {
       _currentPage--;
-      debugPrint('Failed to load more questions: $e');
+      if (kDebugMode) {
+        debugPrint('Failed to load more questions: $e');
+      }
     } finally {
       _isLoadingMore = false;
       notifyListeners();
@@ -303,6 +319,7 @@ class QuestionProvider with ChangeNotifier {
   // ═══════════════════════════════════════════════════════════════════════════
 
   Future<void> scanImage(File imageFile) async {
+    if (_isScanning) return;
     _isScanning = true;
     _creationError = null;
     _currentQueueIndex = 0;
@@ -463,6 +480,7 @@ class QuestionProvider with ChangeNotifier {
   // ═══════════════════════════════════════════════════════════════════════════
 
   Future<bool> saveQuestion(Question question, {File? diagramFile}) async {
+    if (_isSaving) return false;
     _isSaving = true;
     _creationError = null;
     notifyListeners();
@@ -519,6 +537,7 @@ class QuestionProvider with ChangeNotifier {
   }
 
   Future<bool> updateQuestion(String id, Map<String, dynamic> updateData, {File? diagramFile}) async {
+    if (_isSaving) return false;
     _isSaving = true;
     _creationError = null;
     notifyListeners();
@@ -583,6 +602,7 @@ class QuestionProvider with ChangeNotifier {
     File pdfFile, {
     Function(double)? onProgress,
   }) async {
+    if (_isScanning) return null;
     try {
       _isScanning = true;
       _creationError = null;
@@ -785,7 +805,9 @@ class QuestionProvider with ChangeNotifier {
       }
 
       if (items.length > _maxQueueSize) {
-        debugPrint('OCR queue capped at $_maxQueueSize items during session restore.');
+        if (kDebugMode) {
+          debugPrint('OCR queue capped at $_maxQueueSize items during session restore.');
+        }
       }
 
       _questionQueue = scanDataList;
