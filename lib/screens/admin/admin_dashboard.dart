@@ -426,15 +426,20 @@ class _AdminDashboardState extends State<AdminDashboard>
           shadowColor: Colors.black.withValues(alpha: 0.08),
           child: SizedBox(
             height: 60,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildNavItem(0, Icons.dashboard_rounded, 'Dashboard'),
-                _buildNavItem(1, Icons.assignment_rounded, 'Tests'),
-                const SizedBox(width: 48), // Space for FAB
-                _buildNavItem(2, Icons.quiz_rounded, 'Bank'),
-                _buildNavItem(3, Icons.settings_rounded, 'Settings'),
-              ],
+            child: MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.noScaling,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildNavItem(0, Icons.dashboard_rounded, 'Dashboard'),
+                  _buildNavItem(1, Icons.assignment_rounded, 'Tests'),
+                  const SizedBox(width: 48), // Space for FAB
+                  _buildNavItem(2, Icons.quiz_rounded, 'Bank'),
+                  _buildNavItem(3, Icons.settings_rounded, 'Settings'),
+                ],
+              ),
             ),
           ),
         ),
