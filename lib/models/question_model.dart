@@ -25,7 +25,7 @@ class Question {
       questionText: json['question'] ?? '',
       options: List<String>.from(json['options'] ?? []),
       correctAnswer: json['correctAnswer'] ?? '',
-      classNo: json['classNo'] ?? 0,
+      classNo: json['classNo'] ?? 10,
       language: json['language'] ?? 'English',
       chapter: json['chapter'] ?? '',
       diagram: json['diagram'],

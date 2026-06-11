@@ -28,7 +28,7 @@ class TestConfig {
       id: json['_id'] ?? '',
       date: json['date'] ?? '',
       time: json['time'] ?? '',
-      classNo: json['classNo'] ?? 0,
+      classNo: json['classNo'] ?? 10,
       language: json['language'] ?? 'English',
       totalQuestions: json['totalQuestions'] ?? 0,
       totalTime: json['totalTime'] ?? 0,
