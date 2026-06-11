@@ -8,26 +8,46 @@ import 'package:path/path.dart' as p;
 class ImageService {
   final ImagePicker _picker = ImagePicker();
 
-  /// Copies [source] into the app's temporary directory so the file is
-  /// guaranteed to survive until the upload completes (Android can evict
-  /// ImageCropper's cache files at any time, producing a 0-byte read).
+  /// Copies [source] into the app's own temp dir so the file is guaranteed
+  /// to survive until the upload completes. Android can evict ImageCropper's
+  /// cache files at any time, producing a 0-byte read.
   Future<File> _safeCopyToAppTemp(File source) async {
     final tmpDir = await getTemporaryDirectory();
     final destDir = Directory(p.join(tmpDir.path, 'ocr_uploads'));
     if (!destDir.existsSync()) destDir.createSync(recursive: true);
 
-    // Use timestamp so concurrent picks never collide
-    final ext = p.extension(source.path).isNotEmpty ? p.extension(source.path) : '.jpg';
-    final dest = File(p.join(destDir.path, 'img_${DateTime.now().millisecondsSinceEpoch}$ext'));
+    final ext = p.extension(source.path).isNotEmpty
+        ? p.extension(source.path)
+        : '.jpg';
+    final dest = File(
+      p.join(destDir.path, 'img_${DateTime.now().millisecondsSinceEpoch}$ext'),
+    );
     await source.copy(dest.path);
     return dest;
   }
 
-  Future<File?> pickAndCropImage(BuildContext context, {ImageSource source = ImageSource.camera}) async {
+  /// Writes raw [bytes] to a stable file in the app's temp dir.
+  /// Used for content:// URIs (Android 10+) where File() gives 0 bytes.
+  Future<File> _writeBytesToAppTemp(List<int> bytes,
+      {String ext = '.jpg'}) async {
+    final tmpDir = await getTemporaryDirectory();
+    final destDir = Directory(p.join(tmpDir.path, 'ocr_uploads'));
+    if (!destDir.existsSync()) destDir.createSync(recursive: true);
+
+    final dest = File(
+      p.join(destDir.path, 'img_${DateTime.now().millisecondsSinceEpoch}$ext'),
+    );
+    await dest.writeAsBytes(bytes, flush: true);
+    return dest;
+  }
+
+  Future<File?> pickAndCropImage(
+    BuildContext context, {
+    ImageSource source = ImageSource.camera,
+  }) async {
     final primaryColor = Theme.of(context).primaryColor;
     try {
-      // 1. Pick Image with resolution constraints to save memory
-      // 3000px provides ultra high quality for OCR formulas while being safe on 4GB RAM devices
+      // 1. Pick image — resolution constraints keep memory safe on 4 GB devices
       final XFile? photo = await _picker.pickImage(
         source: source,
         maxWidth: 3000,
@@ -37,9 +57,30 @@ class ImageService {
 
       if (photo == null) return null;
 
-      // 2. Open Crop Screen
+      // 2. Read bytes via XFile (handles content:// URIs on Android 10+)
+      final photoBytes = await photo.readAsBytes();
+      if (photoBytes.isEmpty) {
+        debugPrint('[ImageService] pickImage returned 0-byte file. Aborting.');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Camera returned an empty image. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return null;
+      }
+
+      // 3. Write to stable path so ImageCropper gets a reliable file
+      final stablePhoto = await _writeBytesToAppTemp(photoBytes);
+      debugPrint(
+          '[ImageService] Stable photo: ${stablePhoto.path} (${photoBytes.length} bytes)');
+
+      // 4. Open crop screen
       final croppedFile = await ImageCropper().cropImage(
-        sourcePath: photo.path,
+        sourcePath: stablePhoto.path,
         compressFormat: ImageCompressFormat.jpg,
         compressQuality: 90,
         uiSettings: [
@@ -72,15 +113,13 @@ class ImageService {
 
       if (croppedFile == null) return null;
 
-      // 3. Copy to stable app temp dir — prevents 0-byte reads caused by
-      //    Android evicting ImageCropper's cache between crop and upload.
+      // 5. Copy cropped result to stable dir (cropper also uses cache)
       final file = await _safeCopyToAppTemp(File(croppedFile.path));
-
       final length = await file.length();
-      debugPrint('[ImageService] Copied cropped file: ${file.path} ($length bytes)');
+      debugPrint('[ImageService] Cropped file: ${file.path} ($length bytes)');
 
       if (length == 0) {
-        debugPrint('[ImageService] WARNING: copied file is still 0 bytes!');
+        debugPrint('[ImageService] WARNING: cropped file is 0 bytes!');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -97,10 +136,12 @@ class ImageService {
           showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               title: Row(
                 children: const [
-                  Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+                  Icon(Icons.warning_amber_rounded,
+                      color: Colors.orange, size: 28),
                   SizedBox(width: 8),
                   Text('Photo Too Large'),
                 ],
@@ -113,7 +154,10 @@ class ImageService {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0051D5))),
+                  child: const Text('OK',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0051D5))),
                 ),
               ],
             ),
@@ -166,10 +210,11 @@ class ImageService {
 
       if (croppedFile == null) return null;
 
-      // Copy to stable location so the file survives until it's uploaded
+      // Copy to stable location so the file survives until upload
       final file = await _safeCopyToAppTemp(File(croppedFile.path));
       final length = await file.length();
-      debugPrint('[ImageService] cropExistingImage copied: ${file.path} ($length bytes)');
+      debugPrint(
+          '[ImageService] cropExistingImage: ${file.path} ($length bytes)');
       return length > 0 ? file : null;
     } catch (e) {
       debugPrint("cropExistingImage Error: $e");
@@ -177,13 +222,33 @@ class ImageService {
     }
   }
 
-  /// Handles Android specific process death when camera is launched
-  Future<XFile?> getLostData() async {
-    if (Platform.isAndroid) {
-      final LostDataResponse response = await _picker.retrieveLostData();
-      if (response.isEmpty) return null;
-      return response.file;
+  /// Recovers the photo file after Android process-death during camera capture.
+  ///
+  /// Returns a stable [File] with valid bytes, or null if nothing to recover.
+  /// Uses [XFile.readAsBytes()] to properly handle content:// URIs
+  /// (Android 10+), which [File(path).readAsBytes()] cannot handle.
+  Future<File?> getLostData() async {
+    if (!Platform.isAndroid) return null;
+
+    final LostDataResponse response = await _picker.retrieveLostData();
+    if (response.isEmpty || response.file == null) return null;
+
+    final xFile = response.file!;
+    debugPrint('[ImageService] getLostData: recovering ${xFile.path}');
+
+    // XFile.readAsBytes() resolves content:// URIs — File() alone gives 0 bytes
+    final bytes = await xFile.readAsBytes();
+    if (bytes.isEmpty) {
+      debugPrint('[ImageService] getLostData: recovered file is empty!');
+      return null;
     }
-    return null;
+
+    final ext = p.extension(xFile.path).isNotEmpty
+        ? p.extension(xFile.path)
+        : '.jpg';
+    final stableFile = await _writeBytesToAppTemp(bytes, ext: ext);
+    debugPrint(
+        '[ImageService] getLostData: saved ${bytes.length} bytes → ${stableFile.path}');
+    return stableFile;
   }
 }

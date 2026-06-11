@@ -130,10 +130,15 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Future<void> _checkLostData() async {
+    // getLostData() now returns a stable File? (bytes copied from content:// URI)
     final lostFile = await _imageService.getLostData();
-    if (lostFile != null && mounted) {
-      // Pass the recovered file directly into CreateQuestionTab — no race conditions
-      _navigateToCreateQuestion(fileToProcess: File(lostFile.path));
+    if (lostFile == null || !mounted) return;
+
+    // Show crop screen first — the recovered photo was never cropped because
+    // the app was killed before ImageCropper could open.
+    final croppedFile = await _imageService.cropExistingImage(context, lostFile);
+    if (croppedFile != null && mounted) {
+      _navigateToCreateQuestion(fileToProcess: croppedFile);
     }
   }
 
