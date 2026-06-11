@@ -55,6 +55,9 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
           body: Center(
             child: ErrorDisplayWidget(
               error: 'Something went wrong. Please restart the app.',
+              suggestion: kDebugMode && _errorDetails != null
+                  ? _errorDetails!.exceptionAsString()
+                  : null,
               onRetry: () => setState(() => _hasError = false),
             ),
           ),
