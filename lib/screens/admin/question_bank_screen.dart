@@ -977,6 +977,7 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
   File? _newDiagramFile;
   bool _deleteDiagram = false;
   bool _isDownloadingDiagram = false;
+  int? _selectedCorrectOptionIndex;
 
   @override
   void initState() {
@@ -993,6 +994,17 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
     _selectedClass = widget.question.classNo;
     _selectedLanguage = widget.question.language;
     _selectedChapter = widget.question.chapter;
+
+    // Check which option matches the correctAnswer
+    int? foundIndex;
+    for (int i = 0; i < _optCtrls.length; i++) {
+      if (_optCtrls[i].text.trim().toLowerCase() ==
+          widget.question.correctAnswer.trim().toLowerCase()) {
+        foundIndex = i;
+        break;
+      }
+    }
+    _selectedCorrectOptionIndex = foundIndex;
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = Provider.of<QuestionProvider>(context, listen: false);
@@ -1165,26 +1177,71 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
                         decoration: const InputDecoration(labelText: 'Chapter'),
                       ),
                       const SizedBox(height: 24),
-                      ...List.generate(
-                        4,
-                        (i) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: TextFormField(
-                            enabled: !provider.isSaving,
-                            controller: _optCtrls[i],
-                            decoration: InputDecoration(
-                              labelText:
-                                  'Option ${String.fromCharCode(65 + i)}',
-                            ),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Check the box next to the correct answer:',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B),
                           ),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      TextFormField(
-                        enabled: !provider.isSaving,
-                        controller: _correctCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Correct Answer (Exact Text)',
+                      ...List.generate(
+                        4,
+                        (i) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12.0, right: 8.0),
+                                child: Transform.scale(
+                                  scale: 1.1,
+                                  child: Checkbox(
+                                    value: _selectedCorrectOptionIndex == i,
+                                    activeColor: const Color(0xFF0051D5),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    onChanged: provider.isSaving
+                                        ? null
+                                        : (bool? val) {
+                                            setState(() {
+                                              if (val == true) {
+                                                _selectedCorrectOptionIndex = i;
+                                                _correctCtrl.text = _optCtrls[i].text.trim();
+                                              } else {
+                                                if (_selectedCorrectOptionIndex == i) {
+                                                  _selectedCorrectOptionIndex = null;
+                                                  _correctCtrl.clear();
+                                                }
+                                              }
+                                            });
+                                          },
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: TextFormField(
+                                  enabled: !provider.isSaving,
+                                  controller: _optCtrls[i],
+                                  decoration: InputDecoration(
+                                    labelText: 'Option ${String.fromCharCode(65 + i)}',
+                                  ),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (_selectedCorrectOptionIndex == i) {
+                                        _correctCtrl.text = val.trim();
+                                      }
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -1560,14 +1617,72 @@ class _EditQuestionSheetState extends State<_EditQuestionSheet> {
   }
 
   void _save() async {
+    if (_questionCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Question text is required'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+      return;
+    }
+
+    for (int i = 0; i < 4; i++) {
+      if (_optCtrls[i].text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Option ${String.fromCharCode(65 + i)} is required'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    final String correctAnswer = _correctCtrl.text.trim();
+    if (correctAnswer.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Correct answer is required. Please check one of the options.'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final List<String> options = _optCtrls.map((c) => c.text.trim()).toList();
+    if (!options.any((o) => o.toLowerCase() == correctAnswer.toLowerCase())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Correct answer must match one of the 4 options exactly',
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+      return;
+    }
+
     final provider = Provider.of<QuestionProvider>(context, listen: false);
     final data = {
       'question': _questionCtrl.text.trim(),
       'classNo': _selectedClass,
       'language': _selectedLanguage,
       'chapter': _selectedChapter,
-      'options': _optCtrls.map((c) => c.text.trim()).toList(),
-      'correctAnswer': _correctCtrl.text.trim(),
+      'options': options,
+      'correctAnswer': correctAnswer,
     };
 
     if (_deleteDiagram) {
