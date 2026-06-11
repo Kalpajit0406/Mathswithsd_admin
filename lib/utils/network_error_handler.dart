@@ -6,6 +6,7 @@ import '../services/api_service.dart';
 /// Converts raw exceptions and status codes into user-friendly messages.
 String friendlyNetworkError(dynamic error) {
   if (error is ApiException) {
+    if (error.message.isNotEmpty) return error.message;
     switch (error.statusCode) {
       case 401:
         return 'Your session has expired. Please log in again.';
@@ -23,7 +24,6 @@ String friendlyNetworkError(dynamic error) {
       case 504:
         return 'The server encountered an issue. Please try again in a few moments.';
       default:
-        if (error.message.isNotEmpty) return error.message;
         return 'An unexpected error occurred (${error.statusCode}). Please try again.';
     }
   }

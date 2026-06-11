@@ -184,6 +184,10 @@ class ApiService {
       debugPrint('[ApiService] Error: $message');
     }
 
+    if (message.isNotEmpty && message != 'Request failed (${response.statusCode})') {
+      throw ApiException(message, response.statusCode);
+    }
+
     switch (response.statusCode) {
       case 401:
         throw ApiException('Your session has expired. Please log in again.', 401);
