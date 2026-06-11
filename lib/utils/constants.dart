@@ -1,10 +1,10 @@
 class AppConstants {
-  // Use local LAN IP since you are testing on a physical device
+  // Production API — override at build time with:
+  //   flutter run --dart-define=API_BASE_URL=http://localhost:5000  (dev)
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://math-app-backend-main.onrender.com',
+    defaultValue: 'https://api.mathswithsd.in',
   );
-  // static const String baseUrl = 'http://10.0.2.2:5000'; // For emulator
   // API Endpoints
   static const String loginEndpoint = '/api/v1/student/login';
   static const String registerEndpoint = '/api/v1/student/register';

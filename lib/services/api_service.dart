@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -32,152 +31,24 @@ class ApiService {
       return _resolvedBaseUrl!;
     }
     // Check for a manual override stored in secure storage
+    // (useful for dev builds with --dart-define=API_BASE_URL=http://localhost:5000)
     try {
       final override = await AuthStorageService.getBaseUrlOverride();
       if (override != null && override.isNotEmpty) {
-        final overrideResolved = await _probeBaseUrl(override);
-        if (overrideResolved) {
-          _resolvedBaseUrl = override;
-          debugPrint('[ApiService] Using stored base URL override: $override');
-          return override;
-        }
-        debugPrint(
-          '[ApiService] Stored base URL override is unreachable, rediscovering: $override',
-        );
+        _resolvedBaseUrl = override;
+        debugPrint('[ApiService] Using stored base URL override: $override');
+        return override;
       }
     } catch (e) {
       debugPrint('[ApiService] Error reading base URL override: $e');
     }
 
-    final candidates = <String>[
-      'http://10.0.2.2:5000', // Android emulator
-      'http://localhost:5000', // Desktop
-    ];
-    for (final c in candidates) {
-      try {
-        if (await _probeBaseUrl(c)) {
-          _resolvedBaseUrl = c;
-          await AuthStorageService.saveBaseUrlOverride(c);
-          debugPrint('[ApiService] Resolved base URL to $c via health probe');
-          return c;
-        }
-      } catch (e) {
-        debugPrint('[ApiService] Probe failed for $c -> $e');
-      }
-    }
-
-    // Try LAN subnet discovery as a final fallback for physical devices.
-    try {
-      final discovered = await _discoverLanBackendBaseUrl();
-      if (discovered != null && discovered.isNotEmpty) {
-        _resolvedBaseUrl = discovered;
-        await AuthStorageService.saveBaseUrlOverride(discovered);
-        debugPrint(
-          '[ApiService] Resolved base URL via LAN discovery to $discovered',
-        );
-        return discovered;
-      }
-    } catch (e) {
-      debugPrint('[ApiService] LAN discovery failed: $e');
-    }
-
-    debugPrint('[ApiService] Falling back to static base URL: $_staticBaseUrl');
+    // Use the compile-time constant — defaults to production.
+    debugPrint('[ApiService] Using static base URL: $_staticBaseUrl');
     _resolvedBaseUrl = _staticBaseUrl;
     return _staticBaseUrl;
   }
 
-  Future<bool> _probeBaseUrl(String baseUrl) async {
-    try {
-      final probeUri = Uri.parse('$baseUrl/health');
-      final isRemote = baseUrl.startsWith('https://');
-      final timeoutMs = isRemote ? 8000 : 1500;
-      final resp = await http
-          .get(probeUri)
-          .timeout(Duration(milliseconds: timeoutMs));
-      if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        return true;
-      }
-    } catch (_) {}
-    return false;
-  }
-
-  Future<String?> _discoverLanBackendBaseUrl() async {
-    final interfaces = await NetworkInterface.list(
-      type: InternetAddressType.IPv4,
-      includeLoopback: false,
-    );
-
-    final candidates = <String>{};
-    for (final interface in interfaces) {
-      for (final address in interface.addresses) {
-        final octets = address.address.split('.');
-        if (octets.length != 4) continue;
-
-        final prefix = '${octets[0]}.${octets[1]}.${octets[2]}';
-        final lastOctet = int.tryParse(octets[3]);
-        final commonHosts = <int>{
-          1,
-          2,
-          3,
-          4,
-          5,
-          10,
-          11,
-          20,
-          50,
-          100,
-          101,
-          110,
-          111,
-          120,
-          125,
-          150,
-          200,
-          254,
-        };
-        if (lastOctet != null) commonHosts.remove(lastOctet);
-
-        for (final host in commonHosts) {
-          candidates.add('http://$prefix.$host:5000');
-        }
-
-        // Full /24 scan
-        for (var host = 1; host <= 254; host++) {
-          if (lastOctet == host) continue;
-          candidates.add('http://$prefix.$host:5000');
-        }
-      }
-    }
-
-    if (candidates.isEmpty) return null;
-
-    final candidateList = candidates.toList();
-    String? foundUrl;
-
-    const batchSize = 40;
-    for (var i = 0; i < candidateList.length; i += batchSize) {
-      final end = (i + batchSize < candidateList.length)
-          ? i + batchSize
-          : candidateList.length;
-      final batch = candidateList.sublist(i, end);
-
-      await Future.wait(
-        batch.map((url) async {
-          if (foundUrl != null) return;
-          final ok = await _probeBaseUrl(url);
-          if (ok) {
-            foundUrl = url;
-          }
-        }),
-      );
-
-      if (foundUrl != null) {
-        return foundUrl;
-      }
-    }
-
-    return null;
-  }
 
   Future<Uri> _uri(String endpoint) async {
     final base = await _getBaseUrl();

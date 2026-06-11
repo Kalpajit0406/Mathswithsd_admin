@@ -68,37 +68,14 @@ class ConnectivityDiagnosticService {
       }
     }
 
-    // If primary URL failed, try alternates
-    if (!backendReachable) {
-      final alternates = [
-        'http://10.0.2.2:5000',  // Android emulator
-        'http://localhost:5000',  // Desktop/localhost
-      ];
-
-      for (final alt in alternates) {
-        try {
-          final uri = Uri.parse('$alt/api/health');
-          final response = await http.get(uri).timeout(const Duration(seconds: 3));
-          if (response.statusCode >= 200 && response.statusCode < 300) {
-            errors.add('✓ Found backend at: $alt (try updating API_BASE_URL)');
-            detectedUrl = alt;
-            backendReachable = true;
-            break;
-          }
-        } catch (_) {
-          // Continue to next alternate
-        }
-      }
-    }
-
-    // Add helpful error messages if not healthy
+    // If primary URL failed, surface a clear error — no dev fallbacks in production.
     if (!backendReachable) {
       errors.addAll([
         '\n🔍 Troubleshooting steps:',
-        '1. Ensure backend server is running: npm start',
-        '2. Check IP: is it $configuredUrl?',
-        '3. Verify device is on same WiFi network',
-        '4. Try: flutter run --dart-define=API_BASE_URL=http://YOUR_IP:5000',
+        '1. Ensure device has internet connectivity',
+        '2. Verify production server is running at: $configuredUrl',
+        '3. Check DNS resolves: api.mathswithsd.in',
+        '4. For dev builds: flutter run --dart-define=API_BASE_URL=http://localhost:5000',
       ]);
     }
 
