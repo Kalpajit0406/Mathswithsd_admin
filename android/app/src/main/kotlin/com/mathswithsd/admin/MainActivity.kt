@@ -1,4 +1,4 @@
-package com.example.mathswithsd_admin
+package com.mathswithsd.admin
 
 import io.flutter.embedding.android.FlutterActivity
 
