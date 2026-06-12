@@ -207,9 +207,7 @@ class LatexExtractorService {
             rawText: section.trim()
           ));
         } catch (e) {
-          if (kDebugMode) {
-            debugPrint('Error parsing question section: $e');
-          }
+          if (kDebugMode) debugPrint('[LatexExtractorService] Error parsing question section: $e');
           // Fallback for this specific section
           results.add(ScanData(
             questionText: cleanContent(section),
@@ -220,9 +218,7 @@ class LatexExtractorService {
         }
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Critical error in extractQuestions: $e');
-      }
+      if (kDebugMode) debugPrint('[LatexExtractorService] Critical error in extractQuestions: $e');
     }
 
     if (results.isEmpty && rawText.trim().isNotEmpty) {

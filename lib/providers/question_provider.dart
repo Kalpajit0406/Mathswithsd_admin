@@ -53,9 +53,7 @@ class QuestionProvider with ChangeNotifier {
         _cachedChapterVersion = currentVersion;
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[QuestionProvider] Error syncing chapters: $e');
-      }
+      if (kDebugMode) debugPrint('[QuestionProvider] Error syncing chapters: $e');
     } finally {
       _isLoadingChapters = false;
       notifyListeners();
@@ -155,9 +153,7 @@ class QuestionProvider with ChangeNotifier {
     try {
       await _apiService.setCurrentOcrSessionIndex(_queueSessionId!, _currentQueueIndex);
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Failed to sync index with backend: $e');
-      }
+      if (kDebugMode) debugPrint('[QuestionProvider] Failed to sync index with backend: $e');
     }
   }
 
@@ -166,9 +162,7 @@ class QuestionProvider with ChangeNotifier {
     try {
       await _apiService.deleteOcrSessionItem(_queueSessionId!, indexToDelete);
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Failed to delete queue item on backend: $e');
-      }
+      if (kDebugMode) debugPrint('[QuestionProvider] Failed to delete queue item on backend: $e');
     }
   }
 
@@ -184,9 +178,7 @@ class QuestionProvider with ChangeNotifier {
         verified: updatedData.verified,
       );
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Failed to update queue item on backend: $e');
-      }
+      if (kDebugMode) debugPrint('[QuestionProvider] Failed to update queue item on backend: $e');
     }
   }
 
@@ -210,9 +202,7 @@ class QuestionProvider with ChangeNotifier {
             .map((item) => ScanData.fromJson(Map<String, dynamic>.from(item)))
             .toList();
         if (items.length > _maxQueueSize) {
-          if (kDebugMode) {
-            debugPrint('OCR queue capped at $_maxQueueSize items during restore.');
-          }
+          if (kDebugMode) debugPrint('[QuestionProvider] OCR queue capped at $_maxQueueSize items during restore.');
         }
         if (_questionQueue.isNotEmpty && _currentQueueIndex >= _questionQueue.length) {
           _currentQueueIndex = _questionQueue.length - 1;
@@ -232,9 +222,7 @@ class QuestionProvider with ChangeNotifier {
             await _populateQueueFromOcrSession(sessionData);
           }
         } catch (e) {
-          if (kDebugMode) {
-            debugPrint('Failed to sync queue state with backend, using local cache: $e');
-          }
+          if (kDebugMode) debugPrint('[QuestionProvider] Failed to sync queue state with backend, using local cache: $e');
         }
       }
     } catch (_) {
@@ -305,9 +293,7 @@ class QuestionProvider with ChangeNotifier {
       _hasMore = newQuestions.length >= _pageSize;
     } catch (e) {
       _currentPage--;
-      if (kDebugMode) {
-        debugPrint('Failed to load more questions: $e');
-      }
+      if (kDebugMode) debugPrint('[QuestionProvider] Failed to load more questions: $e');
     } finally {
       _isLoadingMore = false;
       notifyListeners();
@@ -805,9 +791,7 @@ class QuestionProvider with ChangeNotifier {
       }
 
       if (items.length > _maxQueueSize) {
-        if (kDebugMode) {
-          debugPrint('OCR queue capped at $_maxQueueSize items during session restore.');
-        }
+        if (kDebugMode) debugPrint('[QuestionProvider] OCR queue capped at $_maxQueueSize items during session restore.');
       }
 
       _questionQueue = scanDataList;

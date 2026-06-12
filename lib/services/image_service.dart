@@ -61,9 +61,7 @@ class ImageService {
       // 2. Read bytes via XFile (handles content:// URIs on Android 10+)
       final photoBytes = await photo.readAsBytes();
       if (photoBytes.isEmpty) {
-        if (kDebugMode) {
-          debugPrint('[ImageService] pickImage returned 0-byte file. Aborting.');
-        }
+        if (kDebugMode) debugPrint('[ImageService] pickImage returned 0-byte file. Aborting.');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -78,9 +76,6 @@ class ImageService {
 
       // 3. Write to stable path so ImageCropper gets a reliable file
       final stablePhoto = await _writeBytesToAppTemp(photoBytes);
-      if (kDebugMode) {
-        debugPrint('[ImageService] Stable photo size: ${photoBytes.length} bytes');
-      }
 
       // 4. Open crop screen
       final croppedFile = await ImageCropper().cropImage(
@@ -120,14 +115,9 @@ class ImageService {
       // 5. Copy cropped result to stable dir (cropper also uses cache)
       final file = await _safeCopyToAppTemp(File(croppedFile.path));
       final length = await file.length();
-      if (kDebugMode) {
-        debugPrint('[ImageService] Cropped file size: $length bytes');
-      }
 
       if (length == 0) {
-        if (kDebugMode) {
-          debugPrint('[ImageService] WARNING: cropped file is 0 bytes!');
-        }
+        if (kDebugMode) debugPrint('[ImageService] WARNING: cropped file is 0 bytes!');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -176,9 +166,7 @@ class ImageService {
 
       return file;
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint("ImageService Error: $e");
-      }
+      if (kDebugMode) debugPrint('[ImageService] pickAndCropImage error: $e');
       return null;
     }
   }
@@ -223,15 +211,9 @@ class ImageService {
       // Copy to stable location so the file survives until upload
       final file = await _safeCopyToAppTemp(File(croppedFile.path));
       final length = await file.length();
-      if (kDebugMode) {
-        debugPrint(
-            '[ImageService] cropExistingImage: ($length bytes)');
-      }
       return length > 0 ? file : null;
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint("cropExistingImage Error: $e");
-      }
+      if (kDebugMode) debugPrint('[ImageService] cropExistingImage error: $e');
       return null;
     }
   }
@@ -248,16 +230,11 @@ class ImageService {
     if (response.isEmpty || response.file == null) return null;
 
     final xFile = response.file!;
-    if (kDebugMode) {
-      debugPrint('[ImageService] getLostData: recovering lost image data');
-    }
 
     // XFile.readAsBytes() resolves content:// URIs — File() alone gives 0 bytes
     final bytes = await xFile.readAsBytes();
     if (bytes.isEmpty) {
-      if (kDebugMode) {
-        debugPrint('[ImageService] getLostData: recovered file is empty!');
-      }
+      if (kDebugMode) debugPrint('[ImageService] getLostData: recovered file is empty!');
       return null;
     }
 
@@ -265,10 +242,6 @@ class ImageService {
         ? p.extension(xFile.path)
         : '.jpg';
     final stableFile = await _writeBytesToAppTemp(bytes, ext: ext);
-    if (kDebugMode) {
-      debugPrint(
-          '[ImageService] getLostData: saved ${bytes.length} bytes');
-    }
     return stableFile;
   }
 }

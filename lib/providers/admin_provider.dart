@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../models/test_model.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
@@ -14,12 +15,14 @@ class AdminProvider with ChangeNotifier {
   List<StudentUser> _rejectedStudents = [];
   LoadState _studentsState = LoadState.idle;
   String? _studentsError;
+  bool _isLoadingStudents = false;
 
   // Tests
   List<TestConfig> _tests = [];
   LoadState _testsState = LoadState.idle;
   String? _testsError;
   bool _isCreatingTest = false;
+  bool _isLoadingTests = false;
   String? _createTestError;
   bool _createTestSuccess = false;
 
@@ -28,6 +31,7 @@ class AdminProvider with ChangeNotifier {
   LoadState _announcementsState = LoadState.idle;
   String? _announcementsError;
   bool _isCreatingAnnouncement = false;
+  bool _isLoadingAnnouncements = false;
   String? _createAnnouncementError;
   bool _createAnnouncementSuccess = false;
 
@@ -56,7 +60,8 @@ class AdminProvider with ChangeNotifier {
   // ─── Students ─────────────────────────────────────────────────────────────────
 
   Future<void> loadStudents() async {
-    if (_studentsState == LoadState.loading) return;
+    if (_isLoadingStudents) return; // prevent duplicate concurrent loads
+    _isLoadingStudents = true;
     _studentsState = LoadState.loading;
     _studentsError = null;
     notifyListeners();
@@ -73,6 +78,8 @@ class AdminProvider with ChangeNotifier {
     } catch (e) {
       _studentsError = 'Failed to load students.';
       _studentsState = LoadState.error;
+    } finally {
+      _isLoadingStudents = false;
     }
     notifyListeners();
   }
@@ -169,7 +176,8 @@ class AdminProvider with ChangeNotifier {
   // ─── Tests ────────────────────────────────────────────────────────────────────
 
   Future<void> loadTests() async {
-    if (_testsState == LoadState.loading) return;
+    if (_isLoadingTests) return; // prevent duplicate concurrent loads
+    _isLoadingTests = true;
     _testsState = LoadState.loading;
     _testsError = null;
     notifyListeners();
@@ -183,6 +191,8 @@ class AdminProvider with ChangeNotifier {
     } catch (e) {
       _testsError = 'Failed to load tests.';
       _testsState = LoadState.error;
+    } finally {
+      _isLoadingTests = false;
     }
     notifyListeners();
   }
@@ -193,9 +203,7 @@ class AdminProvider with ChangeNotifier {
       await loadTests();
       return true;
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[AdminProvider] Error bulk deleting tests: $e');
-      }
+      if (kDebugMode) debugPrint('[AdminProvider] Error bulk deleting tests: $e');
       return false;
     }
   }
@@ -251,7 +259,8 @@ class AdminProvider with ChangeNotifier {
   // ─── Announcements ────────────────────────────────────────────────────────────
 
   Future<void> loadAnnouncements({String? targetClass}) async {
-    if (_announcementsState == LoadState.loading) return;
+    if (_isLoadingAnnouncements) return; // prevent duplicate concurrent loads
+    _isLoadingAnnouncements = true;
     _announcementsState = LoadState.loading;
     _announcementsError = null;
     notifyListeners();
@@ -265,6 +274,8 @@ class AdminProvider with ChangeNotifier {
     } catch (e) {
       _announcementsError = 'Failed to load announcements.';
       _announcementsState = LoadState.error;
+    } finally {
+      _isLoadingAnnouncements = false;
     }
     notifyListeners();
   }
