@@ -320,7 +320,7 @@ class _PdfPickerWidgetState extends State<PdfPickerWidget> {
   Future<void> _pickFile() async {
     try {
       // Request file picker permissions
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: _supportedFormats,
         allowMultiple: false,
