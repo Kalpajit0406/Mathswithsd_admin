@@ -74,7 +74,7 @@ class ConnectivityDiagnosticService {
         '\n🔍 Troubleshooting steps:',
         '1. Ensure device has internet connectivity',
         '2. Verify production server is running at: $configuredUrl',
-        '3. Check DNS resolves: api.mathswithsd.in',
+        '3. Check DNS resolves: apiv2.mathswithsd.in',
         '4. For dev builds: flutter run --dart-define=API_BASE_URL=http://localhost:5000',
       ]);
     }

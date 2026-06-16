@@ -129,7 +129,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               controller: _baseUrlController,
               decoration: InputDecoration(
                 labelText: 'Base URL',
-                hintText: 'e.g., https://api.mathswithsd.in',
+                hintText: 'e.g., https://apiv2.mathswithsd.in',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
