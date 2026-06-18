@@ -1606,7 +1606,7 @@ class ApiService {
   }) async {
     final client = http.Client();
     try {
-      final uri = await _uri('/api/v1/import/upload');
+      final uri = await _uri('/api/v1/imports');
       final request = MultipartRequestWithProgress(
         'POST',
         uri,
@@ -1647,7 +1647,7 @@ class ApiService {
   }
 
   Future<List<dynamic>> getImportJobs() async {
-    final uri = await _uri('/api/v1/import/jobs');
+    final uri = await _uri('/api/v1/imports');
     final headers = await _headers();
     await _logRequest('GET', uri, headers);
     final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
@@ -1656,7 +1656,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getImportJobStatus(String jobId) async {
-    final uri = await _uri('/api/v1/import/jobs/$jobId');
+    final uri = await _uri('/api/v1/imports/$jobId');
     final headers = await _headers();
     await _logRequest('GET', uri, headers);
     final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
@@ -1665,7 +1665,7 @@ class ApiService {
   }
 
   Future<List<dynamic>> getImportJobItems(String jobId) async {
-    final uri = await _uri('/api/v1/import/jobs/$jobId/items');
+    final uri = await _uri('/api/v1/imports/$jobId/items');
     final headers = await _headers();
     await _logRequest('GET', uri, headers);
     final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
@@ -1674,11 +1674,11 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> updateImportItem(String itemId, Map<String, dynamic> updates) async {
-    final uri = await _uri('/api/v1/import/items/$itemId');
+    final uri = await _uri('/api/v1/imports/item/$itemId');
     final headers = await _headers();
     final body = jsonEncode(updates);
-    await _logRequest('PUT', uri, headers);
-    final response = await http.put(uri, headers: headers, body: body).timeout(const Duration(seconds: 15));
+    await _logRequest('PATCH', uri, headers);
+    final response = await http.patch(uri, headers: headers, body: body).timeout(const Duration(seconds: 15));
     return _processResponse(response);
   }
 
@@ -1687,7 +1687,7 @@ class ApiService {
     required List<String> confirmItemIds,
     required List<String> rejectItemIds,
   }) async {
-    final uri = await _uri('/api/v1/import/jobs/$jobId/confirm');
+    final uri = await _uri('/api/v1/imports/$jobId/save');
     final headers = await _headers();
     final body = jsonEncode({
       'confirmItemIds': confirmItemIds,
@@ -1697,6 +1697,7 @@ class ApiService {
     final response = await http.post(uri, headers: headers, body: body).timeout(const Duration(seconds: 30));
     return _processResponse(response);
   }
+
 }
 
 class MultipartRequestWithProgress extends http.MultipartRequest {

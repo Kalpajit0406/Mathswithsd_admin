@@ -892,7 +892,7 @@ class _ImportJobDetailsScreenState extends State<ImportJobDetailsScreen>
         for (var item in items) {
           final itemId = item['_id'];
           
-          _questionControllers[itemId] = TextEditingController(text: item['questionText'] ?? '');
+          _questionControllers[itemId] = TextEditingController(text: item['question'] ?? item['questionText'] ?? '');
           _explanationControllers[itemId] = TextEditingController(text: item['explanation'] ?? '');
           
           final List<dynamic> opts = item['options'] ?? ['', '', '', ''];
@@ -921,7 +921,7 @@ class _ImportJobDetailsScreenState extends State<ImportJobDetailsScreen>
     
     final updates = _editedItems[itemId] ?? {};
     final body = {
-      'questionText': questionText,
+      'question': questionText,
       'options': options,
       'explanation': explanation,
       if (updates.containsKey('correctAnswer')) 'correctAnswer': updates['correctAnswer'],
@@ -1107,7 +1107,7 @@ class _ImportJobDetailsScreenState extends State<ImportJobDetailsScreen>
     final itemId = item['_id'];
     final status = item['status'];
     final hasUnsavedEdits = _editedItems.containsKey(itemId) || 
-        _questionControllers[itemId]?.text != (item['questionText'] ?? '') ||
+        _questionControllers[itemId]?.text != (item['question'] ?? item['questionText'] ?? '') ||
         _explanationControllers[itemId]?.text != (item['explanation'] ?? '');
 
     final correctAnswer = _editedItems[itemId]?['correctAnswer'] ?? item['correctAnswer'] ?? 'A';
@@ -1120,7 +1120,7 @@ class _ImportJobDetailsScreenState extends State<ImportJobDetailsScreen>
     final isRejected = status == 'rejected';
 
     final dupInfo = item['duplicateInfo'] ?? {};
-    final isDuplicate = dupInfo['detected'] == true;
+    final isDuplicate = item['duplicateFound'] == true || dupInfo['detected'] == true;
     final similarity = dupInfo['similarity'] != null ? (dupInfo['similarity'] * 100).toStringAsFixed(0) : '0';
 
     return GlassCard(
@@ -1212,7 +1212,7 @@ class _ImportJobDetailsScreenState extends State<ImportJobDetailsScreen>
             style: const TextStyle(color: Colors.white),
             maxLines: null,
             onChanged: (val) {
-              _updateEditState(itemId, 'questionText', val);
+              _updateEditState(itemId, 'question', val);
             },
             decoration: InputDecoration(
               filled: true,
