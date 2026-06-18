@@ -3,7 +3,7 @@ class AppConstants {
   //   flutter run --dart-define=API_BASE_URL=http://localhost:5000  (dev)
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://apiv2.mathswithsd.in',
+    defaultValue: 'https://api.mathswithsd.in',
   );
   // API Endpoints
   static const String loginEndpoint = '/api/v1/student/login';
