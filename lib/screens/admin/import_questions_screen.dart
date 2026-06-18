@@ -84,7 +84,7 @@ class ImportQuestionsScreen extends StatefulWidget {
 }
 
 class _ImportQuestionsScreenState extends State<ImportQuestionsScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   late TabController _tabController;
   late AnimationController _bgAnimationController;
