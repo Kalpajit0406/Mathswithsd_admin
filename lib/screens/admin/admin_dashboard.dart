@@ -20,6 +20,7 @@ import 'question_bank_screen.dart';
 import '../../widgets/fade_in_slide.dart';
 import '../../widgets/glass_card.dart';
 import 'chapter_management_screen.dart';
+import 'import_questions_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -872,6 +873,29 @@ class _AdminDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const TestPlannerScreen()),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.cloud_upload_rounded,
+                      color: Color(0xFF75859D),
+                    ),
+                    title: const Text(
+                      'Import Questions',
+                      style: TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ImportQuestionsScreen()),
                       );
                     },
                   ),

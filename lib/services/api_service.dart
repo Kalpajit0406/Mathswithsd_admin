@@ -1592,6 +1592,111 @@ class ApiService {
 
   /// Async version of baseUrl — always returns the fully-resolved server URL.
   Future<String> getBaseUrlAsync() => _getBaseUrl();
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // QUESTIONS IMPORT API
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Future<Map<String, dynamic>> uploadImportSource({
+    required String importType,
+    File? file,
+    String? url,
+    String? text,
+    Function(double)? onProgress,
+  }) async {
+    final client = http.Client();
+    try {
+      final uri = await _uri('/api/v1/import/upload');
+      final request = MultipartRequestWithProgress(
+        'POST',
+        uri,
+        onProgress: (bytes, total) {
+          if (onProgress != null && total > 0) {
+            onProgress(bytes / total);
+          }
+        },
+      );
+
+      final headers = await _headers(includeAuth: true);
+      request.headers.addAll(headers);
+
+      // Add fields
+      request.fields['importType'] = importType;
+      if (url != null && url.isNotEmpty) request.fields['url'] = url;
+      if (text != null && text.isNotEmpty) request.fields['text'] = text;
+
+      // Add file if present
+      if (file != null) {
+        request.files.add(
+          http.MultipartFile(
+            'file',
+            file.readAsBytes().asStream(),
+            await file.length(),
+            filename: file.path.split('/').last,
+          ),
+        );
+      }
+
+      await _logRequest('POST', uri, request.headers);
+      final streamedResponse = await client.send(request).timeout(const Duration(minutes: 5));
+      final response = await http.Response.fromStream(streamedResponse);
+      return _processResponse(response);
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<List<dynamic>> getImportJobs() async {
+    final uri = await _uri('/api/v1/import/jobs');
+    final headers = await _headers();
+    await _logRequest('GET', uri, headers);
+    final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
+    final decoded = _processResponse(response);
+    return decoded['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> getImportJobStatus(String jobId) async {
+    final uri = await _uri('/api/v1/import/jobs/$jobId');
+    final headers = await _headers();
+    await _logRequest('GET', uri, headers);
+    final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
+    final decoded = _processResponse(response);
+    return decoded['data'] ?? {};
+  }
+
+  Future<List<dynamic>> getImportJobItems(String jobId) async {
+    final uri = await _uri('/api/v1/import/jobs/$jobId/items');
+    final headers = await _headers();
+    await _logRequest('GET', uri, headers);
+    final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
+    final decoded = _processResponse(response);
+    return decoded['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> updateImportItem(String itemId, Map<String, dynamic> updates) async {
+    final uri = await _uri('/api/v1/import/items/$itemId');
+    final headers = await _headers();
+    final body = jsonEncode(updates);
+    await _logRequest('PUT', uri, headers);
+    final response = await http.put(uri, headers: headers, body: body).timeout(const Duration(seconds: 15));
+    return _processResponse(response);
+  }
+
+  Future<Map<String, dynamic>> confirmImportItems(
+    String jobId, {
+    required List<String> confirmItemIds,
+    required List<String> rejectItemIds,
+  }) async {
+    final uri = await _uri('/api/v1/import/jobs/$jobId/confirm');
+    final headers = await _headers();
+    final body = jsonEncode({
+      'confirmItemIds': confirmItemIds,
+      'rejectItemIds': rejectItemIds,
+    });
+    await _logRequest('POST', uri, headers);
+    final response = await http.post(uri, headers: headers, body: body).timeout(const Duration(seconds: 30));
+    return _processResponse(response);
+  }
 }
 
 class MultipartRequestWithProgress extends http.MultipartRequest {
