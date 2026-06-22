@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/question_provider.dart';
 import '../../services/api_service.dart';
 import '../../widgets/fade_in_slide.dart';
 import '../../widgets/glass_card.dart';
@@ -234,6 +236,7 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen>
                       ? null
                       : () async {
                           if (formKey.currentState!.validate()) {
+                            final questionProvider = Provider.of<QuestionProvider>(context, listen: false);
                             setDialogState(() => isSaving = true);
                             try {
                               await _apiService.addChapter(
@@ -242,6 +245,7 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen>
                                 parentChapter: parentChapter,
                               );
                               if (mounted) {
+                                questionProvider.syncChapters();
                                 Navigator.pop(context);
                                 _fetchChapters();
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -450,6 +454,7 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen>
                       ? null
                       : () async {
                           if (formKey.currentState!.validate()) {
+                            final questionProvider = Provider.of<QuestionProvider>(context, listen: false);
                             setDialogState(() => isSaving = true);
                             try {
                               await _apiService.editChapter(
@@ -458,6 +463,7 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen>
                                 chapterName: textController.text.trim(),
                               );
                               if (mounted) {
+                                questionProvider.syncChapters();
                                 Navigator.pop(context);
                                 _fetchChapters();
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -574,16 +580,18 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen>
                             );
                             return;
                           }
+                          final questionProvider = Provider.of<QuestionProvider>(context, listen: false);
                           setSubstate(() => isVerifying = true);
                           try {
                             await _apiService.editChapter(
                               chapterId,
                               'delete_questions',
                             );
-                            if (mounted) {
-                              Navigator.pop(context); // Close sub-dialog
-                              Navigator.pop(context); // Close edit dialog
-                              _fetchChapters();
+                             if (mounted) {
+                               questionProvider.syncChapters();
+                               Navigator.pop(context); // Close sub-dialog
+                               Navigator.pop(context); // Close edit dialog
+                               _fetchChapters();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
@@ -1075,10 +1083,12 @@ class _DeleteChapterDialogState extends State<_DeleteChapterDialog> {
                     return;
                   }
 
+                  final questionProvider = Provider.of<QuestionProvider>(context, listen: false);
                   setState(() => _isDeleting = true);
                   try {
                     await _apiService.deleteChapter(widget.chapterId);
                     if (mounted) {
+                      questionProvider.syncChapters();
                       Navigator.pop(context);
                       widget.onDeleted();
                       ScaffoldMessenger.of(context).showSnackBar(
